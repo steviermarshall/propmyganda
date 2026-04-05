@@ -3,8 +3,16 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import Index from "./pages/Index.tsx";
-import NotFound from "./pages/NotFound.tsx";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
+import Index from "./pages/Index";
+import Artists from "./pages/Artists";
+import ArtistDetail from "./pages/ArtistDetail";
+import Distribution from "./pages/Distribution";
+import Store from "./pages/Store";
+import ProductDetail from "./pages/ProductDetail";
+import Contact from "./pages/Contact";
+import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
@@ -14,11 +22,18 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <Navbar />
         <Routes>
           <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          <Route path="/artists" element={<Artists />} />
+          <Route path="/artists/:id" element={<ArtistDetail />} />
+          <Route path="/distribution" element={<Distribution />} />
+          <Route path="/store" element={<Store />} />
+          <Route path="/store/:id" element={<ProductDetail />} />
+          <Route path="/contact" element={<Contact />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
+        <Footer />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

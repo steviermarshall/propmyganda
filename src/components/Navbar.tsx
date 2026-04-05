@@ -1,0 +1,86 @@
+import { useState, useEffect } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { Menu, X } from "lucide-react";
+
+const navLinks = [
+  { label: "Home", path: "/" },
+  { label: "Artists", path: "/artists" },
+  { label: "Distribution", path: "/distribution" },
+  { label: "Store", path: "/store" },
+  { label: "Contact", path: "/contact" },
+];
+
+const Navbar = () => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const location = useLocation();
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 50);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
+    setIsOpen(false);
+  }, [location]);
+
+  return (
+    <>
+      <nav
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+          scrolled ? "bg-primary" : "bg-transparent"
+        }`}
+      >
+        <div className="container-content flex items-center justify-between h-16 md:h-20">
+          <Link to="/" className="text-primary-foreground text-xl md:text-2xl font-black tracking-widest uppercase">
+            PMG
+          </Link>
+
+          {/* Desktop Nav */}
+          <div className="hidden md:flex items-center gap-8">
+            {navLinks.map((link) => (
+              <Link
+                key={link.path}
+                to={link.path}
+                className={`text-xs tracking-[0.2em] uppercase font-medium transition-opacity hover:opacity-60 ${
+                  location.pathname === link.path
+                    ? "text-primary-foreground opacity-100"
+                    : "text-primary-foreground opacity-80"
+                }`}
+              >
+                {link.label}
+              </Link>
+            ))}
+          </div>
+
+          {/* Mobile Toggle */}
+          <button
+            onClick={() => setIsOpen(!isOpen)}
+            className="md:hidden text-primary-foreground z-50"
+            aria-label="Toggle menu"
+          >
+            {isOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+        </div>
+      </nav>
+
+      {/* Mobile Overlay */}
+      {isOpen && (
+        <div className="fixed inset-0 z-40 bg-primary flex flex-col items-center justify-center gap-8">
+          {navLinks.map((link) => (
+            <Link
+              key={link.path}
+              to={link.path}
+              className="text-primary-foreground text-3xl md:text-5xl font-bold uppercase tracking-widest hover:opacity-60 transition-opacity"
+            >
+              {link.label}
+            </Link>
+          ))}
+        </div>
+      )}
+    </>
+  );
+};
+
+export default Navbar;
