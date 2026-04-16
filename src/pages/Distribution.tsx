@@ -79,14 +79,16 @@ const Distribution = () => {
                 </div>
               </div>
             </div>
-          </div>
+          </ScrollReveal>
         </div>
       </section>
 
       {/* Services */}
       <section className="section-padding bg-primary text-primary-foreground">
         <div className="container-content">
-          <h2 className="text-3xl md:text-5xl text-heading mb-12">What We Do</h2>
+          <ScrollReveal>
+            <h2 className="text-3xl md:text-5xl text-heading mb-12">What We Do</h2>
+          </ScrollReveal>
           <div className="flex flex-wrap gap-2 mb-8">
             {services.map((s, i) => (
               <button
