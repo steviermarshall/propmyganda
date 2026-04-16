@@ -1,4 +1,5 @@
 import { Instagram, Twitter, Youtube } from "lucide-react";
+import ScrollReveal from "@/components/webgl/ScrollReveal";
 
 const Contact = () => {
   return (
@@ -6,7 +7,7 @@ const Contact = () => {
       <div className="container-content pt-32 pb-20 md:pt-40">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-16 md:gap-24">
           {/* Left */}
-          <div className="flex flex-col justify-center">
+          <ScrollReveal className="flex flex-col justify-center" y={50}>
             <h1 className="text-5xl md:text-7xl lg:text-8xl text-heading mb-8">Get In Touch</h1>
             <div className="space-y-4 text-sm opacity-70">
               <p>Brooklyn, NY</p>
@@ -23,10 +24,10 @@ const Contact = () => {
                 <Youtube size={20} />
               </a>
             </div>
-          </div>
+          </ScrollReveal>
 
           {/* Right — Form */}
-          <div>
+          <ScrollReveal delay={0.2} y={50}>
             <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
               <input
                 type="text"
