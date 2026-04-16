@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { products } from "@/lib/data";
 import Marquee from "@/components/Marquee";
 import ScrollReveal from "@/components/webgl/ScrollReveal";
+import { ShoppingBag } from "lucide-react";
 
 const filters = ["All", "Music", "Clothing", "Accessories"];
 
