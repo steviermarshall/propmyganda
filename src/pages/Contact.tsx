@@ -59,7 +59,7 @@ const Contact = () => {
                 Send Message
               </button>
             </form>
-          </div>
+          </ScrollReveal>
         </div>
       </div>
     </div>
