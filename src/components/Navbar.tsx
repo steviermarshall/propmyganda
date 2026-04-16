@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Menu, X } from "lucide-react";
+import pmgLogo from "@/assets/pmg-logo-clean.png";
 
 const navLinks = [
   { label: "Home", path: "/" },
@@ -33,8 +34,8 @@ const Navbar = () => {
         }`}
       >
         <div className="container-content flex items-center justify-between h-16 md:h-20">
-          <Link to="/" className="text-primary-foreground text-xl md:text-2xl font-black tracking-widest uppercase">
-            PMG
+          <Link to="/" className="flex items-center" aria-label="PMG home">
+            <img src={pmgLogo} alt="PMG" className="h-6 md:h-8 w-auto" />
           </Link>
 
           {/* Desktop Nav */}
