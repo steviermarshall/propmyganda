@@ -113,24 +113,30 @@ const Distribution = () => {
       {/* Tools */}
       <section className="section-padding bg-background border-t border-border">
         <div className="container-content">
-          <h2 className="text-3xl md:text-5xl text-heading mb-8">Tools & Insights</h2>
-          <p className="text-muted-foreground max-w-2xl mb-8 leading-relaxed">
-            PMG provides artists with real-time analytics dashboards, transparent reporting, and proprietary tools
-            to track performance across every platform. Know your numbers. Own your data.
-          </p>
-          <div className="aspect-video bg-secondary border border-border flex items-center justify-center mb-8">
-            <span className="text-muted-foreground text-sm uppercase tracking-wider">Dashboard Preview</span>
-          </div>
-          <button className="border border-foreground px-8 py-3 text-xs tracking-[0.2em] uppercase font-bold hover:bg-primary hover:text-primary-foreground transition-colors">
-            Partner Login
-          </button>
+          <ScrollReveal>
+            <h2 className="text-3xl md:text-5xl text-heading mb-8">Tools & Insights</h2>
+            <p className="text-muted-foreground max-w-2xl mb-8 leading-relaxed">
+              PMG provides artists with real-time analytics dashboards, transparent reporting, and proprietary tools
+              to track performance across every platform. Know your numbers. Own your data.
+            </p>
+          </ScrollReveal>
+          <ScrollReveal delay={0.15}>
+            <div className="aspect-video bg-secondary border border-border flex items-center justify-center mb-8">
+              <span className="text-muted-foreground text-sm uppercase tracking-wider">Dashboard Preview</span>
+            </div>
+            <button className="border border-foreground px-8 py-3 text-xs tracking-[0.2em] uppercase font-bold hover:bg-primary hover:text-primary-foreground transition-colors">
+              Partner Login
+            </button>
+          </ScrollReveal>
         </div>
       </section>
 
       {/* Inquiry Form */}
       <section className="section-padding bg-primary text-primary-foreground">
         <div className="container-content max-w-2xl">
-          <h2 className="text-3xl md:text-5xl text-heading mb-10">Let's Talk</h2>
+          <ScrollReveal>
+            <h2 className="text-3xl md:text-5xl text-heading mb-10">Let's Talk</h2>
+          </ScrollReveal>
           <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
             <input
               type="text"
