@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { artists } from "@/lib/data";
 import Marquee from "@/components/Marquee";
+import ScrollReveal from "@/components/webgl/ScrollReveal";
 
 const services = [
   { name: "Digital Distribution", desc: "We deliver your music to every major platform — Spotify, Apple Music, Amazon, Tidal, YouTube Music, and 150+ more. Global reach, zero compromise." },
@@ -20,19 +21,25 @@ const Distribution = () => {
       {/* Hero Statement */}
       <section className="bg-primary text-primary-foreground pt-32 pb-20 md:pt-40 md:pb-32">
         <div className="container-content max-w-4xl">
-          <h1 className="text-5xl md:text-8xl lg:text-9xl text-heading mb-8">We Move Music.</h1>
-          <p className="text-base md:text-lg leading-relaxed opacity-70 max-w-2xl">
-            PMG is the independent distribution and content arm for artists who are building something real.
-            We bring passionate people and industry expertise to independent artists doing the work.
-          </p>
+          <ScrollReveal y={80}>
+            <h1 className="text-5xl md:text-8xl lg:text-9xl text-heading mb-8">We Move Music.</h1>
+          </ScrollReveal>
+          <ScrollReveal delay={0.2}>
+            <p className="text-base md:text-lg leading-relaxed opacity-70 max-w-2xl">
+              PMG is the independent distribution and content arm for artists who are building something real.
+              We bring passionate people and industry expertise to independent artists doing the work.
+            </p>
+          </ScrollReveal>
         </div>
       </section>
 
       {/* Artist Showcase */}
       <section className="section-padding bg-background border-t border-border">
         <div className="container-content">
-          <h2 className="text-3xl md:text-5xl text-heading mb-12">Listen Up</h2>
-          <div className="flex flex-col md:flex-row gap-8">
+          <ScrollReveal>
+            <h2 className="text-3xl md:text-5xl text-heading mb-12">Listen Up</h2>
+          </ScrollReveal>
+          <ScrollReveal delay={0.15} className="flex flex-col md:flex-row gap-8">
             {/* Artist Names */}
             <div className="md:w-48 flex md:flex-col gap-2 overflow-x-auto md:overflow-visible pb-2 md:pb-0">
               {artists.map((a, i) => (
