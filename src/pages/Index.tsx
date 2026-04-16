@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import PMGScene from "@/components/webgl/PMGScene";
 import Marquee from "@/components/Marquee";
+import ScrollReveal from "@/components/webgl/ScrollReveal";
 
 const Index = () => {
   const [loaded, setLoaded] = useState(false);
@@ -61,39 +62,44 @@ const Index = () => {
       {/* Manifesto */}
       <section className="relative py-32 md:py-48 px-6 md:px-10 border-t border-white/10">
         <div className="max-w-5xl mx-auto">
-          <p className="text-[10px] md:text-xs tracking-[0.4em] uppercase text-white/50 mb-8">
-            01 — Manifesto
-          </p>
-          <h2 className="text-3xl md:text-6xl lg:text-7xl font-black uppercase leading-[0.95] tracking-tight">
-            We move <span className="italic font-light">music</span> for artists
-            who refuse to <span className="italic font-light">wait</span> for
-            permission.
-          </h2>
+          <ScrollReveal>
+            <p className="text-[10px] md:text-xs tracking-[0.4em] uppercase text-white/50 mb-8">
+              01 — Manifesto
+            </p>
+          </ScrollReveal>
+          <ScrollReveal delay={0.15} y={80}>
+            <h2 className="text-3xl md:text-6xl lg:text-7xl font-black uppercase leading-[0.95] tracking-tight">
+              We move <span className="italic font-light">music</span> for artists
+              who refuse to <span className="italic font-light">wait</span> for
+              permission.
+            </h2>
+          </ScrollReveal>
         </div>
       </section>
 
       {/* Pillars */}
       <section className="relative py-32 px-6 md:px-10 border-t border-white/10">
         <div className="max-w-7xl mx-auto">
-          <p className="text-[10px] md:text-xs tracking-[0.4em] uppercase text-white/50 mb-12">
-            02 — What We Do
-          </p>
+          <ScrollReveal>
+            <p className="text-[10px] md:text-xs tracking-[0.4em] uppercase text-white/50 mb-12">
+              02 — What We Do
+            </p>
+          </ScrollReveal>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-px bg-white/10">
             {[
               { n: "01", t: "Distribution", d: "Selective placement across every major DSP. Transparent splits. No middlemen." },
               { n: "02", t: "Content", d: "From visuals to long-form, we build the world around the record." },
               { n: "03", t: "Culture", d: "We invest in scenes, not just streams. Brooklyn-rooted, globally minded." },
-            ].map((x) => (
-              <div
-                key={x.n}
-                className="bg-black p-8 md:p-12 group hover:bg-white hover:text-black transition-colors duration-500"
-              >
-                <p className="text-xs tracking-[0.3em] mb-12 opacity-50">{x.n}</p>
-                <h3 className="text-2xl md:text-3xl font-bold uppercase mb-4">
-                  {x.t}
-                </h3>
-                <p className="text-sm opacity-70 leading-relaxed">{x.d}</p>
-              </div>
+            ].map((x, i) => (
+              <ScrollReveal key={x.n} delay={i * 0.12} y={50}>
+                <div className="bg-black p-8 md:p-12 group hover:bg-white hover:text-black transition-colors duration-500 h-full">
+                  <p className="text-xs tracking-[0.3em] mb-12 opacity-50">{x.n}</p>
+                  <h3 className="text-2xl md:text-3xl font-bold uppercase mb-4">
+                    {x.t}
+                  </h3>
+                  <p className="text-sm opacity-70 leading-relaxed">{x.d}</p>
+                </div>
+              </ScrollReveal>
             ))}
           </div>
         </div>
@@ -101,18 +107,24 @@ const Index = () => {
 
       {/* CTA */}
       <section className="relative py-32 md:py-48 px-6 md:px-10 border-t border-white/10 text-center">
-        <p className="text-[10px] md:text-xs tracking-[0.4em] uppercase text-white/50 mb-8">
-          03 — Get In
-        </p>
-        <h2 className="text-4xl md:text-7xl lg:text-8xl font-black uppercase mb-12 leading-none">
-          Let's <span className="italic font-light">build</span>.
-        </h2>
-        <Link
-          to="/contact"
-          className="inline-block px-10 py-4 border border-white text-xs tracking-[0.3em] uppercase hover:bg-white hover:text-black transition-colors"
-        >
-          Contact PMG
-        </Link>
+        <ScrollReveal>
+          <p className="text-[10px] md:text-xs tracking-[0.4em] uppercase text-white/50 mb-8">
+            03 — Get In
+          </p>
+        </ScrollReveal>
+        <ScrollReveal delay={0.15} y={80}>
+          <h2 className="text-4xl md:text-7xl lg:text-8xl font-black uppercase mb-12 leading-none">
+            Let's <span className="italic font-light">build</span>.
+          </h2>
+        </ScrollReveal>
+        <ScrollReveal delay={0.3}>
+          <Link
+            to="/contact"
+            className="inline-block px-10 py-4 border border-white text-xs tracking-[0.3em] uppercase hover:bg-white hover:text-black transition-colors"
+          >
+            Contact PMG
+          </Link>
+        </ScrollReveal>
       </section>
 
       <Marquee />

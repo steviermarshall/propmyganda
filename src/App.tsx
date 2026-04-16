@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import CustomCursor from "@/components/webgl/CustomCursor";
+import SmoothScroll from "@/components/webgl/SmoothScroll";
 import Index from "./pages/Index";
 import Artists from "./pages/Artists";
 import ArtistDetail from "./pages/ArtistDetail";
@@ -23,6 +24,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <SmoothScroll>
         <CustomCursor />
         <Navbar />
         <Routes>
@@ -36,6 +38,7 @@ const App = () => (
           <Route path="*" element={<NotFound />} />
         </Routes>
         <Footer />
+        </SmoothScroll>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
