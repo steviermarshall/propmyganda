@@ -8,6 +8,7 @@ import Footer from "@/components/Footer";
 import CustomCursor from "@/components/webgl/CustomCursor";
 import SmoothScroll from "@/components/webgl/SmoothScroll";
 import PageTransition from "@/components/webgl/PageTransition";
+import SocialDock from "@/components/SocialDock";
 import Index from "./pages/Index";
 import Artists from "./pages/Artists";
 import ArtistDetail from "./pages/ArtistDetail";
@@ -48,6 +49,7 @@ const App = () => (
           <CustomCursor />
           <Navbar />
           <AppRoutes />
+          <SocialDock />
           <Footer />
         </SmoothScroll>
       </BrowserRouter>
