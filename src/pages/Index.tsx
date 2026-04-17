@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import PMGScene from "@/components/webgl/PMGScene";
 import Marquee from "@/components/Marquee";
 import ScrollReveal from "@/components/webgl/ScrollReveal";
-import SocialDock from "@/components/SocialDock";
 
 const Index = () => {
   const [loaded, setLoaded] = useState(false);
@@ -129,7 +128,6 @@ const Index = () => {
       </section>
 
       <Marquee />
-      <SocialDock />
     </div>
   );
 };
