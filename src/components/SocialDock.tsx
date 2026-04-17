@@ -45,7 +45,7 @@ const SocialDock = () => {
 
   return (
     <div
-      className={`fixed right-4 md:right-6 top-1/2 -translate-y-1/2 z-40 transition-all duration-1000 ${
+      className={`fixed right-3 md:right-6 bottom-24 md:bottom-auto md:top-1/2 md:-translate-y-1/2 z-40 transition-all duration-1000 ${
         mounted ? "opacity-100 translate-x-0" : "opacity-0 translate-x-8"
       }`}
       aria-label="Social links"
