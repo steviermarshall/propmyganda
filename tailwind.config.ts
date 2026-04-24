@@ -15,6 +15,7 @@ export default {
     extend: {
       fontFamily: {
         sans: ["Inter", "Helvetica Neue", "Arial", "sans-serif"],
+        display: ["Bebas Neue", "Impact", "Arial Narrow", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -41,6 +42,10 @@ export default {
         accent: {
           DEFAULT: "hsl(var(--accent))",
           foreground: "hsl(var(--accent-foreground))",
+        },
+        electric: {
+          DEFAULT: "hsl(var(--electric))",
+          foreground: "hsl(var(--electric-foreground))",
         },
         popover: {
           DEFAULT: "hsl(var(--popover))",
