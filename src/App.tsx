@@ -9,6 +9,8 @@ import CustomCursor from "@/components/webgl/CustomCursor";
 import SmoothScroll from "@/components/webgl/SmoothScroll";
 import PageTransition from "@/components/webgl/PageTransition";
 import SocialDock from "@/components/SocialDock";
+import ProtectedRoute from "@/components/dashboard/ProtectedRoute";
+
 import Index from "./pages/Index";
 import Artists from "./pages/Artists";
 import ArtistDetail from "./pages/ArtistDetail";
@@ -16,25 +18,66 @@ import Distribution from "./pages/Distribution";
 import Store from "./pages/Store";
 import ProductDetail from "./pages/ProductDetail";
 import Contact from "./pages/Contact";
+import Events from "./pages/Events";
+import Publication from "./pages/Publication";
 import NotFound from "./pages/NotFound";
+
+import Login from "./pages/auth/Login";
+import Callback from "./pages/auth/Callback";
+
+import DashboardRoot from "./pages/dashboard/index";
+import AdminDashboard from "./pages/dashboard/AdminDashboard";
+import DistributionDashboard from "./pages/dashboard/DistributionDashboard";
+import MarketingDashboard from "./pages/dashboard/MarketingDashboard";
+import SponsorsDashboard from "./pages/dashboard/SponsorsDashboard";
 
 const queryClient = new QueryClient();
 
+const PublicLayout = ({ children }: { children: React.ReactNode }) => (
+  <>
+    <Navbar />
+    {children}
+    <SocialDock />
+    <Footer />
+  </>
+);
+
 const AppRoutes = () => {
   const location = useLocation();
+  const isDash = location.pathname.startsWith("/dashboard");
+  const isAuth = location.pathname.startsWith("/auth");
+
+  if (isDash || isAuth) {
+    return (
+      <Routes location={location}>
+        <Route path="/auth/login"    element={<Login />} />
+        <Route path="/auth/callback" element={<Callback />} />
+
+        <Route path="/dashboard" element={<ProtectedRoute><DashboardRoot /></ProtectedRoute>} />
+        <Route path="/dashboard/admin"        element={<ProtectedRoute allowedRoles={["admin"]}><AdminDashboard /></ProtectedRoute>} />
+        <Route path="/dashboard/distribution" element={<ProtectedRoute allowedRoles={["admin","distribution"]}><DistributionDashboard /></ProtectedRoute>} />
+        <Route path="/dashboard/marketing"    element={<ProtectedRoute allowedRoles={["admin","marketing"]}><MarketingDashboard /></ProtectedRoute>} />
+        <Route path="/dashboard/sponsorships" element={<ProtectedRoute allowedRoles={["admin","sponsorships"]}><SponsorsDashboard /></ProtectedRoute>} />
+      </Routes>
+    );
+  }
 
   return (
     <PageTransition key={location.pathname}>
-      <Routes location={location}>
-        <Route path="/" element={<Index />} />
-        <Route path="/artists" element={<Artists />} />
-        <Route path="/artists/:id" element={<ArtistDetail />} />
-        <Route path="/distribution" element={<Distribution />} />
-        <Route path="/store" element={<Store />} />
-        <Route path="/store/:id" element={<ProductDetail />} />
-        <Route path="/contact" element={<Contact />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+      <PublicLayout>
+        <Routes location={location}>
+          <Route path="/"              element={<Index />} />
+          <Route path="/artists"       element={<Artists />} />
+          <Route path="/artists/:id"   element={<ArtistDetail />} />
+          <Route path="/distribution"  element={<Distribution />} />
+          <Route path="/store"         element={<Store />} />
+          <Route path="/store/:id"     element={<ProductDetail />} />
+          <Route path="/contact"       element={<Contact />} />
+          <Route path="/events"        element={<Events />} />
+          <Route path="/publication"   element={<Publication />} />
+          <Route path="*"              element={<NotFound />} />
+        </Routes>
+      </PublicLayout>
     </PageTransition>
   );
 };
@@ -47,10 +90,7 @@ const App = () => (
       <BrowserRouter>
         <SmoothScroll>
           <CustomCursor />
-          <Navbar />
           <AppRoutes />
-          <SocialDock />
-          <Footer />
         </SmoothScroll>
       </BrowserRouter>
     </TooltipProvider>

@@ -2,19 +2,23 @@ import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import pmgLogo from "@/assets/pmg-logo-clean.png";
+import { useAuth } from "@/hooks/use-auth";
 
 const navLinks = [
-  { label: "Home", path: "/" },
-  { label: "Artists", path: "/artists" },
+  { label: "Home",         path: "/" },
+  { label: "Artists",      path: "/artists" },
+  { label: "Events",       path: "/events" },
   { label: "Distribution", path: "/distribution" },
-  { label: "Store", path: "/store" },
-  { label: "Contact", path: "/contact" },
+  { label: "Publication",  path: "/publication" },
+  { label: "Store",        path: "/store" },
+  { label: "Contact",      path: "/contact" },
 ];
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
+  const { session } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 50);
@@ -54,6 +58,14 @@ const Navbar = () => {
               </Link>
             ))}
           </div>
+
+          {/* Dashboard / Login link */}
+          <Link
+            to={session ? "/dashboard" : "/auth/login"}
+            className="hidden md:block text-[10px] tracking-[0.2em] uppercase font-bold border border-primary-foreground/40 px-4 py-2 hover:bg-primary-foreground hover:text-primary transition-colors text-primary-foreground"
+          >
+            {session ? "Dashboard" : "Staff"}
+          </Link>
 
           {/* Mobile Toggle */}
           <button
