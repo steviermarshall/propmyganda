@@ -8,163 +8,168 @@ interface Props {
 }
 
 /**
- * Gnarled, twisting ancient tree inspired by enchanted-forest references.
- * - Sinuous trunk built from a CatmullRomCurve3 + TubeGeometry
- * - Multiple curling branches reaching outward
- * - Moss highlights on the windward side (cyan/teal emissive accents)
- * - Leafy canopy clusters at the top
- * - A single glowing amber ORB hovering at the base hollow (clickable portal)
- *   No light beams — just a soft pulsing sphere with a halo.
+ * MASSIVE ancient tree at the heart of the clearing.
+ * - Towering, heavily-barked trunk (much wider & taller than forest trees)
+ * - Deep root buttresses fanning out
+ * - Thick gnarled branches
+ * - Layered leafy crown
+ * - Glowing amber ORB portal at the base (no beams)
  */
-
-function makeTrunkCurve() {
-  return new THREE.CatmullRomCurve3([
-    new THREE.Vector3(0.2, 0, 0.1),
-    new THREE.Vector3(-0.4, 2.2, 0.6),
-    new THREE.Vector3(0.6, 4.6, -0.3),
-    new THREE.Vector3(-0.3, 7.0, 0.4),
-    new THREE.Vector3(0.5, 9.4, -0.2),
-    new THREE.Vector3(-0.2, 11.8, 0.3),
-  ]);
-}
-
-function makeBranchCurve(
-  start: THREE.Vector3,
-  dir: THREE.Vector3,
-  length: number,
-  curlSeed: number
-): THREE.CatmullRomCurve3 {
-  const pts: THREE.Vector3[] = [start.clone()];
-  const segs = 6;
-  const up = new THREE.Vector3(0, 1, 0);
-  for (let i = 1; i <= segs; i++) {
-    const t = i / segs;
-    const swirl = Math.sin(t * Math.PI * 1.6 + curlSeed) * 0.9 * (1 - t * 0.4);
-    const lift = Math.sin(t * Math.PI) * 1.4;
-    const p = start.clone()
-      .add(dir.clone().multiplyScalar(length * t))
-      .add(up.clone().multiplyScalar(lift))
-      .add(new THREE.Vector3(swirl, 0, swirl * 0.7));
-    pts.push(p);
-  }
-  return new THREE.CatmullRomCurve3(pts);
-}
-
-interface BranchDef {
-  curve: THREE.CatmullRomCurve3;
-  radius: number;
-  end: THREE.Vector3;
-}
-
 export default function AncientTree({ onEnter, onHoverChange }: Props) {
-  const orbMatRef = useRef<THREE.MeshBasicMaterial>(null);
-  const orbHaloRef = useRef<THREE.Mesh>(null);
   const orbCoreRef = useRef<THREE.Mesh>(null);
+  const orbGlowRef = useRef<THREE.MeshBasicMaterial>(null);
+  const orbHaloRef = useRef<THREE.Mesh>(null);
   const orbLightRef = useRef<THREE.PointLight>(null);
   const mossRefs = useRef<THREE.MeshStandardMaterial[]>([]);
 
-  const trunkGeom = useMemo(() => {
-    const curve = makeTrunkCurve();
-    return new THREE.TubeGeometry(curve, 80, 1.6, 16, false);
-  }, []);
+  const HEIGHT = 28;
+  const BASE_R = 4.2;
+  const TOP_R = 1.6;
 
-  // Taper the trunk by scaling vertices along Y
-  const taperedTrunk = useMemo(() => {
-    const g = trunkGeom.clone();
+  // Trunk — sinuous tapered tube
+  const trunkGeom = useMemo(() => {
+    const curve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(0, 0, 0),
+      new THREE.Vector3(0.3, HEIGHT * 0.2, -0.2),
+      new THREE.Vector3(-0.4, HEIGHT * 0.45, 0.3),
+      new THREE.Vector3(0.5, HEIGHT * 0.7, -0.25),
+      new THREE.Vector3(-0.2, HEIGHT * 0.9, 0.2),
+      new THREE.Vector3(0.1, HEIGHT, 0),
+    ]);
+    const g = new THREE.TubeGeometry(curve, 100, BASE_R, 24, false);
     const pos = g.attributes.position as THREE.BufferAttribute;
     for (let i = 0; i < pos.count; i++) {
       const y = pos.getY(i);
-      const t = Math.min(1, Math.max(0, y / 12));
-      const r = THREE.MathUtils.lerp(1.0, 0.35, t); // wider at base, thinner up top
-      // distance from center axis (approx using x/z relative to trunk centerline ~0)
-      const x = pos.getX(i);
-      const z = pos.getZ(i);
-      pos.setX(i, x * r);
-      pos.setZ(i, z * r);
+      const t = THREE.MathUtils.clamp(y / HEIGHT, 0, 1);
+      // smoother taper with subtle bulges
+      const taper = THREE.MathUtils.lerp(1.0, TOP_R / BASE_R, t);
+      const bulge = 1 + Math.sin(y * 0.6) * 0.04;
+      const r = taper * bulge;
+      pos.setX(i, pos.getX(i) * r);
+      pos.setZ(i, pos.getZ(i) * r);
     }
     pos.needsUpdate = true;
     g.computeVertexNormals();
     return g;
-  }, [trunkGeom]);
-
-  const branches = useMemo<BranchDef[]>(() => {
-    const defs: BranchDef[] = [];
-    const startsY = [6.5, 7.8, 9.0, 10.2, 11.0, 11.6];
-    const count = 9;
-    for (let i = 0; i < count; i++) {
-      const a = (i / count) * Math.PI * 2 + i * 0.31;
-      const sy = startsY[i % startsY.length];
-      const start = new THREE.Vector3(Math.cos(a) * 0.4, sy, Math.sin(a) * 0.4);
-      const dir = new THREE.Vector3(Math.cos(a), 0.35 + Math.sin(i) * 0.2, Math.sin(a)).normalize();
-      const length = 3.2 + ((Math.sin(i * 1.7) + 1) / 2) * 2.8;
-      const curve = makeBranchCurve(start, dir, length, i * 1.7);
-      defs.push({
-        curve,
-        radius: 0.32 + ((Math.sin(i * 2.3) + 1) / 2) * 0.18,
-        end: curve.getPoint(1),
-      });
-    }
-    return defs;
   }, []);
 
-  // Moss patch positions along the trunk (windward / front-left bias)
-  const mossPatches = useMemo(() => {
-    const arr: { pos: [number, number, number]; scale: [number, number, number]; rot: number }[] = [];
-    for (let i = 0; i < 14; i++) {
-      const y = 0.8 + i * 0.78 + (Math.sin(i * 3.1) + 1) * 0.2;
-      const a = -0.6 + Math.sin(i * 2.3) * 0.5; // bias toward front
-      const r = 1.05 - Math.min(0.7, y / 18);
+  // Root buttresses
+  const roots = useMemo(() => {
+    const arr: { pos: [number, number, number]; rot: [number, number, number]; scale: number }[] = [];
+    const count = 11;
+    for (let i = 0; i < count; i++) {
+      const a = (i / count) * Math.PI * 2 + Math.sin(i) * 0.25;
+      const r = BASE_R * 0.85;
       arr.push({
-        pos: [Math.cos(a) * r, y, Math.sin(a) * r + 0.1],
-        scale: [0.7 + Math.sin(i) * 0.15, 0.45, 0.18],
-        rot: a,
+        pos: [Math.cos(a) * r, 0.8, Math.sin(a) * r],
+        rot: [Math.PI / 2 - 0.35, 0, -a + Math.PI / 2],
+        scale: 0.95 + ((Math.sin(i * 7.3) + 1) / 2) * 0.5,
       });
     }
     return arr;
   }, []);
 
-  // Foliage clusters at branch ends + top
+  // Vertical bark ridges (thin tall boxes hugging the trunk)
+  const barkRidges = useMemo(() => {
+    const arr: { a: number; y: number; h: number }[] = [];
+    const count = 22;
+    for (let i = 0; i < count; i++) {
+      const a = (i / count) * Math.PI * 2 + Math.sin(i * 1.3) * 0.1;
+      const y = HEIGHT * (0.15 + ((i % 5) / 5) * 0.6);
+      const h = 4 + ((Math.sin(i * 2.1) + 1) / 2) * 5;
+      arr.push({ a, y, h });
+    }
+    return arr;
+  }, []);
+
+  // Knots / burls
+  const knots = useMemo(() => {
+    const arr: { pos: [number, number, number]; r: number }[] = [];
+    for (let i = 0; i < 7; i++) {
+      const a = (i / 7) * Math.PI * 2 + i;
+      const y = 4 + (i % 4) * 4;
+      const t = y / HEIGHT;
+      const trunkR = THREE.MathUtils.lerp(BASE_R, TOP_R, t) * 0.95;
+      arr.push({
+        pos: [Math.cos(a) * trunkR, y, Math.sin(a) * trunkR],
+        r: 0.5 + ((Math.sin(i * 3.7) + 1) / 2) * 0.4,
+      });
+    }
+    return arr;
+  }, []);
+
+  // Major branches near the top
+  const branches = useMemo(() => {
+    const arr: { geom: THREE.TubeGeometry; end: THREE.Vector3 }[] = [];
+    const count = 8;
+    for (let i = 0; i < count; i++) {
+      const a = (i / count) * Math.PI * 2 + i * 0.4;
+      const sy = HEIGHT * (0.7 + (i % 3) * 0.08);
+      const start = new THREE.Vector3(0, sy, 0);
+      const dir = new THREE.Vector3(Math.cos(a), 0.4 + Math.sin(i) * 0.2, Math.sin(a)).normalize();
+      const length = 5 + ((Math.sin(i * 1.7) + 1) / 2) * 3.5;
+      const pts: THREE.Vector3[] = [start.clone()];
+      const segs = 6;
+      for (let j = 1; j <= segs; j++) {
+        const t = j / segs;
+        const lift = Math.sin(t * Math.PI * 0.8) * 1.6;
+        const swirl = Math.sin(t * Math.PI + i) * 0.6 * (1 - t * 0.3);
+        pts.push(
+          start.clone()
+            .add(dir.clone().multiplyScalar(length * t))
+            .add(new THREE.Vector3(0, lift, 0))
+            .add(new THREE.Vector3(swirl, 0, swirl * 0.7))
+        );
+      }
+      const curve = new THREE.CatmullRomCurve3(pts);
+      const geom = new THREE.TubeGeometry(curve, 30, 0.55, 10, false);
+      arr.push({ geom, end: pts[pts.length - 1] });
+    }
+    return arr;
+  }, []);
+
+  // Leafy canopy puffs at branch ends + crown
   const foliage = useMemo(() => {
-    const arr: { pos: [number, number, number]; scale: number }[] = [];
+    const arr: { pos: [number, number, number]; scale: number; alt: boolean }[] = [];
     branches.forEach((b, i) => {
       const e = b.end;
-      const baseScale = 0.9 + ((Math.sin(i * 2.7) + 1) / 2) * 0.5;
-      arr.push({ pos: [e.x, e.y, e.z], scale: baseScale });
-      // sub-clusters
-      for (let j = 0; j < 3; j++) {
-        const off = j * 1.3;
+      arr.push({ pos: [e.x, e.y, e.z], scale: 2.4, alt: false });
+      for (let j = 0; j < 5; j++) {
+        const off = j * 1.3 + i;
         arr.push({
           pos: [
-            e.x + Math.sin(i * 2 + j) * 0.7,
-            e.y + 0.4 + Math.cos(j) * 0.3,
-            e.z + Math.cos(i * 2 + j) * 0.7,
+            e.x + Math.sin(off) * 1.4,
+            e.y + Math.cos(j) * 0.8 + 0.4,
+            e.z + Math.cos(off) * 1.4,
           ],
-          scale: baseScale * (0.55 + (Math.sin(off) + 1) * 0.2),
+          scale: 1.2 + ((Math.sin(off * 2) + 1) / 2) * 0.6,
+          alt: j % 2 === 0,
         });
       }
     });
-    // Crown clusters
+    // Crown above trunk top
     for (let i = 0; i < 6; i++) {
       const a = (i / 6) * Math.PI * 2;
-      arr.push({ pos: [Math.cos(a) * 1.2, 12.5 + Math.sin(i) * 0.4, Math.sin(a) * 1.2], scale: 1.2 });
+      arr.push({ pos: [Math.cos(a) * 1.6, HEIGHT + 0.6, Math.sin(a) * 1.6], scale: 2.6, alt: i % 2 === 0 });
     }
     return arr;
   }, [branches]);
 
-  // Hanging vines from select branches
-  const vines = useMemo(() => {
-    return branches.slice(0, 5).map((b, i) => {
-      const e = b.end;
-      const drop = 2.5 + (i % 3) * 0.7;
-      const curve = new THREE.CatmullRomCurve3([
-        new THREE.Vector3(e.x, e.y, e.z),
-        new THREE.Vector3(e.x + 0.1, e.y - drop * 0.4, e.z + 0.1),
-        new THREE.Vector3(e.x - 0.1, e.y - drop * 0.8, e.z - 0.05),
-        new THREE.Vector3(e.x, e.y - drop, e.z),
-      ]);
-      return new THREE.TubeGeometry(curve, 24, 0.04, 6, false);
-    });
-  }, [branches]);
+  // Mossy patches on the trunk
+  const mossPatches = useMemo(() => {
+    const arr: { pos: [number, number, number]; scale: number }[] = [];
+    for (let i = 0; i < 16; i++) {
+      const a = (i / 16) * Math.PI * 2 + Math.sin(i * 2.1);
+      const y = 0.8 + i * 1.4 + Math.sin(i * 3.1) * 0.3;
+      const t = Math.min(1, y / HEIGHT);
+      const r = THREE.MathUtils.lerp(BASE_R, TOP_R, t) * 1.02;
+      arr.push({
+        pos: [Math.cos(a) * r, y, Math.sin(a) * r],
+        scale: 0.55 + ((Math.sin(i * 1.7) + 1) / 2) * 0.35,
+      });
+    }
+    return arr;
+  }, []);
 
   useFrame((state) => {
     const t = state.clock.getElapsedTime();
@@ -176,8 +181,8 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
       const s = 1 + pulse * 0.08;
       orbCoreRef.current.scale.set(s, s, s);
     }
-    if (orbMatRef.current) {
-      orbMatRef.current.opacity = 0.85 + pulse * 0.15;
+    if (orbGlowRef.current) {
+      orbGlowRef.current.opacity = 0.85 + pulse * 0.15;
     }
     if (orbHaloRef.current) {
       const mat = orbHaloRef.current.material as THREE.MeshBasicMaterial;
@@ -186,98 +191,115 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
       orbHaloRef.current.scale.set(s, s, s);
     }
     if (orbLightRef.current) {
-      orbLightRef.current.intensity = 2.2 + pulse * 2.6;
+      orbLightRef.current.intensity = 2.4 + pulse * 2.8;
     }
-    // Moss subtle breathing
     mossRefs.current.forEach((m, i) => {
-      if (m) m.emissiveIntensity = 0.35 + Math.sin(t * 1.3 + i) * 0.15;
+      if (m) m.emissiveIntensity = 0.3 + Math.sin(t * 1.2 + i) * 0.12;
     });
   });
 
   return (
     <group position={[0, 0, 0]}>
-      {/* Mossy mound base */}
-      <mesh position={[0, 0.15, 0.3]} receiveShadow>
-        <sphereGeometry args={[3.2, 24, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
-        <meshStandardMaterial color="#0a3326" roughness={1} />
-      </mesh>
-      <mesh position={[0.4, 0.05, 1.2]} receiveShadow>
-        <sphereGeometry args={[1.8, 20, 14, 0, Math.PI * 2, 0, Math.PI / 2]} />
-        <meshStandardMaterial color="#0d4030" roughness={1} emissive="#0a2a22" emissiveIntensity={0.25} />
+      {/* Earth mound at base */}
+      <mesh position={[0, 0.2, 0]} receiveShadow>
+        <sphereGeometry args={[BASE_R * 1.4, 32, 18, 0, Math.PI * 2, 0, Math.PI / 2]} />
+        <meshStandardMaterial color="#0b2218" roughness={1} />
       </mesh>
 
-      {/* Trunk — sinuous, tapered, moonlit */}
-      <mesh geometry={taperedTrunk} castShadow receiveShadow>
-        <meshStandardMaterial color="#1a2230" roughness={0.95} />
+      {/* Root buttresses */}
+      {roots.map((r, i) => (
+        <mesh key={`root-${i}`} position={r.pos} rotation={r.rot} castShadow>
+          <coneGeometry args={[0.85 * r.scale, 3.8 * r.scale, 7]} />
+          <meshStandardMaterial color="#0a0f14" roughness={1} />
+        </mesh>
+      ))}
+
+      {/* Trunk */}
+      <mesh geometry={trunkGeom} castShadow receiveShadow>
+        <meshStandardMaterial color="#11181f" roughness={0.98} />
       </mesh>
 
-      {/* Bark highlight — additive cyan rim on the front */}
-      <mesh geometry={taperedTrunk} scale={[1.005, 1.005, 1.005]}>
-        <meshBasicMaterial
-          color="#3a8aa8"
-          transparent
-          opacity={0.12}
-          blending={THREE.AdditiveBlending}
-          depthWrite={false}
-          toneMapped={false}
-        />
-      </mesh>
+      {/* Vertical bark ridges */}
+      {barkRidges.map((b, i) => {
+        const t = b.y / HEIGHT;
+        const trunkR = THREE.MathUtils.lerp(BASE_R, TOP_R, t) * 1.0;
+        return (
+          <mesh
+            key={`ridge-${i}`}
+            position={[Math.cos(b.a) * trunkR, b.y, Math.sin(b.a) * trunkR]}
+            rotation={[0, -b.a + Math.PI / 2, 0]}
+          >
+            <boxGeometry args={[0.18, b.h, 0.45]} />
+            <meshStandardMaterial color="#05090d" roughness={1} />
+          </mesh>
+        );
+      })}
 
-      {/* Moss patches on the trunk — emissive cyan/teal */}
+      {/* Horizontal bark bands */}
+      {[0.18, 0.36, 0.54, 0.72].map((tt, i) => {
+        const r = THREE.MathUtils.lerp(BASE_R, TOP_R, tt) * 1.03;
+        return (
+          <mesh key={`band-${i}`} position={[0, HEIGHT * tt, 0]}>
+            <cylinderGeometry args={[r, r, 0.22, 24]} />
+            <meshStandardMaterial color="#060a0e" roughness={1} />
+          </mesh>
+        );
+      })}
+
+      {/* Knots */}
+      {knots.map((k, i) => (
+        <mesh key={`knot-${i}`} position={k.pos}>
+          <sphereGeometry args={[k.r, 14, 12]} />
+          <meshStandardMaterial color="#080c10" roughness={1} />
+        </mesh>
+      ))}
+
+      {/* Moss patches */}
       {mossPatches.map((m, i) => (
-        <mesh key={`moss-${i}`} position={m.pos} rotation={[0, m.rot + Math.PI / 2, 0]}>
-          <sphereGeometry args={[0.55, 12, 8]} />
+        <mesh key={`moss-${i}`} position={m.pos} scale={[m.scale, m.scale * 0.7, m.scale * 0.4]}>
+          <sphereGeometry args={[1, 12, 10]} />
           <meshStandardMaterial
             ref={(el) => {
               if (el) mossRefs.current[i] = el;
             }}
-            color="#1f5a48"
-            emissive="#3fe0c2"
-            emissiveIntensity={0.4}
+            color="#1d5a44"
+            emissive="#2c9a78"
+            emissiveIntensity={0.3}
             roughness={1}
           />
         </mesh>
       ))}
 
-      {/* Branches — curling tubes */}
-      {branches.map((b, i) => {
-        const geom = new THREE.TubeGeometry(b.curve, 40, b.radius, 10, false);
-        return (
-          <mesh key={`branch-${i}`} geometry={geom} castShadow>
-            <meshStandardMaterial color="#10171f" roughness={1} />
-          </mesh>
-        );
-      })}
-
-      {/* Hanging vines */}
-      {vines.map((g, i) => (
-        <mesh key={`vine-${i}`} geometry={g}>
-          <meshStandardMaterial color="#0c3a2c" roughness={1} emissive="#1d6a52" emissiveIntensity={0.2} />
+      {/* Major branches */}
+      {branches.map((b, i) => (
+        <mesh key={`br-${i}`} geometry={b.geom} castShadow>
+          <meshStandardMaterial color="#0b1218" roughness={1} />
         </mesh>
       ))}
 
-      {/* Foliage clusters — leafy crown */}
+      {/* Leafy canopy */}
       {foliage.map((f, i) => (
-        <group key={`foliage-${i}`} position={f.pos}>
+        <group key={`fo-${i}`} position={f.pos}>
           <mesh>
             <icosahedronGeometry args={[f.scale, 1]} />
-            <meshStandardMaterial color="#0e3a2a" roughness={0.95} />
+            <meshStandardMaterial color={f.alt ? "#0e3a2a" : "#0a3325"} roughness={0.95} flatShading />
           </mesh>
-          <mesh scale={[0.85, 0.85, 0.85]}>
+          <mesh scale={[0.78, 0.78, 0.78]}>
             <icosahedronGeometry args={[f.scale, 1]} />
             <meshStandardMaterial
-              color="#1b6a4a"
+              color={f.alt ? "#1a5440" : "#175038"}
               roughness={0.9}
-              emissive="#1a4a38"
-              emissiveIntensity={0.15}
+              flatShading
+              emissive="#0a2418"
+              emissiveIntensity={0.12}
             />
           </mesh>
         </group>
       ))}
 
-      {/* ---------- The Glowing Orb Portal (interactive) ---------- */}
+      {/* ---------- Glowing Orb Portal (interactive, no beams) ---------- */}
       <group
-        position={[0, 1.6, 1.6]}
+        position={[0, 2.0, BASE_R * 0.95 + 0.3]}
         onClick={(e) => {
           e.stopPropagation();
           onEnter();
@@ -292,9 +314,8 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
           onHoverChange?.(false);
         }}
       >
-        {/* Outer halo (soft amber bloom-catcher) */}
         <mesh ref={orbHaloRef}>
-          <sphereGeometry args={[1.25, 32, 32]} />
+          <sphereGeometry args={[1.4, 32, 32]} />
           <meshBasicMaterial
             color="#ffb14a"
             transparent
@@ -304,12 +325,10 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
             toneMapped={false}
           />
         </mesh>
-
-        {/* Mid glow shell */}
         <mesh>
-          <sphereGeometry args={[0.75, 32, 32]} />
+          <sphereGeometry args={[0.8, 32, 32]} />
           <meshBasicMaterial
-            ref={orbMatRef}
+            ref={orbGlowRef}
             color="#ffd27a"
             transparent
             opacity={0.9}
@@ -318,19 +337,15 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
             toneMapped={false}
           />
         </mesh>
-
-        {/* Solid bright core */}
         <mesh ref={orbCoreRef}>
-          <sphereGeometry args={[0.42, 32, 32]} />
+          <sphereGeometry args={[0.45, 32, 32]} />
           <meshBasicMaterial color="#fff2c2" toneMapped={false} />
         </mesh>
-
-        {/* Single point light — no beams */}
         <pointLight
           ref={orbLightRef}
           intensity={3}
           color="#ffa040"
-          distance={14}
+          distance={16}
           decay={2}
         />
       </group>
