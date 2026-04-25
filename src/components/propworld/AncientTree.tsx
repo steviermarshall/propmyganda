@@ -268,37 +268,21 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
         </mesh>
       ))}
 
-      {/* Trunk */}
+      {/* Trunk — procedural bark via vertex displacement */}
       <mesh geometry={trunkGeom} castShadow receiveShadow>
-        <meshStandardMaterial color="#11181f" roughness={0.98} />
+        <meshStandardMaterial
+          color="#141c24"
+          roughness={1}
+          flatShading
+          emissive="#0a1814"
+          emissiveIntensity={0.08}
+        />
       </mesh>
 
-      {/* Vertical bark ridges */}
-      {barkRidges.map((b, i) => {
-        const t = b.y / HEIGHT;
-        const trunkR = THREE.MathUtils.lerp(BASE_R, TOP_R, t) * 1.0;
-        return (
-          <mesh
-            key={`ridge-${i}`}
-            position={[Math.cos(b.a) * trunkR, b.y, Math.sin(b.a) * trunkR]}
-            rotation={[0, -b.a + Math.PI / 2, 0]}
-          >
-            <boxGeometry args={[0.18, b.h, 0.45]} />
-            <meshStandardMaterial color="#05090d" roughness={1} />
-          </mesh>
-        );
-      })}
-
-      {/* Horizontal bark bands */}
-      {[0.18, 0.36, 0.54, 0.72].map((tt, i) => {
-        const r = THREE.MathUtils.lerp(BASE_R, TOP_R, tt) * 1.03;
-        return (
-          <mesh key={`band-${i}`} position={[0, HEIGHT * tt, 0]}>
-            <cylinderGeometry args={[r, r, 0.22, 24]} />
-            <meshStandardMaterial color="#060a0e" roughness={1} />
-          </mesh>
-        );
-      })}
+      {/* Subtle dark inner shell to deepen the crevices visually */}
+      <mesh geometry={trunkGeom} scale={[0.985, 1, 0.985]}>
+        <meshStandardMaterial color="#03070a" roughness={1} />
+      </mesh>
 
       {/* Knots */}
       {knots.map((k, i) => (
