@@ -38,7 +38,7 @@ export default function SponsorsDashboard() {
   }, []);
 
   async function moveStage(id: string, stage: Lead["stage"]) {
-    await supabase.from("sponsorship_leads").update({ stage }).eq("id", id);
+    await supabase.from("sponsorship_leads").update({ stage } as never).eq("id", id);
     setLeads((prev) => prev.map((l) => (l.id === id ? { ...l, stage } : l)));
   }
 
