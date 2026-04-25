@@ -47,17 +47,31 @@ const Propworld = () => {
         )}
       </AnimatePresence>
 
-      {/* Transition fade */}
+      {/* Cinematic transition: vignette + fade to black */}
       <AnimatePresence>
         {mode === "transitioning" && (
-          <motion.div
-            key="trans"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: [0, 0.85, 0] }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 2.6, times: [0, 0.55, 1] }}
-            className="pointer-events-none absolute inset-0 bg-black"
-          />
+          <>
+            <motion.div
+              key="trans-vignette"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.6 }}
+              className="pointer-events-none absolute inset-0"
+              style={{
+                background:
+                  "radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.95) 85%)",
+              }}
+            />
+            <motion.div
+              key="trans-fade"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0, 1, 1, 0] }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 2.8, times: [0, 0.55, 0.85, 1], ease: "easeInOut" }}
+              className="pointer-events-none absolute inset-0 bg-black"
+            />
+          </>
         )}
       </AnimatePresence>
 
