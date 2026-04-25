@@ -1,169 +1,209 @@
 import { useMemo } from "react";
 import * as THREE from "three";
-import { Cylinder } from "@react-three/drei";
+
+/**
+ * Realistic-feeling forest trees ringing the clearing.
+ * Each tree: tapered trunk + root flares + 4-6 main limbs (curved tubes) +
+ * leafy canopy made of layered icosahedron clusters.
+ * Sized similar to (but slightly smaller than) the central ancient tree.
+ */
 
 type TreeSpec = {
   pos: [number, number, number];
   scale: number;
-  height: number;
-  radiusTop: number;
-  radiusBottom: number;
-  hue: number; // dark blue-green tint
+  trunkColor: string;
+  leafColor: string;
+  leafColor2: string;
+  seed: number;
 };
 
-type RootSpec = {
-  parentPos: [number, number, number];
-  angle: number;
-  length: number;
-  thickness: number;
-};
+function rand(n: number) {
+  const x = Math.sin(n * 9999.13) * 43758.5453;
+  return x - Math.floor(x);
+}
 
-type VineSpec = {
-  pos: [number, number, number];
-  length: number;
-  sway: number;
-};
+function makeBranchGeom(
+  start: THREE.Vector3,
+  angle: number,
+  length: number,
+  radius: number,
+  curlSeed: number
+) {
+  const dir = new THREE.Vector3(Math.cos(angle), 0.55, Math.sin(angle)).normalize();
+  const pts: THREE.Vector3[] = [start.clone()];
+  const segs = 6;
+  for (let i = 1; i <= segs; i++) {
+    const t = i / segs;
+    const lift = Math.sin(t * Math.PI * 0.7) * 1.2;
+    const swirl = Math.sin(t * Math.PI + curlSeed) * 0.4 * (1 - t * 0.3);
+    const p = start.clone()
+      .add(dir.clone().multiplyScalar(length * t))
+      .add(new THREE.Vector3(0, lift, 0))
+      .add(new THREE.Vector3(swirl, 0, swirl * 0.7));
+    pts.push(p);
+  }
+  const curve = new THREE.CatmullRomCurve3(pts);
+  return {
+    geom: new THREE.TubeGeometry(curve, 24, radius, 8, false),
+    end: pts[pts.length - 1],
+  };
+}
 
-type FoliageSpec = {
-  pos: [number, number, number];
-  scale: number;
-};
+function ForestTree({ spec }: { spec: TreeSpec }) {
+  const { pos, scale, trunkColor, leafColor, leafColor2, seed } = spec;
 
-/* ---------- Vine: a thin curved tube hanging from canopy ---------- */
-function Vine({ pos, length, sway }: VineSpec) {
-  const geom = useMemo(() => {
-    const points: THREE.Vector3[] = [];
-    const segs = 10;
-    for (let i = 0; i <= segs; i++) {
-      const k = i / segs;
-      const y = -length * k;
-      // gentle curl
-      const x = Math.sin(k * Math.PI * 1.2 + sway) * 0.25 * (1 - k);
-      const z = Math.cos(k * Math.PI * 0.9 + sway) * 0.18 * (1 - k);
-      points.push(new THREE.Vector3(x, y, z));
+  const baseHeight = 18 * scale;
+  const trunkRadiusBottom = 1.1 * scale;
+  const trunkRadiusTop = 0.45 * scale;
+
+  // Trunk geometry — slightly curved + tapered tube
+  const trunkGeom = useMemo(() => {
+    const sway = (rand(seed) - 0.5) * 0.6;
+    const curve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(0, 0, 0),
+      new THREE.Vector3(sway * 0.2, baseHeight * 0.3, -sway * 0.15),
+      new THREE.Vector3(sway * 0.4, baseHeight * 0.6, sway * 0.2),
+      new THREE.Vector3(sway * 0.5, baseHeight * 0.85, -sway * 0.1),
+      new THREE.Vector3(sway * 0.55, baseHeight, 0),
+    ]);
+    const g = new THREE.TubeGeometry(curve, 40, trunkRadiusBottom, 14, false);
+    const posAttr = g.attributes.position as THREE.BufferAttribute;
+    for (let i = 0; i < posAttr.count; i++) {
+      const y = posAttr.getY(i);
+      const t = THREE.MathUtils.clamp(y / baseHeight, 0, 1);
+      const r = THREE.MathUtils.lerp(1.0, trunkRadiusTop / trunkRadiusBottom, t);
+      posAttr.setX(i, posAttr.getX(i) * r);
+      posAttr.setZ(i, posAttr.getZ(i) * r);
     }
-    const curve = new THREE.CatmullRomCurve3(points);
-    return new THREE.TubeGeometry(curve, 14, 0.035, 6, false);
-  }, [length, sway]);
+    posAttr.needsUpdate = true;
+    g.computeVertexNormals();
+    return g;
+  }, [seed, baseHeight, trunkRadiusBottom, trunkRadiusTop]);
 
-  return (
-    <mesh position={pos} geometry={geom}>
-      <meshStandardMaterial color="#0a1810" roughness={1} />
-    </mesh>
-  );
-}
-
-/* ---------- Root: a tilted tapered cylinder fanning from a trunk ---------- */
-function Root({ parentPos, angle, length, thickness }: RootSpec) {
-  const x = parentPos[0] + Math.cos(angle) * (thickness * 1.6);
-  const z = parentPos[2] + Math.sin(angle) * (thickness * 1.6);
-  return (
-    <Cylinder
-      args={[thickness * 0.4, thickness, length, 8]}
-      position={[x, parentPos[1] - length * 0.35, z]}
-      rotation={[Math.PI / 2 - 0.5, 0, -angle + Math.PI / 2]}
-    >
-      <meshStandardMaterial color="#0a1410" roughness={1} />
-    </Cylinder>
-  );
-}
-
-/* ---------- Mossy foliage clump (low-poly icosahedron) ---------- */
-function Foliage({ pos, scale }: FoliageSpec) {
-  return (
-    <mesh position={pos} scale={scale}>
-      <icosahedronGeometry args={[1, 0]} />
-      <meshStandardMaterial color="#0c3a2a" roughness={1} flatShading />
-    </mesh>
-  );
-}
-
-/* ---------- Single ancient tree (cylindrical trunk + roots + vines) ---------- */
-function GiantTree({ spec }: { spec: TreeSpec }) {
-  const { pos, scale, height, radiusTop, radiusBottom, hue } = spec;
-
-  const roots = useMemo<RootSpec[]>(() => {
-    const arr: RootSpec[] = [];
-    const count = 7;
+  // Main limbs branching from upper trunk
+  const branches = useMemo(() => {
+    const arr: { geom: THREE.TubeGeometry; end: THREE.Vector3 }[] = [];
+    const count = 5;
     for (let i = 0; i < count; i++) {
-      const a = (i / count) * Math.PI * 2 + Math.sin(i * 1.3) * 0.3;
-      arr.push({
-        parentPos: [pos[0], 1.0 * scale, pos[2]],
-        angle: a,
-        length: 2.4 * scale * (0.85 + Math.sin(i * 7) * 0.2),
-        thickness: radiusBottom * 0.55,
-      });
+      const a = (i / count) * Math.PI * 2 + rand(seed + i) * 0.6;
+      const sy = baseHeight * (0.55 + rand(seed + i + 11) * 0.35);
+      const start = new THREE.Vector3(0, sy, 0);
+      const length = (3.2 + rand(seed + i + 22) * 2.2) * scale;
+      const radius = 0.22 * scale * (0.8 + rand(seed + i + 33) * 0.4);
+      arr.push(makeBranchGeom(start, a, length, radius, seed + i));
     }
     return arr;
-  }, [pos, scale, radiusBottom]);
+  }, [seed, scale, baseHeight]);
 
-  const vines = useMemo<VineSpec[]>(() => {
-    const arr: VineSpec[] = [];
+  // Root flares
+  const roots = useMemo(() => {
+    const arr: { pos: [number, number, number]; rot: [number, number, number]; scale: number }[] = [];
     const count = 6;
     for (let i = 0; i < count; i++) {
-      const a = (i / count) * Math.PI * 2 + Math.sin(i * 2.7);
-      const r = radiusTop * 0.95;
+      const a = (i / count) * Math.PI * 2 + rand(seed + i + 88) * 0.4;
       arr.push({
-        pos: [
-          pos[0] + Math.cos(a) * r,
-          pos[1] + height * 0.85,
-          pos[2] + Math.sin(a) * r,
-        ],
-        length: 3.5 + ((Math.sin(i * 3.1) + 1) / 2) * 4,
-        sway: i * 0.7,
+        pos: [Math.cos(a) * trunkRadiusBottom * 0.9, 0.4, Math.sin(a) * trunkRadiusBottom * 0.9],
+        rot: [Math.PI / 2 - 0.4, 0, -a + Math.PI / 2],
+        scale: 0.7 + rand(seed + i + 99) * 0.4,
       });
     }
     return arr;
-  }, [pos, height, radiusTop]);
+  }, [seed, trunkRadiusBottom]);
 
-  // Subtle hue variation on trunks
-  const trunkColor = useMemo(() => {
-    const c = new THREE.Color("#0e1a14");
-    c.offsetHSL(hue * 0.02, 0, hue * 0.05);
-    return c;
-  }, [hue]);
+  // Foliage clusters at branch ends + crown
+  const foliage = useMemo(() => {
+    const arr: { pos: [number, number, number]; scale: number; alt: boolean }[] = [];
+    branches.forEach((b, i) => {
+      const e = b.end;
+      const base = (1.4 + rand(seed + i + 200) * 0.8) * scale;
+      arr.push({ pos: [e.x, e.y, e.z], scale: base, alt: false });
+      // sub-puffs
+      for (let j = 0; j < 4; j++) {
+        const off = j * 1.4 + i;
+        arr.push({
+          pos: [
+            e.x + Math.sin(off) * 0.9 * scale,
+            e.y + Math.cos(j) * 0.6 * scale + 0.3,
+            e.z + Math.cos(off) * 0.9 * scale,
+          ],
+          scale: base * (0.55 + rand(seed + i * 10 + j) * 0.3),
+          alt: j % 2 === 0,
+        });
+      }
+    });
+    // Crown puffs above the trunk top
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI * 2;
+      arr.push({
+        pos: [Math.cos(a) * 0.9 * scale, baseHeight + 0.4, Math.sin(a) * 0.9 * scale],
+        scale: 1.6 * scale,
+        alt: i % 2 === 0,
+      });
+    }
+    return arr;
+  }, [branches, seed, scale, baseHeight]);
 
   return (
-    <group>
-      {/* Massive cylindrical trunk */}
-      <Cylinder
-        args={[radiusTop, radiusBottom, height, 14]}
-        position={[pos[0], pos[1] + height / 2, pos[2]]}
-        castShadow
-        receiveShadow
-      >
-        <meshStandardMaterial color={trunkColor} roughness={0.98} />
-      </Cylinder>
-
-      {/* Bark grain ridges */}
-      {[0.2, 0.45, 0.7].map((y, i) => (
-        <Cylinder
-          key={i}
-          args={[radiusBottom * (1 - y * 0.3) + 0.04, radiusBottom * (1 - y * 0.3) + 0.04, 0.18, 14]}
-          position={[pos[0], pos[1] + height * y, pos[2]]}
-        >
-          <meshStandardMaterial color="#050a07" roughness={1} />
-        </Cylinder>
-      ))}
-
-      {/* Mossy patches climbing the trunk */}
-      <mesh position={[pos[0] + radiusBottom * 0.85, pos[1] + 1.2, pos[2] + radiusBottom * 0.4]}>
-        <sphereGeometry args={[0.55, 8, 8]} />
-        <meshStandardMaterial color="#0c3a2a" roughness={1} flatShading />
-      </mesh>
-      <mesh position={[pos[0] - radiusBottom * 0.7, pos[1] + 2.4, pos[2] + radiusBottom * 0.6]}>
-        <sphereGeometry args={[0.45, 8, 8]} />
-        <meshStandardMaterial color="#0a3225" roughness={1} flatShading />
-      </mesh>
-
-      {/* Roots fanning out */}
+    <group position={pos}>
+      {/* Root flares */}
       {roots.map((r, i) => (
-        <Root key={`r-${i}`} {...r} />
+        <mesh key={`root-${i}`} position={r.pos} rotation={r.rot}>
+          <coneGeometry args={[0.35 * scale * r.scale, 1.6 * scale * r.scale, 6]} />
+          <meshStandardMaterial color={trunkColor} roughness={1} />
+        </mesh>
       ))}
 
-      {/* Hanging vines */}
-      {vines.map((v, i) => (
-        <Vine key={`v-${i}`} {...v} />
+      {/* Trunk */}
+      <mesh geometry={trunkGeom} castShadow receiveShadow>
+        <meshStandardMaterial color={trunkColor} roughness={0.95} />
+      </mesh>
+
+      {/* Bark detail rings */}
+      {[0.25, 0.5, 0.75].map((t, i) => {
+        const r = THREE.MathUtils.lerp(trunkRadiusBottom, trunkRadiusTop, t) * 1.04;
+        return (
+          <mesh key={`ring-${i}`} position={[0, baseHeight * t, 0]}>
+            <cylinderGeometry args={[r, r, 0.15, 14]} />
+            <meshStandardMaterial color="#06100c" roughness={1} />
+          </mesh>
+        );
+      })}
+
+      {/* Mossy patches on trunk */}
+      <mesh position={[trunkRadiusBottom * 0.7, 1.4, trunkRadiusBottom * 0.4]}>
+        <sphereGeometry args={[0.45 * scale, 10, 8]} />
+        <meshStandardMaterial color="#1a4a38" roughness={1} emissive="#194f3c" emissiveIntensity={0.15} />
+      </mesh>
+      <mesh position={[-trunkRadiusBottom * 0.5, 3.2, trunkRadiusBottom * 0.6]}>
+        <sphereGeometry args={[0.35 * scale, 10, 8]} />
+        <meshStandardMaterial color="#16412f" roughness={1} emissive="#1c5a44" emissiveIntensity={0.18} />
+      </mesh>
+
+      {/* Branches */}
+      {branches.map((b, i) => (
+        <mesh key={`br-${i}`} geometry={b.geom} castShadow>
+          <meshStandardMaterial color={trunkColor} roughness={1} />
+        </mesh>
+      ))}
+
+      {/* Foliage */}
+      {foliage.map((f, i) => (
+        <group key={`fo-${i}`} position={f.pos}>
+          <mesh>
+            <icosahedronGeometry args={[f.scale, 1]} />
+            <meshStandardMaterial color={f.alt ? leafColor2 : leafColor} roughness={0.95} flatShading />
+          </mesh>
+          <mesh scale={[0.78, 0.78, 0.78]}>
+            <icosahedronGeometry args={[f.scale, 1]} />
+            <meshStandardMaterial
+              color={f.alt ? leafColor : leafColor2}
+              roughness={0.9}
+              flatShading
+              emissive="#0a2418"
+              emissiveIntensity={0.12}
+            />
+          </mesh>
+        </group>
       ))}
     </group>
   );
@@ -171,50 +211,49 @@ function GiantTree({ spec }: { spec: TreeSpec }) {
 
 /* ---------- Forest ---------- */
 export default function Forest() {
-  // Background giant trees ringing the clearing (leaving the center for the AncientTree)
   const trees = useMemo<TreeSpec[]>(() => {
     const items: TreeSpec[] = [];
-    const seed = (n: number) => {
-      const x = Math.sin(n * 9999) * 43758.5453;
-      return x - Math.floor(x);
-    };
-    const count = 14;
-    for (let i = 0; i < count; i++) {
-      const a = (i / count) * Math.PI * 2 + seed(i) * 0.4;
-      const r = 13 + seed(i + 50) * 7;
-      const x = Math.cos(a) * r;
-      const z = Math.sin(a) * r;
-      const s = 1.0 + seed(i + 100) * 0.6;
-      const h = 22 + seed(i + 200) * 10;
-      const rb = 1.4 + seed(i + 300) * 0.7;
-      const rt = rb * (0.55 + seed(i + 400) * 0.2);
+    // Inner ring — closer, slightly smaller
+    const innerCount = 10;
+    for (let i = 0; i < innerCount; i++) {
+      const a = (i / innerCount) * Math.PI * 2 + rand(i) * 0.35;
+      const r = 14 + rand(i + 50) * 4;
       items.push({
-        pos: [x, 0, z],
-        scale: s,
-        height: h,
-        radiusBottom: rb,
-        radiusTop: rt,
-        hue: seed(i + 500),
+        pos: [Math.cos(a) * r, 0, Math.sin(a) * r],
+        scale: 0.95 + rand(i + 100) * 0.35,
+        trunkColor: ["#0d161e", "#101820", "#0a141c"][i % 3],
+        leafColor: ["#0e3a2a", "#103e2e", "#0d3326"][i % 3],
+        leafColor2: ["#1a5440", "#16523e", "#185644"][i % 3],
+        seed: i + 1,
+      });
+    }
+    // Outer ring — taller, further back
+    const outerCount = 9;
+    for (let i = 0; i < outerCount; i++) {
+      const a = (i / outerCount) * Math.PI * 2 + 0.18 + rand(i + 200) * 0.4;
+      const r = 24 + rand(i + 250) * 5;
+      items.push({
+        pos: [Math.cos(a) * r, 0, Math.sin(a) * r],
+        scale: 1.15 + rand(i + 300) * 0.4,
+        trunkColor: ["#0a121a", "#0c141c", "#08101a"][i % 3],
+        leafColor: ["#0a2e22", "#0c3328", "#0b3025"][i % 3],
+        leafColor2: ["#144836", "#15503e", "#124234"][i % 3],
+        seed: i + 500,
       });
     }
     return items;
   }, []);
 
-  // Mossy foliage clumps scattered on the ground
-  const foliage = useMemo<FoliageSpec[]>(() => {
-    const items: FoliageSpec[] = [];
-    const seed = (n: number) => {
-      const x = Math.sin(n * 7919.31) * 43758.5453;
-      return x - Math.floor(x);
-    };
-    for (let i = 0; i < 60; i++) {
-      const a = seed(i) * Math.PI * 2;
-      const r = 6 + seed(i + 50) * 14;
+  // Ground foliage clumps
+  const foliage = useMemo(() => {
+    const items: { pos: [number, number, number]; scale: number }[] = [];
+    for (let i = 0; i < 70; i++) {
+      const a = rand(i + 700) * Math.PI * 2;
+      const r = 6 + rand(i + 750) * 18;
       const x = Math.cos(a) * r;
       const z = Math.sin(a) * r;
-      // skip if too close to center (where ancient tree sits)
-      if (Math.hypot(x, z) < 5.5) continue;
-      const s = 0.4 + seed(i + 100) * 0.7;
+      if (Math.hypot(x, z) < 6) continue;
+      const s = 0.4 + rand(i + 800) * 0.7;
       items.push({ pos: [x, s * 0.4 - 0.1, z], scale: s });
     }
     return items;
@@ -223,10 +262,13 @@ export default function Forest() {
   return (
     <group>
       {trees.map((t, i) => (
-        <GiantTree key={i} spec={t} />
+        <ForestTree key={i} spec={t} />
       ))}
       {foliage.map((f, i) => (
-        <Foliage key={`f-${i}`} {...f} />
+        <mesh key={`f-${i}`} position={f.pos} scale={f.scale}>
+          <icosahedronGeometry args={[1, 0]} />
+          <meshStandardMaterial color="#0c3a2a" roughness={1} flatShading />
+        </mesh>
       ))}
     </group>
   );
