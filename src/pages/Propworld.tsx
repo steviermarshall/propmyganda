@@ -1,127 +1,88 @@
-import { motion } from "framer-motion";
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 
 const PropworldScene = lazy(() => import("@/components/propworld/PropworldScene"));
 
-const realms = [
-  {
-    title: "The Sound",
-    desc: "Sonic identity of the Propworld universe — frequencies, rituals, releases.",
-    glyph: "◐",
-  },
-  {
-    title: "The Visuals",
-    desc: "Worldbuilding through art, film, and design that bends reality.",
-    glyph: "◈",
-  },
-  {
-    title: "The Culture",
-    desc: "Community, rituals, and the people who live inside the world.",
-    glyph: "◆",
-  },
-];
-
-const containerVariants = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: { staggerChildren: 0.15, delayChildren: 0.4 },
-  },
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 30 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] } },
-};
+type Mode = "forest" | "transitioning" | "theater";
 
 const Propworld = () => {
+  const [mode, setMode] = useState<Mode>("forest");
+
   return (
-    <main className="relative min-h-screen bg-[#03030a] text-foreground overflow-hidden">
-      {/* 3D Scene background */}
-      <div className="fixed inset-0 z-0">
-        <Suspense fallback={<div className="w-full h-full bg-[#03030a]" />}>
-          <PropworldScene />
+    <main className="relative h-screen w-screen overflow-hidden bg-[#02060a] text-white">
+      {/* Full-screen 3D scene */}
+      <div className="absolute inset-0">
+        <Suspense fallback={<div className="w-full h-full bg-[#02060a]" />}>
+          <PropworldScene onModeChange={setMode} />
         </Suspense>
       </div>
 
-      {/* Gradient veil for legibility */}
-      <div className="pointer-events-none fixed inset-0 z-10 bg-gradient-to-b from-[#03030a]/80 via-transparent to-[#03030a]/90" />
+      {/* Subtle vignette overlay for legibility */}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/60" />
 
-      {/* Overlay UI */}
-      <div className="relative z-20">
-        <section className="container-content min-h-screen flex flex-col justify-center pt-24 pb-20">
+      {/* Forest UI */}
+      <AnimatePresence>
+        {mode === "forest" && (
           <motion.div
-            initial="hidden"
-            animate="show"
-            variants={containerVariants}
-            className="max-w-3xl"
+            key="forest-ui"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+            className="pointer-events-none absolute inset-x-0 top-24 md:top-28 flex flex-col items-center text-center px-6"
           >
-            <motion.p
-              variants={itemVariants}
-              className="text-[10px] md:text-xs tracking-[0.4em] uppercase text-[#00f0ff] mb-6"
-            >
-              Enter the universe
-            </motion.p>
-
-            <motion.h1
-              variants={itemVariants}
-              className="text-6xl md:text-8xl lg:text-9xl font-bold uppercase tracking-tight text-white leading-[0.9]"
-            >
-              Prop
-              <span className="block bg-gradient-to-r from-[#00f0ff] via-white to-[#ff00aa] bg-clip-text text-transparent">
-                world
+            <p className="text-[10px] md:text-xs tracking-[0.4em] uppercase text-amber-200/80 mb-4">
+              Propworld
+            </p>
+            <h1 className="text-4xl md:text-6xl font-bold uppercase tracking-tight">
+              Enter the
+              <span className="block bg-gradient-to-r from-amber-200 via-amber-400 to-amber-200 bg-clip-text text-transparent">
+                Ancient Tree
               </span>
-            </motion.h1>
-
-            <motion.p
-              variants={itemVariants}
-              className="mt-8 max-w-xl text-base md:text-lg text-white/70 leading-relaxed"
-            >
-              A living world built by PMG — culture, sound, and story converging
-              into one immersive experience. Drag, orbit, and step inside.
-            </motion.p>
-
-            <motion.div variants={itemVariants} className="mt-10 flex items-center gap-4">
-              <div className="flex items-center gap-2 text-[10px] tracking-[0.3em] uppercase text-white/50">
-                <span className="w-8 h-px bg-[#00f0ff]" />
-                Drag to orbit
-              </div>
-            </motion.div>
+            </h1>
+            <p className="mt-4 max-w-md text-sm md:text-base text-white/60">
+              Click the glowing hollow to step inside.
+            </p>
           </motion.div>
-        </section>
+        )}
+      </AnimatePresence>
 
-        {/* Realms grid */}
-        <section className="container-content pb-32">
+      {/* Transition fade */}
+      <AnimatePresence>
+        {mode === "transitioning" && (
           <motion.div
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, amount: 0.2 }}
-            variants={containerVariants}
-            className="grid grid-cols-1 md:grid-cols-3 gap-6"
-          >
-            {realms.map((realm) => (
-              <motion.article
-                key={realm.title}
-                variants={itemVariants}
-                whileHover={{ y: -6 }}
-                transition={{ type: "spring", stiffness: 260, damping: 22 }}
-                className="group relative border border-white/10 bg-white/[0.03] backdrop-blur-md p-8 overflow-hidden"
-              >
-                <div className="text-3xl text-[#00f0ff] mb-5 opacity-80 group-hover:opacity-100 transition-opacity">
-                  {realm.glyph}
-                </div>
-                <h2 className="text-xl font-bold uppercase tracking-wider text-white mb-3">
-                  {realm.title}
-                </h2>
-                <p className="text-sm text-white/60 leading-relaxed">{realm.desc}</p>
+            key="trans"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: [0, 0.85, 0] }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 2.6, times: [0, 0.55, 1] }}
+            className="pointer-events-none absolute inset-0 bg-black"
+          />
+        )}
+      </AnimatePresence>
 
-                {/* Hover beam */}
-                <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-[#00f0ff] to-transparent scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-center" />
-              </motion.article>
-            ))}
+      {/* Theater UI */}
+      <AnimatePresence>
+        {mode === "theater" && (
+          <motion.div
+            key="theater-ui"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
+            className="absolute inset-x-0 bottom-8 flex flex-col items-center px-6"
+          >
+            <p className="text-[10px] tracking-[0.4em] uppercase text-amber-200/70 mb-3">
+              The Inner Sanctum · Live
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              className="pointer-events-auto text-[10px] tracking-[0.3em] uppercase border border-amber-200/30 px-5 py-2.5 text-amber-100 hover:bg-amber-200/10 hover:border-amber-200/60 transition-colors"
+            >
+              ← Return to Forest
+            </button>
           </motion.div>
-        </section>
-      </div>
+        )}
+      </AnimatePresence>
     </main>
   );
 };
