@@ -4,47 +4,70 @@ import * as THREE from "three";
 
 interface Props {
   mode: "forest" | "transitioning" | "theater";
+  hovered?: boolean;
   onTransitionComplete: () => void;
 }
 
 /**
- * Animates the camera through three phases:
- *  - forest: gentle orbit around the ancient tree
- *  - transitioning: cinematic fly-through into the hollow entrance
- *  - theater: settle in front of the screen
+ * Camera choreography:
+ *  - forest: gentle orbit; on hover, slowly drift forward toward the tree
+ *  - transitioning: cinematic zoom into the hollow with FOV punch
+ *  - theater: settle in the seat with subtle sway
  */
-export default function CameraRig({ mode, onTransitionComplete }: Props) {
+export default function CameraRig({ mode, hovered, onTransitionComplete }: Props) {
   const { camera } = useThree();
   const startTimeRef = useRef<number | null>(null);
   const startPosRef = useRef(new THREE.Vector3());
-  const startQuatRef = useRef(new THREE.Quaternion());
+  const startFovRef = useRef(55);
   const completedRef = useRef(false);
 
-  // Forest target (orbit center)
+  // Drift offset added during hover (lerped, not snapped)
+  const driftRef = useRef(0);
+  // Orbit angle accumulator so we can freeze it during transitions
+  const angleRef = useRef(0);
+
   const forestTarget = useRef(new THREE.Vector3(0, 4, 0));
   const theaterTarget = useRef(new THREE.Vector3(0, 3, -5.35));
   const theaterPos = useRef(new THREE.Vector3(0, 3, 4));
 
-  // Reset transition state when mode changes
   useEffect(() => {
     if (mode === "transitioning") {
       startTimeRef.current = null;
       completedRef.current = false;
       startPosRef.current.copy(camera.position);
-      startQuatRef.current.copy(camera.quaternion);
+      const persp = camera as THREE.PerspectiveCamera;
+      startFovRef.current = persp.fov;
+    }
+    if (mode === "forest") {
+      const persp = camera as THREE.PerspectiveCamera;
+      persp.fov = 55;
+      persp.updateProjectionMatrix();
     }
   }, [mode, camera]);
 
   useFrame((state, delta) => {
     const t = state.clock.getElapsedTime();
+    const persp = camera as THREE.PerspectiveCamera;
 
     if (mode === "forest") {
-      // Slow cinematic orbit
-      const radius = 14;
-      const speed = 0.08;
-      camera.position.x = Math.sin(t * speed) * radius;
-      camera.position.z = Math.cos(t * speed) * radius;
-      camera.position.y = 5 + Math.sin(t * 0.3) * 0.4;
+      // Slow continuous orbit
+      angleRef.current += delta * 0.08;
+      const baseRadius = 14;
+
+      // Hover: lerp drift toward the tree (reduce radius), ease back when not hovered
+      const targetDrift = hovered ? 4.5 : 0;
+      driftRef.current = THREE.MathUtils.lerp(driftRef.current, targetDrift, 0.025);
+      const radius = baseRadius - driftRef.current;
+
+      camera.position.x = Math.sin(angleRef.current) * radius;
+      camera.position.z = Math.cos(angleRef.current) * radius;
+      camera.position.y = 5 + Math.sin(t * 0.3) * 0.4 - driftRef.current * 0.15;
+
+      // Hover: tighten FOV for a subtle "leaning in" feel
+      const targetFov = hovered ? 48 : 55;
+      persp.fov = THREE.MathUtils.lerp(persp.fov, targetFov, 0.04);
+      persp.updateProjectionMatrix();
+
       camera.lookAt(forestTarget.current);
       return;
     }
@@ -52,38 +75,40 @@ export default function CameraRig({ mode, onTransitionComplete }: Props) {
     if (mode === "transitioning") {
       if (startTimeRef.current === null) startTimeRef.current = t;
       const elapsed = t - startTimeRef.current;
-      const duration = 2.6;
+      const duration = 2.8;
       const k = Math.min(elapsed / duration, 1);
-      // ease in-out cubic
       const e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
 
-      // Path: current → entrance mouth → into the dark → settled in theater
       const p0 = startPosRef.current;
-      const p1 = new THREE.Vector3(0, 2.5, 5.5);   // approach entrance
-      const p2 = new THREE.Vector3(0, 2.5, 3.0);   // through portal
+      const p1 = new THREE.Vector3(0, 2.8, 6.0);   // align with entrance
+      const p2 = new THREE.Vector3(0, 2.8, 3.25);  // mouth of the hollow
       const p3 = new THREE.Vector3(0, 3, 4);       // theater seat
 
       let pos: THREE.Vector3;
       if (e < 0.4) {
-        const u = e / 0.4;
-        pos = p0.clone().lerp(p1, u);
-      } else if (e < 0.7) {
-        const u = (e - 0.4) / 0.3;
-        pos = p1.clone().lerp(p2, u);
+        pos = p0.clone().lerp(p1, e / 0.4);
+      } else if (e < 0.75) {
+        pos = p1.clone().lerp(p2, (e - 0.4) / 0.35);
       } else {
-        const u = (e - 0.7) / 0.3;
-        pos = p2.clone().lerp(p3, u);
+        pos = p2.clone().lerp(p3, (e - 0.75) / 0.25);
       }
       camera.position.copy(pos);
 
-      // Look target glides from tree center → portal → screen
+      // FOV punch — narrows on approach, widens as you "step in"
+      const fov =
+        e < 0.75
+          ? THREE.MathUtils.lerp(startFovRef.current, 38, e / 0.75)
+          : THREE.MathUtils.lerp(38, 60, (e - 0.75) / 0.25);
+      persp.fov = fov;
+      persp.updateProjectionMatrix();
+
       const lookStart = forestTarget.current;
-      const lookMid = new THREE.Vector3(0, 2.5, 3);
+      const lookMid = new THREE.Vector3(0, 2.8, 3.25);
       const lookEnd = theaterTarget.current;
       const look =
-        e < 0.5
-          ? lookStart.clone().lerp(lookMid, e / 0.5)
-          : lookMid.clone().lerp(lookEnd, (e - 0.5) / 0.5);
+        e < 0.55
+          ? lookStart.clone().lerp(lookMid, e / 0.55)
+          : lookMid.clone().lerp(lookEnd, (e - 0.55) / 0.45);
       camera.lookAt(look);
 
       if (k >= 1 && !completedRef.current) {
@@ -93,12 +118,14 @@ export default function CameraRig({ mode, onTransitionComplete }: Props) {
       return;
     }
 
-    // theater mode — gentle sway in the seat
+    // theater
     const sway = Math.sin(t * 0.4) * 0.06;
     camera.position.lerp(
       new THREE.Vector3(theaterPos.current.x + sway, theaterPos.current.y, theaterPos.current.z),
       0.05
     );
+    persp.fov = THREE.MathUtils.lerp(persp.fov, 55, 0.05);
+    persp.updateProjectionMatrix();
     camera.lookAt(theaterTarget.current);
   });
 
