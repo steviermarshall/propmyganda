@@ -71,15 +71,15 @@ export default function PropworldScene({ onModeChange }: Props) {
 
       <EffectComposer>
         <Bloom
-          intensity={mode === "transitioning" ? 2.2 : 1.1}
-          luminanceThreshold={0.2}
+          intensity={mode === "transitioning" ? 2.2 : mode === "theater" ? 1.6 : 1.1}
+          luminanceThreshold={mode === "theater" ? 0.15 : 0.2}
           luminanceSmoothing={0.9}
           mipmapBlur
         />
         <Vignette
           eskil={false}
-          offset={0.15}
-          darkness={mode === "transitioning" ? 1.0 : 0.85}
+          offset={mode === "theater" ? 0.25 : 0.15}
+          darkness={mode === "transitioning" ? 1.0 : mode === "theater" ? 0.9 : 0.85}
         />
       </EffectComposer>
     </Canvas>
