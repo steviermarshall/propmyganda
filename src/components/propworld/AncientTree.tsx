@@ -26,7 +26,8 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
   const BASE_R = 4.2;
   const TOP_R = 1.6;
 
-  // Trunk — sinuous tapered tube
+  // Trunk — sinuous tapered tube with PROCEDURAL BARK displacement
+  // Multi-octave noise + angular ridges create deep vertical grooves and burls.
   const trunkGeom = useMemo(() => {
     const curve = new THREE.CatmullRomCurve3([
       new THREE.Vector3(0, 0, 0),
@@ -36,17 +37,70 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
       new THREE.Vector3(-0.2, HEIGHT * 0.9, 0.2),
       new THREE.Vector3(0.1, HEIGHT, 0),
     ]);
-    const g = new THREE.TubeGeometry(curve, 100, BASE_R, 24, false);
+    // Higher radial + tubular segments so displacement reads as real bark
+    const g = new THREE.TubeGeometry(curve, 220, BASE_R, 64, false);
     const pos = g.attributes.position as THREE.BufferAttribute;
+
+    // Fast hash-based pseudo noise (deterministic)
+    const hash = (x: number, y: number, z: number) => {
+      const s = Math.sin(x * 12.9898 + y * 78.233 + z * 37.719) * 43758.5453;
+      return s - Math.floor(s);
+    };
+    const fbm = (x: number, y: number, z: number) => {
+      let v = 0;
+      let amp = 1;
+      let freq = 1;
+      for (let o = 0; o < 4; o++) {
+        v += (hash(x * freq, y * freq, z * freq) - 0.5) * amp;
+        amp *= 0.5;
+        freq *= 2.1;
+      }
+      return v;
+    };
+
     for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i);
       const y = pos.getY(i);
+      const z = pos.getZ(i);
+
       const t = THREE.MathUtils.clamp(y / HEIGHT, 0, 1);
-      // smoother taper with subtle bulges
       const taper = THREE.MathUtils.lerp(1.0, TOP_R / BASE_R, t);
-      const bulge = 1 + Math.sin(y * 0.6) * 0.04;
-      const r = taper * bulge;
-      pos.setX(i, pos.getX(i) * r);
-      pos.setZ(i, pos.getZ(i) * r);
+
+      // Apply taper first
+      let nx = x * taper;
+      let nz = z * taper;
+
+      // Compute angle around trunk axis for vertical ridges
+      const angle = Math.atan2(nz, nx);
+      const radial = Math.sqrt(nx * nx + nz * nz);
+
+      // Vertical ridges: high-frequency angular grooves, slightly twisting up
+      const ridges =
+        Math.sin(angle * 22 + y * 0.18) * 0.5 +
+        Math.sin(angle * 11 - y * 0.07) * 0.35;
+
+      // FBM for organic bumps & burls
+      const noise = fbm(nx * 0.8, y * 0.45, nz * 0.8) * 1.6;
+
+      // Larger low-freq bulges
+      const bulge = Math.sin(y * 0.35 + angle * 2) * 0.18;
+
+      // Stronger displacement at the base, easing toward the top
+      const baseFalloff = THREE.MathUtils.lerp(1.0, 0.45, t);
+
+      // Total radial displacement (in world units)
+      const disp = (ridges * 0.18 + noise * 0.22 + bulge) * baseFalloff;
+
+      // Push outward along the radial direction
+      if (radial > 0.0001) {
+        const dirX = nx / radial;
+        const dirZ = nz / radial;
+        nx += dirX * disp;
+        nz += dirZ * disp;
+      }
+
+      pos.setX(i, nx);
+      pos.setZ(i, nz);
     }
     pos.needsUpdate = true;
     g.computeVertexNormals();
