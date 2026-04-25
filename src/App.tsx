@@ -18,6 +18,7 @@ import Distribution from "./pages/Distribution";
 import Store from "./pages/Store";
 import ProductDetail from "./pages/ProductDetail";
 import Contact from "./pages/Contact";
+import Propworld from "./pages/Propworld";
 import Events from "./pages/Events";
 import Publication from "./pages/Publication";
 import NotFound from "./pages/NotFound";
@@ -72,6 +73,7 @@ const AppRoutes = () => {
           <Route path="/distribution"  element={<Distribution />} />
           <Route path="/store"         element={<Store />} />
           <Route path="/store/:id"     element={<ProductDetail />} />
+          <Route path="/propworld"     element={<Propworld />} />
           <Route path="/contact"       element={<Contact />} />
           <Route path="/events"        element={<Events />} />
           <Route path="/publication"   element={<Publication />} />

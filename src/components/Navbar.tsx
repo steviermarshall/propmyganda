@@ -11,6 +11,7 @@ const navLinks = [
   { label: "Distribution", path: "/distribution" },
   { label: "Publication",  path: "/publication" },
   { label: "Store",        path: "/store" },
+  { label: "Propworld",    path: "/propworld" },
   { label: "Contact",      path: "/contact" },
 ];
 
