@@ -18,6 +18,7 @@ interface Props {
 
 export default function PropworldScene({ onModeChange }: Props) {
   const [mode, setMode] = useState<Mode>("forest");
+  const [hovered, setHovered] = useState(false);
 
   function setModeAndNotify(next: Mode) {
     setMode(next);
