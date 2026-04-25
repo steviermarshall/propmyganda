@@ -1,7 +1,6 @@
-import { Suspense, useRef, useState } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Suspense, useState } from "react";
+import { Canvas } from "@react-three/fiber";
 import { EffectComposer, Bloom, Vignette } from "@react-three/postprocessing";
-import { Cone } from "@react-three/drei";
 import * as THREE from "three";
 
 import Ground from "./Ground";
@@ -15,73 +14,6 @@ type Mode = "forest" | "transitioning" | "theater";
 
 interface Props {
   onModeChange?: (mode: Mode) => void;
-}
-
-/* ---------- Volumetric-style god ray (additive cone) ---------- */
-function GodRay({
-  position,
-  rotation = [0, 0, 0],
-  height = 22,
-  radius = 1.6,
-  color = "#9ee6ff",
-  opacity = 0.09,
-  seed = 0,
-}: {
-  position: [number, number, number];
-  rotation?: [number, number, number];
-  height?: number;
-  radius?: number;
-  color?: string;
-  opacity?: number;
-  seed?: number;
-}) {
-  const ref = useRef<THREE.Mesh>(null);
-  useFrame((state) => {
-    if (!ref.current) return;
-    const t = state.clock.getElapsedTime();
-    const mat = ref.current.material as THREE.MeshBasicMaterial;
-    mat.opacity = opacity + Math.sin(t * 0.5 + seed) * 0.025;
-  });
-  return (
-    <Cone ref={ref} args={[radius, height, 24, 1, true]} position={position} rotation={rotation}>
-      <meshBasicMaterial
-        color={color}
-        transparent
-        opacity={opacity}
-        depthWrite={false}
-        blending={THREE.AdditiveBlending}
-        side={THREE.DoubleSide}
-        toneMapped={false}
-      />
-    </Cone>
-  );
-}
-
-function GodRays() {
-  const rays: Array<{
-    position: [number, number, number];
-    rotation: [number, number, number];
-    radius: number;
-    height: number;
-    opacity: number;
-    color: string;
-  }> = [
-    // Strong central column straight down through the canopy
-    { position: [0, 11, -2], rotation: [0, 0, 0], radius: 2.6, height: 24, opacity: 0.18, color: "#bff0ff" },
-    // Slanted side beams
-    { position: [-5, 11, -1], rotation: [0.05, 0, 0.18], radius: 1.6, height: 22, opacity: 0.12, color: "#a8e4ff" },
-    { position: [4.5, 11, 0], rotation: [-0.05, 0, -0.16], radius: 1.4, height: 22, opacity: 0.11, color: "#a8e4ff" },
-    { position: [7, 11, 3], rotation: [0, 0, -0.22], radius: 1.1, height: 20, opacity: 0.09, color: "#9eddf5" },
-    { position: [-7, 11, 4], rotation: [0, 0, 0.22], radius: 1.1, height: 20, opacity: 0.09, color: "#9eddf5" },
-    { position: [0, 11, 6], rotation: [-0.08, 0, 0], radius: 1.2, height: 21, opacity: 0.10, color: "#bff0ff" },
-  ];
-  return (
-    <>
-      {rays.map((r, i) => (
-        <GodRay key={i} {...r} seed={i * 1.7} />
-      ))}
-    </>
-  );
 }
 
 export default function PropworldScene({ onModeChange }: Props) {
@@ -126,7 +58,6 @@ export default function PropworldScene({ onModeChange }: Props) {
               onEnter={() => setModeAndNotify("transitioning")}
               onHoverChange={setHovered}
             />
-            <GodRays />
             <Fireflies count={650} />
           </>
         )}
