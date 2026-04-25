@@ -31,7 +31,7 @@ export default function DistributionDashboard() {
   }, []);
 
   async function updateStatus(id: string, status: App["status"]) {
-    await supabase.from("distribution_applications").update({ status, reviewed_at: new Date().toISOString() }).eq("id", id);
+    await supabase.from("distribution_applications").update({ status, reviewed_at: new Date().toISOString() } as never).eq("id", id);
     setApps((prev) => prev.map((a) => (a.id === id ? { ...a, status } : a)));
   }
 

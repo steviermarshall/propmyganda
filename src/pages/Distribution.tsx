@@ -46,7 +46,7 @@ const Distribution = () => {
     e.preventDefault();
     setError(null);
     setSubmitting(true);
-    const { error: err } = await supabase.from("distribution_applications").insert({
+    const { error: err } = await supabase.from("distribution_applications").insert([{
       artist_name:         form.artist_name,
       contact_name:        form.contact_name,
       email:               form.email,
@@ -55,7 +55,7 @@ const Distribution = () => {
       monthly_listeners:   form.monthly_listeners || null,
       current_distributor: form.current_distributor || null,
       message:             form.message || null,
-    });
+    }] as never);
     if (err) setError("Something went wrong. Try again.");
     else setSubmitted(true);
     setSubmitting(false);

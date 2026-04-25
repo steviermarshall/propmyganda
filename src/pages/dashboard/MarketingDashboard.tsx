@@ -42,13 +42,13 @@ export default function MarketingDashboard() {
   }, []);
 
   async function toggleFeatured(id: string, current: boolean) {
-    await supabase.from("publications").update({ featured: !current }).eq("id", id);
+    await supabase.from("publications").update({ featured: !current } as never).eq("id", id);
     setPubs((prev) => prev.map((p) => (p.id === id ? { ...p, featured: !current } : p)));
   }
 
   async function togglePublished(pub: Publication) {
     const published_at = pub.published_at ? null : new Date().toISOString();
-    await supabase.from("publications").update({ published_at }).eq("id", pub.id);
+    await supabase.from("publications").update({ published_at } as never).eq("id", pub.id);
     setPubs((prev) => prev.map((p) => (p.id === pub.id ? { ...p, published_at } : p)));
   }
 
