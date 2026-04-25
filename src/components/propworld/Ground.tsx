@@ -8,9 +8,9 @@ export default function Ground() {
   const uniforms = useMemo(
     () => ({
       uTime: { value: 0 },
-      uColorA: { value: new THREE.Color("#03100d") },
-      uColorB: { value: new THREE.Color("#06182a") },
-      uShimmer: { value: new THREE.Color("#ffc870") },
+      uColorA: { value: new THREE.Color("#031a16") },
+      uColorB: { value: new THREE.Color("#08303a") },
+      uShimmer: { value: new THREE.Color("#5fffd0") },
     }),
     []
   );
