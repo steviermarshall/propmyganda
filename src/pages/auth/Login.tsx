@@ -4,14 +4,27 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import pmgLogo from "@/assets/pmg-logo-clean.png";
 
+type Mode = "magic" | "password";
+
 export default function Login() {
   const { session, loading } = useAuth();
+  const [mode, setMode] = useState<Mode>("password");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   if (!loading && session) return <Navigate to="/dashboard" replace />;
+
+  async function handlePassword(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setSubmitting(true);
+    const { error: err } = await supabase.auth.signInWithPassword({ email, password });
+    if (err) setError(err.message);
+    setSubmitting(false);
+  }
 
   async function handleMagicLink(e: React.FormEvent) {
     e.preventDefault();
@@ -36,7 +49,6 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-black flex flex-col items-center justify-center px-6">
       <div className="w-full max-w-sm">
-        {/* Logo */}
         <div className="flex justify-center mb-12">
           <img src={pmgLogo} alt="PMG" className="h-8 w-auto" />
         </div>
@@ -61,24 +73,73 @@ export default function Login() {
               <p className="text-white/40 text-xs tracking-widest uppercase">PMG Internal</p>
             </div>
 
-            <form onSubmit={handleMagicLink} className="space-y-4">
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="your@email.com"
-                required
-                className="w-full bg-transparent border-b border-white/20 py-3 text-sm text-white placeholder:text-white/30 focus:border-electric outline-none transition-colors"
-              />
-              {error && <p className="text-red-400 text-xs">{error}</p>}
+            {/* Mode toggle */}
+            <div className="flex border border-white/10">
               <button
-                type="submit"
-                disabled={submitting}
-                className="w-full bg-white text-black py-4 text-xs tracking-[0.2em] uppercase font-bold hover:bg-electric transition-colors disabled:opacity-50"
+                onClick={() => { setMode("password"); setError(null); }}
+                className={`flex-1 py-2 text-[10px] uppercase tracking-widest transition-colors ${
+                  mode === "password" ? "bg-white text-black" : "text-white/40 hover:text-white"
+                }`}
               >
-                {submitting ? "Sending…" : "Send Magic Link"}
+                Password
               </button>
-            </form>
+              <button
+                onClick={() => { setMode("magic"); setError(null); }}
+                className={`flex-1 py-2 text-[10px] uppercase tracking-widest transition-colors ${
+                  mode === "magic" ? "bg-white text-black" : "text-white/40 hover:text-white"
+                }`}
+              >
+                Magic Link
+              </button>
+            </div>
+
+            {mode === "password" ? (
+              <form onSubmit={handlePassword} className="space-y-4">
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Email"
+                  required
+                  className="w-full bg-transparent border-b border-white/20 py-3 text-sm text-white placeholder:text-white/30 focus:border-electric outline-none transition-colors"
+                />
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Password"
+                  required
+                  className="w-full bg-transparent border-b border-white/20 py-3 text-sm text-white placeholder:text-white/30 focus:border-electric outline-none transition-colors"
+                />
+                {error && <p className="text-red-400 text-xs">{error}</p>}
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full bg-white text-black py-4 text-xs tracking-[0.2em] uppercase font-bold hover:bg-electric transition-colors disabled:opacity-50"
+                >
+                  {submitting ? "Signing in…" : "Sign In"}
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={handleMagicLink} className="space-y-4">
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Email"
+                  required
+                  className="w-full bg-transparent border-b border-white/20 py-3 text-sm text-white placeholder:text-white/30 focus:border-electric outline-none transition-colors"
+                />
+                {error && <p className="text-red-400 text-xs">{error}</p>}
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full bg-white text-black py-4 text-xs tracking-[0.2em] uppercase font-bold hover:bg-electric transition-colors disabled:opacity-50"
+                >
+                  {submitting ? "Sending…" : "Send Magic Link"}
+                </button>
+              </form>
+            )}
 
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
