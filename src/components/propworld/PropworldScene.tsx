@@ -52,7 +52,10 @@ export default function PropworldScene({ onModeChange }: Props) {
           <>
             <Ground />
             <Forest />
-            <AncientTree onEnter={() => setModeAndNotify("transitioning")} />
+            <AncientTree
+              onEnter={() => setModeAndNotify("transitioning")}
+              onHoverChange={setHovered}
+            />
             <Fireflies count={650} />
           </>
         )}
@@ -62,17 +65,22 @@ export default function PropworldScene({ onModeChange }: Props) {
 
       <CameraRig
         mode={mode}
+        hovered={hovered && mode === "forest"}
         onTransitionComplete={() => setModeAndNotify("theater")}
       />
 
       <EffectComposer>
         <Bloom
-          intensity={1.1}
+          intensity={mode === "transitioning" ? 2.2 : 1.1}
           luminanceThreshold={0.2}
           luminanceSmoothing={0.9}
           mipmapBlur
         />
-        <Vignette eskil={false} offset={0.15} darkness={0.85} />
+        <Vignette
+          eskil={false}
+          offset={0.15}
+          darkness={mode === "transitioning" ? 1.0 : 0.85}
+        />
       </EffectComposer>
     </Canvas>
   );
