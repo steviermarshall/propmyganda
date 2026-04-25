@@ -126,7 +126,6 @@ export default function PropworldScene({ onModeChange }: Props) {
               onEnter={() => setModeAndNotify("transitioning")}
               onHoverChange={setHovered}
             />
-            <GodRays />
             <Fireflies count={650} />
           </>
         )}
