@@ -1,4 +1,4 @@
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useLoader } from "@react-three/fiber";
 import { Html, Text } from "@react-three/drei";
 import * as THREE from "three";
@@ -6,6 +6,101 @@ import * as THREE from "three";
 import concreteWallUrl from "@/assets/concrete-wall.jpg";
 import concreteFloorUrl from "@/assets/concrete-floor.jpg";
 import ceilingWoodUrl from "@/assets/ceiling-wood.jpg";
+import { kickables, type Kickable } from "./useKickables";
+
+const ROOM_BOUND = 7.5; // wall half-size used by KickableProp collisions (room is 16 wide)
+
+/**
+ * KickableProp — wraps any 3D content and makes it physically kickable.
+ * Registers with the kickables singleton; runs simple gravity + wall collision physics.
+ */
+function KickableProp({
+  id,
+  initialPosition,
+  initialRotationY = 0,
+  radius,
+  mass = 1,
+  groundY,
+  children,
+}: {
+  id: string;
+  initialPosition: [number, number, number];
+  initialRotationY?: number;
+  radius: number;
+  mass?: number;
+  groundY: number;
+  children: React.ReactNode;
+}) {
+  const groupRef = useRef<THREE.Group>(null);
+  const stateRef = useRef<Kickable>({
+    id,
+    position: new THREE.Vector3(...initialPosition),
+    velocity: new THREE.Vector3(0, 0, 0),
+    angularY: 0,
+    rotationY: initialRotationY,
+    radius,
+    groundY,
+    mass,
+  });
+
+  useEffect(() => {
+    const s = stateRef.current;
+    kickables.register(s);
+    return () => kickables.unregister(id);
+  }, [id]);
+
+  useFrame((_, delta) => {
+    const s = stateRef.current;
+    const dt = Math.min(delta, 0.05);
+
+    if (s.position.y > s.groundY + 0.001 || s.velocity.y > 0) {
+      s.velocity.y -= 18 * dt;
+    }
+
+    s.position.x += s.velocity.x * dt;
+    s.position.y += s.velocity.y * dt;
+    s.position.z += s.velocity.z * dt;
+    s.rotationY += s.angularY * dt;
+
+    if (s.position.y < s.groundY) {
+      s.position.y = s.groundY;
+      if (s.velocity.y < 0) s.velocity.y = -s.velocity.y * 0.25;
+      if (Math.abs(s.velocity.y) < 0.4) s.velocity.y = 0;
+      s.velocity.x *= Math.pow(0.02, dt);
+      s.velocity.z *= Math.pow(0.02, dt);
+      s.angularY *= Math.pow(0.05, dt);
+    } else {
+      s.velocity.x *= Math.pow(0.6, dt);
+      s.velocity.z *= Math.pow(0.6, dt);
+    }
+
+    const limit = ROOM_BOUND - s.radius;
+    if (s.position.x > limit) {
+      s.position.x = limit;
+      s.velocity.x = -s.velocity.x * 0.4;
+    } else if (s.position.x < -limit) {
+      s.position.x = -limit;
+      s.velocity.x = -s.velocity.x * 0.4;
+    }
+    if (s.position.z > limit) {
+      s.position.z = limit;
+      s.velocity.z = -s.velocity.z * 0.4;
+    } else if (s.position.z < -limit) {
+      s.position.z = -limit;
+      s.velocity.z = -s.velocity.z * 0.4;
+    }
+
+    if (s.velocity.lengthSq() < 0.0004) s.velocity.set(0, 0, 0);
+    if (Math.abs(s.angularY) < 0.02) s.angularY = 0;
+
+    if (groupRef.current) {
+      groupRef.current.position.copy(s.position);
+      groupRef.current.rotation.y = s.rotationY;
+    }
+  });
+
+  return <group ref={groupRef}>{children}</group>;
+}
 
 /**
  * Gritty Max-Payne-style concrete warehouse "treelink" room.
