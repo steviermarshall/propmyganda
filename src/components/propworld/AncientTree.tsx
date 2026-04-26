@@ -116,21 +116,6 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
     return g;
   }, []);
 
-  // Root buttresses
-  const roots = useMemo(() => {
-    const arr: { pos: [number, number, number]; rot: [number, number, number]; scale: number }[] = [];
-    const count = 11;
-    for (let i = 0; i < count; i++) {
-      const a = (i / count) * Math.PI * 2 + Math.sin(i) * 0.25;
-      const r = BASE_R * 0.85;
-      arr.push({
-        pos: [Math.cos(a) * r, 0.8, Math.sin(a) * r],
-        rot: [Math.PI / 2 - 0.35, 0, -a + Math.PI / 2],
-        scale: 0.95 + ((Math.sin(i * 7.3) + 1) / 2) * 0.5,
-      });
-    }
-    return arr;
-  }, []);
 
 
 
