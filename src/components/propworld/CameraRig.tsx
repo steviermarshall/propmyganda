@@ -42,10 +42,21 @@ export default function CameraRig({ mode, hovered, isMobile, onTransitionComplet
   const theaterTarget = useRef(new THREE.Vector3(0, 3, -5.35));
   const theaterPos = useRef(new THREE.Vector3(0, 3, 4));
 
-  // Theater look-around (yaw/pitch) state — driven by drag in theater mode.
+  // Theater look-around state — yaw/pitch are smoothed via target refs
   const theaterYawRef = useRef(0);
   const theaterPitchRef = useRef(0);
+  const theaterYawTargetRef = useRef(0);
+  const theaterPitchTargetRef = useRef(0);
+  // Velocity (rad/s) for fling/momentum
+  const yawVelRef = useRef(0);
+  const pitchVelRef = useRef(0);
   const lastYRef = useRef(0);
+
+  // Track press position for tap-vs-drag detection (kick on tap)
+  const pressXRef = useRef(0);
+  const pressYRef = useRef(0);
+  const pressTimeRef = useRef(0);
+  const movedRef = useRef(false);
 
   // Pointer drag handlers — attached to the canvas DOM element.
   useEffect(() => {
@@ -54,12 +65,19 @@ export default function CameraRig({ mode, hovered, isMobile, onTransitionComplet
     const onDown = (e: PointerEvent) => {
       if (mode !== "forest" && mode !== "theater") return;
       if (e.pointerType === "mouse" && e.button !== 0) return;
-      // Don't hijack drags that start on HTML overlays (e.g. Discord iframe in theater)
       const target = e.target as HTMLElement | null;
       if (target && target.tagName !== "CANVAS") return;
       draggingRef.current = true;
       lastXRef.current = e.clientX;
       lastYRef.current = e.clientY;
+      pressXRef.current = e.clientX;
+      pressYRef.current = e.clientY;
+      pressTimeRef.current = performance.now();
+      movedRef.current = false;
+      // Kill momentum so the user gets immediate control
+      yawVelRef.current = 0;
+      pitchVelRef.current = 0;
+      userAngleVelRef.current = 0;
       userInteractRef.current = performance.now();
       try {
         dom.setPointerCapture(e.pointerId);
@@ -73,15 +91,24 @@ export default function CameraRig({ mode, hovered, isMobile, onTransitionComplet
       const dy = e.clientY - lastYRef.current;
       lastXRef.current = e.clientX;
       lastYRef.current = e.clientY;
+
+      const totalDx = e.clientX - pressXRef.current;
+      const totalDy = e.clientY - pressYRef.current;
+      if (Math.hypot(totalDx, totalDy) > 6) movedRef.current = true;
+
       if (mode === "theater") {
-        const sens = (Math.PI / window.innerWidth) * 1.4;
-        // Full 360° yaw — no clamp
-        theaterYawRef.current = theaterYawRef.current - dx * sens;
-        theaterPitchRef.current = THREE.MathUtils.clamp(
-          theaterPitchRef.current - dy * sens * 0.6,
-          -0.5,
-          0.5
+        // Higher sensitivity on mobile so flicks rotate more
+        const sens =
+          (Math.PI / Math.max(window.innerWidth, 1)) * (isMobile ? 2.0 : 1.6);
+        theaterYawTargetRef.current -= dx * sens;
+        theaterPitchTargetRef.current = THREE.MathUtils.clamp(
+          theaterPitchTargetRef.current - dy * sens * 0.55,
+          -0.45,
+          0.45
         );
+        // Track instantaneous velocity for fling
+        yawVelRef.current = -dx * sens * 60; // approx rad/s @ 60fps
+        pitchVelRef.current = -dy * sens * 0.55 * 60;
       } else {
         const sensitivity = (Math.PI / window.innerWidth) * 1.2;
         const delta = -dx * sensitivity;
@@ -91,7 +118,18 @@ export default function CameraRig({ mode, hovered, isMobile, onTransitionComplet
       userInteractRef.current = performance.now();
     };
     const onUp = (e: PointerEvent) => {
+      if (!draggingRef.current) return;
       draggingRef.current = false;
+      const elapsed = performance.now() - pressTimeRef.current;
+      const isTap = !movedRef.current && elapsed < 300;
+
+      if (isTap && mode === "theater") {
+        // KICK! Send an impulse along the camera's forward direction.
+        const dir = new THREE.Vector3();
+        camera.getWorldDirection(dir);
+        kickables.kickFromCamera(camera.position.clone(), dir);
+      }
+
       try {
         dom.releasePointerCapture(e.pointerId);
       } catch {
@@ -103,7 +141,6 @@ export default function CameraRig({ mode, hovered, isMobile, onTransitionComplet
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
     window.addEventListener("pointercancel", onUp);
-    // Prevent the page from scrolling while dragging on touch devices.
     dom.style.touchAction = "none";
 
     return () => {
@@ -112,7 +149,7 @@ export default function CameraRig({ mode, hovered, isMobile, onTransitionComplet
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointercancel", onUp);
     };
-  }, [gl, mode]);
+  }, [gl, mode, camera, isMobile]);
 
   useEffect(() => {
     if (mode === "transitioning") {
