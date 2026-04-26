@@ -151,13 +151,13 @@ export default function TheaterInterior({ isMobile = false }: TheaterProps) {
   useFrame((state) => {
     const t = state.clock.getElapsedTime();
     // Subtle fluorescent flicker on the single overhead light
-    const flick = Math.sin(t * 33) > 0.985 ? 0.4 : 1;
+    const flick = Math.sin(t * 33) > 0.985 ? 0.55 : 1;
     if (flickerLightRef.current) {
       flickerLightRef.current.intensity =
-        (1.4 + Math.sin(t * 0.5) * 0.08) * flick;
+        (2.4 + Math.sin(t * 0.5) * 0.1) * flick;
     }
     if (tubeMatRef.current) {
-      tubeMatRef.current.opacity = flick > 0.5 ? 1 : 0.35;
+      tubeMatRef.current.opacity = flick > 0.5 ? 1 : 0.5;
     }
   });
 
