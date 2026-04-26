@@ -49,8 +49,8 @@ const Navbar = () => {
             </Link>
           )}
 
-          {/* Desktop Nav — absolutely centered */}
-          <div className="hidden md:flex items-center gap-8 absolute left-1/2 -translate-x-1/2">
+          {/* Desktop Nav — centered to viewport */}
+          <div className="hidden md:flex items-center gap-8 fixed left-1/2 -translate-x-1/2 top-0 h-16 md:h-20">
             {navLinks.map((link) => (
               <Link
                 key={link.path}
