@@ -267,8 +267,12 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
       const y = 0.8 + i * 1.4 + Math.sin(i * 3.1) * 0.3;
       const t = Math.min(1, y / HEIGHT);
       const r = THREE.MathUtils.lerp(BASE_R, TOP_R, t) * 1.02;
+      const px = Math.cos(a) * r;
+      const pz = Math.sin(a) * r;
+      // Skip moss patches that fall inside the doorway zone
+      if (insideDoorway(px, y, pz)) continue;
       arr.push({
-        pos: [Math.cos(a) * r, y, Math.sin(a) * r],
+        pos: [px, y, pz],
         scale: 0.55 + ((Math.sin(i * 1.7) + 1) / 2) * 0.35,
       });
     }
