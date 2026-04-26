@@ -307,67 +307,137 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
         </group>
       ))}
 
-      {/* ---------- Glowing Orb Portal ----------
-          Clean texture-driven portal: solid bright core + two additive
-          glow shells + a soft outer halo. The point light is short-range
-          and low-intensity so it never reads as a visible beam. */}
-      <group
-        position={[0, 2.0, BASE_R * 0.95 + 0.3]}
-        onClick={(e) => {
-          e.stopPropagation();
-          onEnter();
-        }}
-        onPointerOver={(e) => {
-          e.stopPropagation();
-          document.body.style.cursor = "pointer";
-          onHoverChange?.(true);
-        }}
-        onPointerOut={() => {
-          document.body.style.cursor = "auto";
-          onHoverChange?.(false);
-        }}
-      >
-        {/* Soft outer halo */}
-        <mesh ref={orbHaloRef}>
-          <sphereGeometry args={[1.4, 32, 32]} />
-          <meshBasicMaterial
-            color="#ffb14a"
-            transparent
-            opacity={0.28}
-            blending={THREE.AdditiveBlending}
-            depthWrite={false}
-            toneMapped={false}
-          />
-        </mesh>
+      {/* ---------- Arched Doorway + Orb Portal ----------
+          A tall arched opening carved into the trunk (no door). The orb
+          floats inside the doorway and its glow fills the cavity. */}
+      {(() => {
+        // Doorway dims (world units)
+        const DW = 1.8;   // width
+        const DH = 3.2;   // total height (rectangle + arch)
+        const DR = DW / 2; // arch radius
+        const DZ = BASE_R * 0.96; // sit on the trunk's front surface
 
-        {/* Glow shell */}
-        <mesh>
-          <sphereGeometry args={[0.8, 32, 32]} />
-          <meshBasicMaterial
-            ref={orbGlowRef}
-            color="#ffd27a"
-            transparent
-            opacity={0.9}
-            blending={THREE.AdditiveBlending}
-            depthWrite={false}
-            toneMapped={false}
-          />
-        </mesh>
+        // Build an arched shape (rectangle bottom + semicircle top)
+        const archShape = new THREE.Shape();
+        archShape.moveTo(-DR, 0);
+        archShape.lineTo(-DR, DH - DR);
+        archShape.absarc(0, DH - DR, DR, Math.PI, 0, true);
+        archShape.lineTo(DR, 0);
+        archShape.lineTo(-DR, 0);
 
-        {/* Solid bright core */}
-        <mesh ref={orbCoreRef}>
-          <sphereGeometry args={[0.45, 32, 32]} />
-          <meshBasicMaterial color="#fff2c2" toneMapped={false} />
-        </mesh>
+        // Outer frame shape (slightly larger arch with inner hole)
+        const frameOuter = new THREE.Shape();
+        const FW = DW + 0.55;
+        const FH = DH + 0.45;
+        const FR = FW / 2;
+        frameOuter.moveTo(-FR, 0);
+        frameOuter.lineTo(-FR, FH - FR);
+        frameOuter.absarc(0, FH - FR, FR, Math.PI, 0, true);
+        frameOuter.lineTo(FR, 0);
+        frameOuter.lineTo(-FR, 0);
+        const frameHole = new THREE.Path();
+        frameHole.moveTo(-DR, 0);
+        frameHole.lineTo(-DR, DH - DR);
+        frameHole.absarc(0, DH - DR, DR, Math.PI, 0, true);
+        frameHole.lineTo(DR, 0);
+        frameHole.lineTo(-DR, 0);
+        frameOuter.holes.push(frameHole);
 
-        <pointLight
-          ref={orbLightRef}
-          intensity={2.4}
-          color="#ffa040"
-          distance={10}
-          decay={2}
-        />
-      </group>
+        return (
+          <group
+            position={[0, 0, DZ]}
+            onClick={(e) => {
+              e.stopPropagation();
+              onEnter();
+            }}
+            onPointerOver={(e) => {
+              e.stopPropagation();
+              document.body.style.cursor = "pointer";
+              onHoverChange?.(true);
+            }}
+            onPointerOut={() => {
+              document.body.style.cursor = "auto";
+              onHoverChange?.(false);
+            }}
+          >
+            {/* Recessed black cavity — sits just behind the trunk surface
+                so the bark naturally frames the opening. */}
+            <mesh position={[0, 0.4, -0.05]}>
+              <shapeGeometry args={[archShape]} />
+              <meshBasicMaterial color="#000000" toneMapped={false} />
+            </mesh>
+
+            {/* Carved bark arch frame (raised lip around the doorway) */}
+            <mesh position={[0, 0.4, 0.02]}>
+              <shapeGeometry args={[frameOuter]} />
+              <meshStandardMaterial
+                color="#070b0f"
+                roughness={1}
+                emissive="#1a0e05"
+                emissiveIntensity={0.25}
+              />
+            </mesh>
+
+            {/* Subtle warm glow lining the arch interior */}
+            <mesh position={[0, 0.4, -0.02]} scale={[0.94, 0.94, 1]}>
+              <shapeGeometry args={[archShape]} />
+              <meshBasicMaterial
+                color="#ff8a30"
+                transparent
+                opacity={0.25}
+                blending={THREE.AdditiveBlending}
+                depthWrite={false}
+                toneMapped={false}
+              />
+            </mesh>
+
+            {/* ---------- Orb floating INSIDE the doorway ---------- */}
+            <group position={[0, 1.55, 0.55]}>
+              {/* Soft outer halo — fills the doorway space */}
+              <mesh ref={orbHaloRef}>
+                <sphereGeometry args={[1.4, 32, 32]} />
+                <meshBasicMaterial
+                  color="#ffb14a"
+                  transparent
+                  opacity={0.32}
+                  blending={THREE.AdditiveBlending}
+                  depthWrite={false}
+                  toneMapped={false}
+                />
+              </mesh>
+
+              {/* Glow shell */}
+              <mesh>
+                <sphereGeometry args={[0.8, 32, 32]} />
+                <meshBasicMaterial
+                  ref={orbGlowRef}
+                  color="#ffd27a"
+                  transparent
+                  opacity={0.9}
+                  blending={THREE.AdditiveBlending}
+                  depthWrite={false}
+                  toneMapped={false}
+                />
+              </mesh>
+
+              {/* Solid bright core */}
+              <mesh ref={orbCoreRef}>
+                <sphereGeometry args={[0.45, 32, 32]} />
+                <meshBasicMaterial color="#fff2c2" toneMapped={false} />
+              </mesh>
+
+              {/* Warm fill light — illuminates the cavity walls/frame */}
+              <pointLight
+                ref={orbLightRef}
+                intensity={2.6}
+                color="#ffa040"
+                distance={9}
+                decay={2}
+              />
+            </group>
+          </group>
+        );
+      })()}
     </group>
   );
 }
