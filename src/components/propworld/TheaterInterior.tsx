@@ -878,30 +878,50 @@ export default function TheaterInterior({ isMobile = false }: TheaterProps) {
             </Text>
 
             {panel.src ? (
-              <Html
-                position={[0, 0, 0.16]}
-                transform
-                occlude={false}
-                scale={htmlScale}
-                style={{
-                  width: `${IFRAME_BASE_W}px`,
-                  height: `${IFRAME_BASE_H}px`,
-                  overflow: "hidden",
-                  background: "#1a1a1a",
-                  borderRadius: "4px",
-                }}
-              >
-                <iframe
-                  title={panel.label}
-                  src={panel.src}
-                  width={IFRAME_BASE_W}
-                  height={IFRAME_BASE_H}
-                  frameBorder="0"
-                  allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                  sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts allow-presentation allow-forms"
-                  style={{ border: 0, display: "block", background: "#1a1a1a", width: "100%", height: "100%" }}
-                />
-              </Html>
+              <>
+                {/* Dark contrast mat behind the iframe so embedded UI stays
+                    readable against the textured wood frame backing. */}
+                <mesh position={[0, 0, 0.14]}>
+                  <planeGeometry args={[PANEL_W * 0.96, PANEL_H * 0.96]} />
+                  <meshBasicMaterial color="#0a0a0a" toneMapped={false} />
+                </mesh>
+                <Html
+                  position={[0, 0, 0.16]}
+                  transform
+                  occlude={false}
+                  scale={htmlScale}
+                  style={{
+                    width: `${IFRAME_BASE_W}px`,
+                    height: `${IFRAME_BASE_H}px`,
+                    overflow: "hidden",
+                    background: "#0a0a0a",
+                    borderRadius: "6px",
+                    boxShadow:
+                      "0 0 0 2px rgba(255,255,255,0.08) inset, 0 0 0 1px rgba(0,0,0,0.9), 0 12px 40px rgba(0,0,0,0.7)",
+                    colorScheme: "dark",
+                    isolation: "isolate",
+                  }}
+                >
+                  <iframe
+                    title={panel.label}
+                    src={panel.src}
+                    width={IFRAME_BASE_W}
+                    height={IFRAME_BASE_H}
+                    frameBorder="0"
+                    allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                    sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts allow-presentation allow-forms"
+                    style={{
+                      border: 0,
+                      display: "block",
+                      background: "#0a0a0a",
+                      width: "100%",
+                      height: "100%",
+                      colorScheme: "dark",
+                      filter: "contrast(1.05) saturate(1.05)",
+                    }}
+                  />
+                </Html>
+              </>
             ) : (
               <Html
                 position={[0, 0, 0.16]}
