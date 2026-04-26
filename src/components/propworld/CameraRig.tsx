@@ -217,15 +217,31 @@ export default function CameraRig({ mode, hovered, isMobile, onTransitionComplet
       return;
     }
 
-    // theater
+    // theater — seated sway + drag-to-look-around
     const sway = Math.sin(t * 0.4) * 0.06;
+    // On mobile, sit slightly farther back & higher FOV so the screen fits portrait.
+    const seatZ = isMobile ? 5.2 : theaterPos.current.z;
+    const seatY = isMobile ? 3.1 : theaterPos.current.y;
     camera.position.lerp(
-      new THREE.Vector3(theaterPos.current.x + sway, theaterPos.current.y, theaterPos.current.z),
+      new THREE.Vector3(theaterPos.current.x + sway, seatY, seatZ),
       0.05
     );
-    persp.fov = THREE.MathUtils.lerp(persp.fov, 55, 0.05);
+    const targetFov = isMobile ? 68 : 55;
+    persp.fov = THREE.MathUtils.lerp(persp.fov, targetFov, 0.05);
     persp.updateProjectionMatrix();
-    camera.lookAt(theaterTarget.current);
+
+    // Apply yaw/pitch around the screen target.
+    const base = theaterTarget.current;
+    const yaw = theaterYawRef.current;
+    const pitch = theaterPitchRef.current;
+    // Offset the lookAt point by yaw/pitch — gives a "look around" feel without leaving the seat.
+    const lookOffset = new THREE.Vector3(
+      Math.sin(yaw) * 6,
+      Math.sin(pitch) * 4,
+      Math.cos(yaw) * -1
+    );
+    const lookTarget = base.clone().add(lookOffset);
+    camera.lookAt(lookTarget);
   });
 
   return null;
