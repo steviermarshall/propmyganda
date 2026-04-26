@@ -252,19 +252,8 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
 
   return (
     <group position={[0, 0, 0]}>
-      {/* Earth mound at base */}
-      <mesh position={[0, 0.2, 0]} receiveShadow>
-        <sphereGeometry args={[BASE_R * 1.4, 32, 18, 0, Math.PI * 2, 0, Math.PI / 2]} />
-        <meshStandardMaterial color="#0b2218" roughness={1} />
-      </mesh>
-
-      {/* Root buttresses */}
-      {roots.map((r, i) => (
-        <mesh key={`root-${i}`} position={r.pos} rotation={r.rot} castShadow>
-          <coneGeometry args={[0.85 * r.scale, 3.8 * r.scale, 7]} />
-          <meshStandardMaterial color="#0a0f14" roughness={1} />
-        </mesh>
-      ))}
+      {/* Trunk meets ground directly — no mound, no flared roots.
+          The bottom of the trunk is parallel-sided. */}
 
       {/* Trunk — procedural bark via vertex displacement */}
       <mesh geometry={trunkGeom} castShadow receiveShadow>
