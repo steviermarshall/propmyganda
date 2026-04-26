@@ -89,7 +89,7 @@ const Propworld = () => {
             className="absolute inset-x-0 bottom-8 flex flex-col items-center px-6"
           >
             <p className="text-[10px] tracking-[0.4em] uppercase text-amber-200/70 mb-3">
-              The Inner Sanctum · Drag to look · Tap to kick
+              The Inner Sanctum · Slow drag to look · Tap props to kick
             </p>
             <button
               onClick={() => window.location.reload()}
