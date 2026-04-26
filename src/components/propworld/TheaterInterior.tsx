@@ -652,6 +652,67 @@ export default function TheaterInterior({ isMobile = false }: TheaterProps) {
         <meshStandardMaterial map={wallTex} roughness={1} />
       </mesh>
 
+      {/* ---------- NYC Graffiti decals on walls ---------- */}
+      {/* Tucked into low corners so they don't fight with picture frames (frames at y=2.6) */}
+      {/* North wall — BRONX, lower left */}
+      <mesh position={[-4.2, 0.6, HALF - 0.02]} rotation={[0, Math.PI, 0]}>
+        <planeGeometry args={[4.4, 2.2]} />
+        <meshStandardMaterial
+          map={gBronx}
+          transparent
+          alphaTest={0.05}
+          roughness={1}
+          depthWrite={false}
+          polygonOffset
+          polygonOffsetFactor={-1}
+        />
+      </mesh>
+      {/* South wall — BROOKLYN, lower right */}
+      <mesh position={[3.8, 0.5, -HALF + 0.02]}>
+        <planeGeometry args={[4.6, 2.3]} />
+        <meshStandardMaterial
+          map={gBrooklyn}
+          transparent
+          alphaTest={0.05}
+          roughness={1}
+          depthWrite={false}
+          polygonOffset
+          polygonOffsetFactor={-1}
+        />
+      </mesh>
+      {/* East wall — NYC crown piece, low center */}
+      <mesh
+        position={[HALF - 0.02, 0.7, 0]}
+        rotation={[0, -Math.PI / 2, 0]}
+      >
+        <planeGeometry args={[5.0, 2.5]} />
+        <meshStandardMaterial
+          map={gNyc}
+          transparent
+          alphaTest={0.05}
+          roughness={1}
+          depthWrite={false}
+          polygonOffset
+          polygonOffsetFactor={-1}
+        />
+      </mesh>
+      {/* West wall — QUEENS, low center */}
+      <mesh
+        position={[-HALF + 0.02, 0.6, 0]}
+        rotation={[0, Math.PI / 2, 0]}
+      >
+        <planeGeometry args={[4.8, 2.4]} />
+        <meshStandardMaterial
+          map={gQueens}
+          transparent
+          alphaTest={0.05}
+          roughness={1}
+          depthWrite={false}
+          polygonOffset
+          polygonOffsetFactor={-1}
+        />
+      </mesh>
+
       {/* ---------- Ceiling (dark wood planks) ---------- */}
       <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, ROOM_HEIGHT - 0.5, 0]}>
         <planeGeometry args={[ROOM_SIZE, ROOM_SIZE]} />
