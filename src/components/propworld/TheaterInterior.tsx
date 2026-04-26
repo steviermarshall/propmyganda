@@ -272,72 +272,7 @@ export default function TheaterInterior({ isMobile = false }: TheaterProps) {
   const iframeW = isMobile ? 520 : 640;
   const iframeH = isMobile ? 360 : 420;
 
-  // ---- Reusable prop components ----
-  const Pipe = ({ position }: { position: [number, number, number] }) => (
-    <group position={position}>
-      <mesh castShadow>
-        <cylinderGeometry args={[0.22, 0.22, ROOM_HEIGHT, 16]} />
-        <meshStandardMaterial color="#7a6840" roughness={0.85} metalness={0.4} />
-      </mesh>
-      <mesh position={[0.32, 0, 0]} castShadow>
-        <cylinderGeometry args={[0.18, 0.18, ROOM_HEIGHT, 16]} />
-        <meshStandardMaterial color="#8a7548" roughness={0.8} metalness={0.45} />
-      </mesh>
-    </group>
-  );
-
-  const Barrel = ({ color = "#3a5d4a" }: { color?: string }) => (
-    <group>
-      <mesh castShadow>
-        <cylinderGeometry args={[0.55, 0.55, 1.3, 24]} />
-        <meshStandardMaterial color={color} roughness={0.75} metalness={0.45} />
-      </mesh>
-      <mesh position={[0, 0.5, 0]}>
-        <torusGeometry args={[0.56, 0.04, 8, 24]} />
-        <meshStandardMaterial color="#2a3f33" roughness={0.6} metalness={0.6} />
-      </mesh>
-      <mesh position={[0, -0.5, 0]}>
-        <torusGeometry args={[0.56, 0.04, 8, 24]} />
-        <meshStandardMaterial color="#2a3f33" roughness={0.6} metalness={0.6} />
-      </mesh>
-    </group>
-  );
-
-  const Box = ({
-    size = [0.9, 0.9, 0.9] as [number, number, number],
-  }: {
-    size?: [number, number, number];
-  }) => (
-    <mesh castShadow>
-      <boxGeometry args={size} />
-      <meshStandardMaterial color="#a47844" roughness={0.95} />
-    </mesh>
-  );
-
-  const Ladder = ({
-    position,
-    rotation = 0,
-  }: {
-    position: [number, number, number];
-    rotation?: number;
-  }) => (
-    <group position={position} rotation={[0, rotation, 0]}>
-      <mesh position={[-0.35, 1.2, 0]} rotation={[0, 0, 0.12]}>
-        <boxGeometry args={[0.08, 2.6, 0.08]} />
-        <meshStandardMaterial color="#c8a263" roughness={0.85} />
-      </mesh>
-      <mesh position={[0.35, 1.2, 0]} rotation={[0, 0, -0.12]}>
-        <boxGeometry args={[0.08, 2.6, 0.08]} />
-        <meshStandardMaterial color="#c8a263" roughness={0.85} />
-      </mesh>
-      {[0.3, 0.8, 1.3, 1.8].map((y, i) => (
-        <mesh key={i} position={[0, y, 0]}>
-          <boxGeometry args={[0.7, 0.06, 0.06]} />
-          <meshStandardMaterial color="#b08b50" roughness={0.85} />
-        </mesh>
-      ))}
-    </group>
-  );
+  // (Prop components Pipe, Barrel, Box, Ladder, Chair are defined at module scope below)
 
   // Simple wooden folding-style chair (centered at base of seat)
   const Chair = () => (
