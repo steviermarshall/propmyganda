@@ -47,6 +47,10 @@ export default function CameraRig({ mode, hovered, isMobile, onTransitionComplet
   const theaterPitchRef = useRef(0);
   const theaterYawTargetRef = useRef(0);
   const theaterPitchTargetRef = useRef(0);
+  // Theater dolly: how far we've moved along the view direction (clamped inside room).
+  // Negative = backed up away from where we're looking. Positive = pushed forward.
+  const theaterDollyRef = useRef(0);
+  const theaterDollyTargetRef = useRef(0);
   // Velocity (rad/s) for fling/momentum
   const yawVelRef = useRef(0);
   const pitchVelRef = useRef(0);
