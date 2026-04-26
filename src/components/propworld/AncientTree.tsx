@@ -470,9 +470,9 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
             {/* Negative Z pushes it back into the recessed opening so
                 the frame and inner walls occlude its outer halo. */}
             <group position={[0, DH * 0.45, -0.55]}>
-              {/* Soft outer halo — fills the doorway space */}
+              {/* Soft halo — sized so it stays inside the doorway opening */}
               <mesh ref={orbHaloRef}>
-                <sphereGeometry args={[1.4, 32, 32]} />
+                <sphereGeometry args={[Math.min(DR * 0.95, 1.0), 32, 32]} />
                 <meshBasicMaterial
                   color="#ffb14a"
                   transparent
