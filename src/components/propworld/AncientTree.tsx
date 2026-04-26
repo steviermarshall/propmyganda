@@ -26,6 +26,52 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
   const BASE_R = 4.2;
   const TOP_R = 1.6;
 
+  // ---- Shared doorway zone (used by trunk geometry, knots, moss, portal) ----
+  // The doorway occupies an angular slice on the +Z (front) face of the trunk,
+  // from y=0 up to DOORWAY_TOP_Y. Trunk geometry skips faces inside this
+  // silhouette so no bark protrudes through the portal.
+  const PARALLEL_END = 0.3;
+  const trunkRadiusAt = (y: number) => {
+    const t = THREE.MathUtils.clamp(y / HEIGHT, 0, 1);
+    const taper =
+      t <= PARALLEL_END
+        ? 1.0
+        : THREE.MathUtils.lerp(
+            1.0,
+            TOP_R / BASE_R,
+            (t - PARALLEL_END) / (1 - PARALLEL_END),
+          );
+    return BASE_R * taper;
+  };
+  const DOORWAY_BASE_Y = 0;
+  const DOORWAY_TOP_Y = HEIGHT * 0.28;
+  const DH = DOORWAY_TOP_Y - DOORWAY_BASE_Y;
+  const DOORWAY_Y_CENTER = (DOORWAY_BASE_Y + DOORWAY_TOP_Y) / 2;
+  const doorwayTrunkR = trunkRadiusAt(DOORWAY_Y_CENTER);
+  const DW = Math.min(doorwayTrunkR * 1.4, DH * 0.7);
+  const DR = DW / 2;
+
+  // Returns true if a point on the trunk surface (world coords) falls inside
+  // the doorway silhouette — used to exclude trunk faces, knots, moss.
+  const insideDoorway = (x: number, y: number, z: number) => {
+    if (y < DOORWAY_BASE_Y - 0.4 || y > DOORWAY_TOP_Y + 0.4) return false;
+    if (z <= 0) return false; // back of trunk
+    // Approximate horizontal arc-position on the front face
+    const angle = Math.atan2(x, z); // 0 = front, ±π/2 = sides
+    const trunkR = trunkRadiusAt(Math.max(0, y));
+    const lx = angle * trunkR;
+    if (Math.abs(lx) > DR + 0.15) return false;
+    const ly = y - DOORWAY_BASE_Y;
+    if (ly < -0.2) return false;
+    if (ly > DH + 0.2) return false;
+    if (ly <= DH - DR) return true; // rectangle portion (with margin)
+    // Top semicircle
+    const dx = lx;
+    const dy = ly - (DH - DR);
+    return dx * dx + dy * dy <= (DR + 0.15) * (DR + 0.15);
+  };
+
+
   // Trunk — sinuous tapered tube with PROCEDURAL BARK displacement
   // Multi-octave noise + angular ridges create deep vertical grooves and burls.
   const trunkGeom = useMemo(() => {
