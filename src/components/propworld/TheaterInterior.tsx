@@ -1,4 +1,4 @@
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useLoader } from "@react-three/fiber";
 import { Html, Text } from "@react-three/drei";
 import * as THREE from "three";
@@ -6,6 +6,101 @@ import * as THREE from "three";
 import concreteWallUrl from "@/assets/concrete-wall.jpg";
 import concreteFloorUrl from "@/assets/concrete-floor.jpg";
 import ceilingWoodUrl from "@/assets/ceiling-wood.jpg";
+import { kickables, type Kickable } from "./useKickables";
+
+const ROOM_BOUND = 7.5; // wall half-size used by KickableProp collisions (room is 16 wide)
+
+/**
+ * KickableProp — wraps any 3D content and makes it physically kickable.
+ * Registers with the kickables singleton; runs simple gravity + wall collision physics.
+ */
+function KickableProp({
+  id,
+  initialPosition,
+  initialRotationY = 0,
+  radius,
+  mass = 1,
+  groundY,
+  children,
+}: {
+  id: string;
+  initialPosition: [number, number, number];
+  initialRotationY?: number;
+  radius: number;
+  mass?: number;
+  groundY: number;
+  children: React.ReactNode;
+}) {
+  const groupRef = useRef<THREE.Group>(null);
+  const stateRef = useRef<Kickable>({
+    id,
+    position: new THREE.Vector3(...initialPosition),
+    velocity: new THREE.Vector3(0, 0, 0),
+    angularY: 0,
+    rotationY: initialRotationY,
+    radius,
+    groundY,
+    mass,
+  });
+
+  useEffect(() => {
+    const s = stateRef.current;
+    kickables.register(s);
+    return () => kickables.unregister(id);
+  }, [id]);
+
+  useFrame((_, delta) => {
+    const s = stateRef.current;
+    const dt = Math.min(delta, 0.05);
+
+    if (s.position.y > s.groundY + 0.001 || s.velocity.y > 0) {
+      s.velocity.y -= 18 * dt;
+    }
+
+    s.position.x += s.velocity.x * dt;
+    s.position.y += s.velocity.y * dt;
+    s.position.z += s.velocity.z * dt;
+    s.rotationY += s.angularY * dt;
+
+    if (s.position.y < s.groundY) {
+      s.position.y = s.groundY;
+      if (s.velocity.y < 0) s.velocity.y = -s.velocity.y * 0.25;
+      if (Math.abs(s.velocity.y) < 0.4) s.velocity.y = 0;
+      s.velocity.x *= Math.pow(0.02, dt);
+      s.velocity.z *= Math.pow(0.02, dt);
+      s.angularY *= Math.pow(0.05, dt);
+    } else {
+      s.velocity.x *= Math.pow(0.6, dt);
+      s.velocity.z *= Math.pow(0.6, dt);
+    }
+
+    const limit = ROOM_BOUND - s.radius;
+    if (s.position.x > limit) {
+      s.position.x = limit;
+      s.velocity.x = -s.velocity.x * 0.4;
+    } else if (s.position.x < -limit) {
+      s.position.x = -limit;
+      s.velocity.x = -s.velocity.x * 0.4;
+    }
+    if (s.position.z > limit) {
+      s.position.z = limit;
+      s.velocity.z = -s.velocity.z * 0.4;
+    } else if (s.position.z < -limit) {
+      s.position.z = -limit;
+      s.velocity.z = -s.velocity.z * 0.4;
+    }
+
+    if (s.velocity.lengthSq() < 0.0004) s.velocity.set(0, 0, 0);
+    if (Math.abs(s.angularY) < 0.02) s.angularY = 0;
+
+    if (groupRef.current) {
+      groupRef.current.position.copy(s.position);
+      groupRef.current.rotation.y = s.rotationY;
+    }
+  });
+
+  return <group ref={groupRef}>{children}</group>;
+}
 
 /**
  * Gritty Max-Payne-style concrete warehouse "treelink" room.
@@ -180,14 +275,8 @@ export default function TheaterInterior({ isMobile = false }: TheaterProps) {
     </group>
   );
 
-  const Barrel = ({
-    position,
-    color = "#3a5d4a",
-  }: {
-    position: [number, number, number];
-    color?: string;
-  }) => (
-    <group position={position}>
+  const Barrel = ({ color = "#3a5d4a" }: { color?: string }) => (
+    <group>
       <mesh castShadow>
         <cylinderGeometry args={[0.55, 0.55, 1.3, 24]} />
         <meshStandardMaterial color={color} roughness={0.75} metalness={0.45} />
@@ -204,15 +293,11 @@ export default function TheaterInterior({ isMobile = false }: TheaterProps) {
   );
 
   const Box = ({
-    position,
-    rotation = 0,
     size = [0.9, 0.9, 0.9] as [number, number, number],
   }: {
-    position: [number, number, number];
-    rotation?: number;
     size?: [number, number, number];
   }) => (
-    <mesh position={position} rotation={[0, rotation, 0]} castShadow>
+    <mesh castShadow>
       <boxGeometry args={size} />
       <meshStandardMaterial color="#a47844" roughness={0.95} />
     </mesh>
@@ -359,22 +444,50 @@ export default function TheaterInterior({ isMobile = false }: TheaterProps) {
       {/* ---------- Environmental props ---------- */}
       <Ladder position={[-3.2, -0.5, HALF - 0.9]} rotation={-0.2} />
 
-      <Barrel position={[HALF - 1.6, 0.15, 2.5]} color="#3a5d4a" />
-      <Barrel position={[HALF - 1.6, 0.15, 4]} color="#4a3a2a" />
-      <Barrel position={[HALF - 2.8, 0.15, 3.2]} color="#3a5d4a" />
+      {/* Kickable barrels — radius ~0.6, mass 1.4 */}
+      <KickableProp id="barrel-1" initialPosition={[HALF - 1.6, 0.15, 2.5]} radius={0.6} mass={1.4} groundY={0.15}>
+        <Barrel color="#3a5d4a" />
+      </KickableProp>
+      <KickableProp id="barrel-2" initialPosition={[HALF - 1.6, 0.15, 4]} radius={0.6} mass={1.4} groundY={0.15}>
+        <Barrel color="#4a3a2a" />
+      </KickableProp>
+      <KickableProp id="barrel-3" initialPosition={[HALF - 2.8, 0.15, 3.2]} radius={0.6} mass={1.4} groundY={0.15}>
+        <Barrel color="#3a5d4a" />
+      </KickableProp>
 
-      <Box position={[HALF - 1.8, 0, -3]} rotation={0.3} size={[1.1, 1, 1.1]} />
-      <Box position={[HALF - 2.9, 0, -3.4]} rotation={-0.2} size={[0.8, 0.8, 0.8]} />
-      <Box position={[HALF - 2.1, 1.05, -3.2]} rotation={0.5} size={[0.7, 0.7, 0.7]} />
+      {/* Kickable boxes — lighter so they fly farther */}
+      <KickableProp id="box-1" initialPosition={[HALF - 1.8, 0, -3]} initialRotationY={0.3} radius={0.6} mass={0.7} groundY={0}>
+        <Box size={[1.1, 1, 1.1]} />
+      </KickableProp>
+      <KickableProp id="box-2" initialPosition={[HALF - 2.9, 0, -3.4]} initialRotationY={-0.2} radius={0.45} mass={0.5} groundY={0}>
+        <Box size={[0.8, 0.8, 0.8]} />
+      </KickableProp>
+      <KickableProp id="box-3" initialPosition={[HALF - 2.1, 1.05, -3.2]} initialRotationY={0.5} radius={0.4} mass={0.4} groundY={0}>
+        <Box size={[0.7, 0.7, 0.7]} />
+      </KickableProp>
+      <KickableProp id="box-4" initialPosition={[-HALF + 1.6, 0, -1.5]} initialRotationY={-0.4} radius={0.55} mass={0.6} groundY={0}>
+        <Box size={[0.95, 0.95, 0.95]} />
+      </KickableProp>
+      <KickableProp id="box-5" initialPosition={[-HALF + 1.4, 0, 3]} initialRotationY={0.2} radius={0.6} mass={0.65} groundY={0}>
+        <Box size={[1.1, 0.9, 1.0]} />
+      </KickableProp>
 
-      <Box position={[-HALF + 1.6, 0, -1.5]} rotation={-0.4} size={[0.95, 0.95, 0.95]} />
-      <Box position={[-HALF + 1.4, 0, 3]} rotation={0.2} size={[1.1, 0.9, 1.0]} />
-
+      {/* Kickable debris (lightweight) */}
       {debris.map((d, i) => (
-        <mesh key={`debris-${i}`} position={d.pos} rotation={[0, d.rot, 0]} castShadow>
-          <boxGeometry args={[d.scale, d.scale * 0.5, d.scale]} />
-          <meshStandardMaterial color="#2e2c28" roughness={1} />
-        </mesh>
+        <KickableProp
+          key={`debris-${i}`}
+          id={`debris-${i}`}
+          initialPosition={d.pos}
+          initialRotationY={d.rot}
+          radius={d.scale * 0.7}
+          mass={0.25}
+          groundY={-0.42}
+        >
+          <mesh castShadow>
+            <boxGeometry args={[d.scale, d.scale * 0.5, d.scale]} />
+            <meshStandardMaterial color="#2e2c28" roughness={1} />
+          </mesh>
+        </KickableProp>
       ))}
 
       {/* ---------- Slanted picture-framed embeds on each wall ---------- */}
