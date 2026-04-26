@@ -335,7 +335,10 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
         </group>
       ))}
 
-      {/* ---------- Glowing Orb Portal (interactive, no beams) ---------- */}
+      {/* ---------- Glowing Orb Portal ----------
+          Clean texture-driven portal: solid bright core + two additive
+          glow shells + a soft outer halo. The point light is short-range
+          and low-intensity so it never reads as a visible beam. */}
       <group
         position={[0, 2.0, BASE_R * 0.95 + 0.3]}
         onClick={(e) => {
@@ -352,24 +355,40 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
           onHoverChange?.(false);
         }}
       >
+        {/* Outermost soft halo — wide, very faint */}
         <mesh ref={orbHaloRef}>
-          <sphereGeometry args={[1.4, 32, 32]} />
+          <sphereGeometry args={[1.8, 40, 40]} />
           <meshBasicMaterial
-            color="#ffb14a"
+            color="#ff9a3a"
             transparent
-            opacity={0.28}
+            opacity={0.18}
             blending={THREE.AdditiveBlending}
             depthWrite={false}
             toneMapped={false}
           />
         </mesh>
+
+        {/* Mid glow shell — warmer amber */}
         <mesh>
-          <sphereGeometry args={[0.8, 32, 32]} />
+          <sphereGeometry args={[1.05, 40, 40]} />
+          <meshBasicMaterial
+            color="#ffb96a"
+            transparent
+            opacity={0.55}
+            blending={THREE.AdditiveBlending}
+            depthWrite={false}
+            toneMapped={false}
+          />
+        </mesh>
+
+        {/* Inner bright shell */}
+        <mesh>
+          <sphereGeometry args={[0.7, 40, 40]} />
           <meshBasicMaterial
             ref={orbGlowRef}
-            color="#ffd27a"
+            color="#ffe2a8"
             transparent
-            opacity={0.9}
+            opacity={0.85}
             blending={THREE.AdditiveBlending}
             depthWrite={false}
             toneMapped={false}
