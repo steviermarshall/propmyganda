@@ -41,6 +41,11 @@ export default function CameraRig({ mode, hovered, isMobile, onTransitionComplet
   const theaterTarget = useRef(new THREE.Vector3(0, 3, -5.35));
   const theaterPos = useRef(new THREE.Vector3(0, 3, 4));
 
+  // Theater look-around (yaw/pitch) state — driven by drag in theater mode.
+  const theaterYawRef = useRef(0);
+  const theaterPitchRef = useRef(0);
+  const lastYRef = useRef(0);
+
   // Pointer drag handlers — attached to the canvas DOM element.
   useEffect(() => {
     const dom = gl.domElement;
