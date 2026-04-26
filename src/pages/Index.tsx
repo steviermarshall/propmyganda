@@ -25,10 +25,17 @@ const Index = () => {
 
         {/* Overlay UI */}
         <div className="pointer-events-none absolute inset-0 flex flex-col justify-between p-6 md:p-10 z-10">
-          <div className="flex justify-between items-start text-[10px] md:text-xs tracking-[0.3em] uppercase text-white/80">
-            <span>BKLN / NYC</span>
+          <div className="flex justify-between items-center text-[10px] md:text-xs tracking-[0.3em] uppercase text-white/80 pointer-events-auto">
+            <Link to="/" aria-label="PMG home" className="flex items-center">
+              <img src={pmgLogo} alt="PMG" className="h-6 md:h-8 w-auto" />
+            </Link>
             <span className="hidden md:block">Est. Independent</span>
-            <span>{new Date().getFullYear()}</span>
+            <Link
+              to={session ? "/dashboard" : "/auth/login"}
+              className="text-[10px] tracking-[0.2em] uppercase font-bold border border-white/40 px-4 py-2 hover:bg-white hover:text-black transition-colors text-white"
+            >
+              {session ? "Dashboard" : "Staff"}
+            </Link>
           </div>
 
           <div
