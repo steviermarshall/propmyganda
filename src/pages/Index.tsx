@@ -29,12 +29,21 @@ const Index = () => {
             <Link to="/" aria-label="PMG home" className="flex items-center">
               <img src={pmgLogo} alt="PMG" className="h-6 md:h-8 w-auto" />
             </Link>
-            <Link
-              to="/auth/login"
-              className="text-[10px] tracking-[0.2em] uppercase font-bold border border-white/40 px-4 py-2 hover:bg-white hover:text-black transition-colors text-white"
-            >
-              Staff
-            </Link>
+            <div className="flex items-center gap-3">
+              <Link
+                to="/auth/login"
+                className="text-[10px] tracking-[0.2em] uppercase font-bold border border-white/40 px-4 py-2 hover:bg-white hover:text-black transition-colors text-white"
+              >
+                Staff
+              </Link>
+              <Link
+                to="/artists"
+                className="md:hidden text-[10px] tracking-[0.2em] uppercase font-bold text-white/80 hover:text-white"
+                aria-label="Menu"
+              >
+                Menu
+              </Link>
+            </div>
           </div>
 
           <div
