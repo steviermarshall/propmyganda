@@ -481,32 +481,70 @@ export default function TheaterInterior({ isMobile = false }: TheaterProps) {
       {/* ---------- Environmental props ---------- */}
       <Ladder position={[-3.2, -0.5, HALF - 0.9]} rotation={-0.2} />
 
-      {/* Kickable barrels — radius ~0.6, mass 1.4 */}
-      <KickableProp id="barrel-1" initialPosition={[HALF - 1.6, 0.15, 2.5]} radius={0.6} mass={1.4} groundY={0.15}>
+      {/* Kickable barrels — placed all around the room */}
+      <KickableProp id="barrel-1" initialPosition={[HALF - 1.6, 0.65, 2.5]} radius={0.6} mass={1.4} groundY={0.65}>
         <Barrel color="#3a5d4a" />
       </KickableProp>
-      <KickableProp id="barrel-2" initialPosition={[HALF - 1.6, 0.15, 4]} radius={0.6} mass={1.4} groundY={0.15}>
+      <KickableProp id="barrel-2" initialPosition={[HALF - 1.6, 0.65, 4]} radius={0.6} mass={1.4} groundY={0.65}>
         <Barrel color="#4a3a2a" />
       </KickableProp>
-      <KickableProp id="barrel-3" initialPosition={[HALF - 2.8, 0.15, 3.2]} radius={0.6} mass={1.4} groundY={0.15}>
+      <KickableProp id="barrel-3" initialPosition={[HALF - 2.8, 0.65, 3.2]} radius={0.6} mass={1.4} groundY={0.65}>
         <Barrel color="#3a5d4a" />
       </KickableProp>
+      <KickableProp id="barrel-4" initialPosition={[-3, 0.65, -4]} radius={0.6} mass={1.4} groundY={0.65}>
+        <Barrel color="#5a4a2a" />
+      </KickableProp>
+      <KickableProp id="barrel-5" initialPosition={[-1.5, 0.65, -4.5]} radius={0.6} mass={1.4} groundY={0.65}>
+        <Barrel color="#3a5d4a" />
+      </KickableProp>
+      <KickableProp id="barrel-6" initialPosition={[3, 0.65, -1.5]} radius={0.6} mass={1.2} groundY={0.65}>
+        <Barrel color="#4a3a2a" />
+      </KickableProp>
 
-      {/* Kickable boxes — lighter so they fly farther */}
-      <KickableProp id="box-1" initialPosition={[HALF - 1.8, 0, -3]} initialRotationY={0.3} radius={0.6} mass={0.7} groundY={0}>
+      {/* Kickable boxes — scattered everywhere */}
+      <KickableProp id="box-1" initialPosition={[HALF - 1.8, 0.5, -3]} initialRotationY={0.3} radius={0.6} mass={0.7} groundY={0.5}>
         <Box size={[1.1, 1, 1.1]} />
       </KickableProp>
-      <KickableProp id="box-2" initialPosition={[HALF - 2.9, 0, -3.4]} initialRotationY={-0.2} radius={0.45} mass={0.5} groundY={0}>
+      <KickableProp id="box-2" initialPosition={[HALF - 2.9, 0.4, -3.4]} initialRotationY={-0.2} radius={0.45} mass={0.5} groundY={0.4}>
         <Box size={[0.8, 0.8, 0.8]} />
       </KickableProp>
-      <KickableProp id="box-3" initialPosition={[HALF - 2.1, 1.05, -3.2]} initialRotationY={0.5} radius={0.4} mass={0.4} groundY={0}>
+      <KickableProp id="box-3" initialPosition={[HALF - 2.1, 1.55, -3.2]} initialRotationY={0.5} radius={0.4} mass={0.4} groundY={0.35}>
         <Box size={[0.7, 0.7, 0.7]} />
       </KickableProp>
-      <KickableProp id="box-4" initialPosition={[-HALF + 1.6, 0, -1.5]} initialRotationY={-0.4} radius={0.55} mass={0.6} groundY={0}>
+      <KickableProp id="box-4" initialPosition={[-HALF + 1.6, 0.5, -1.5]} initialRotationY={-0.4} radius={0.55} mass={0.6} groundY={0.5}>
         <Box size={[0.95, 0.95, 0.95]} />
       </KickableProp>
-      <KickableProp id="box-5" initialPosition={[-HALF + 1.4, 0, 3]} initialRotationY={0.2} radius={0.6} mass={0.65} groundY={0}>
+      <KickableProp id="box-5" initialPosition={[-HALF + 1.4, 0.45, 3]} initialRotationY={0.2} radius={0.6} mass={0.65} groundY={0.45}>
         <Box size={[1.1, 0.9, 1.0]} />
+      </KickableProp>
+      <KickableProp id="box-6" initialPosition={[2.5, 0.45, 3.8]} initialRotationY={0.7} radius={0.5} mass={0.55} groundY={0.45}>
+        <Box size={[0.9, 0.9, 0.9]} />
+      </KickableProp>
+      <KickableProp id="box-7" initialPosition={[1, 0.4, -2.5]} initialRotationY={-0.6} radius={0.45} mass={0.5} groundY={0.4}>
+        <Box size={[0.8, 0.8, 0.8]} />
+      </KickableProp>
+      <KickableProp id="box-8" initialPosition={[-2, 0.5, 2]} initialRotationY={0.1} radius={0.55} mass={0.6} groundY={0.5}>
+        <Box size={[1.0, 1.0, 1.0]} />
+      </KickableProp>
+      <KickableProp id="box-9" initialPosition={[-3.5, 0.35, 1.5]} initialRotationY={1.1} radius={0.4} mass={0.4} groundY={0.35}>
+        <Box size={[0.7, 0.7, 0.7]} />
+      </KickableProp>
+
+      {/* Kickable chairs */}
+      <KickableProp id="chair-1" initialPosition={[2, 0, 1.5]} initialRotationY={-0.4} radius={0.4} mass={0.6} groundY={0}>
+        <Chair />
+      </KickableProp>
+      <KickableProp id="chair-2" initialPosition={[-1.8, 0, -2.5]} initialRotationY={1.2} radius={0.4} mass={0.6} groundY={0}>
+        <Chair />
+      </KickableProp>
+      <KickableProp id="chair-3" initialPosition={[3.5, 0, 0]} initialRotationY={-1.5} radius={0.4} mass={0.6} groundY={0}>
+        <Chair />
+      </KickableProp>
+      <KickableProp id="chair-4" initialPosition={[-3.2, 0, 4]} initialRotationY={0.3} radius={0.4} mass={0.6} groundY={0}>
+        <Chair />
+      </KickableProp>
+      <KickableProp id="chair-5" initialPosition={[0, 0, 4]} initialRotationY={Math.PI} radius={0.4} mass={0.6} groundY={0}>
+        <Chair />
       </KickableProp>
 
       {/* Kickable debris (lightweight) */}
