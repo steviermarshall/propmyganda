@@ -41,16 +41,24 @@ export default function CameraRig({ mode, hovered, isMobile, onTransitionComplet
   const theaterTarget = useRef(new THREE.Vector3(0, 3, -5.35));
   const theaterPos = useRef(new THREE.Vector3(0, 3, 4));
 
+  // Theater look-around (yaw/pitch) state — driven by drag in theater mode.
+  const theaterYawRef = useRef(0);
+  const theaterPitchRef = useRef(0);
+  const lastYRef = useRef(0);
+
   // Pointer drag handlers — attached to the canvas DOM element.
   useEffect(() => {
     const dom = gl.domElement;
 
     const onDown = (e: PointerEvent) => {
-      if (mode !== "forest") return;
-      // Only primary button / touch
+      if (mode !== "forest" && mode !== "theater") return;
       if (e.pointerType === "mouse" && e.button !== 0) return;
+      // Don't hijack drags that start on HTML overlays (e.g. Discord iframe in theater)
+      const target = e.target as HTMLElement | null;
+      if (target && target.tagName !== "CANVAS") return;
       draggingRef.current = true;
       lastXRef.current = e.clientX;
+      lastYRef.current = e.clientY;
       userInteractRef.current = performance.now();
       try {
         dom.setPointerCapture(e.pointerId);
@@ -61,12 +69,27 @@ export default function CameraRig({ mode, hovered, isMobile, onTransitionComplet
     const onMove = (e: PointerEvent) => {
       if (!draggingRef.current) return;
       const dx = e.clientX - lastXRef.current;
+      const dy = e.clientY - lastYRef.current;
       lastXRef.current = e.clientX;
-      // Width-normalized rotation: full screen drag ≈ ~PI rad
-      const sensitivity = (Math.PI / window.innerWidth) * 1.2;
-      const delta = -dx * sensitivity;
-      angleRef.current += delta;
-      userAngleVelRef.current = delta;
+      lastYRef.current = e.clientY;
+      if (mode === "theater") {
+        const sens = (Math.PI / window.innerWidth) * 1.0;
+        theaterYawRef.current = THREE.MathUtils.clamp(
+          theaterYawRef.current - dx * sens,
+          -0.9,
+          0.9
+        );
+        theaterPitchRef.current = THREE.MathUtils.clamp(
+          theaterPitchRef.current - dy * sens * 0.7,
+          -0.4,
+          0.5
+        );
+      } else {
+        const sensitivity = (Math.PI / window.innerWidth) * 1.2;
+        const delta = -dx * sensitivity;
+        angleRef.current += delta;
+        userAngleVelRef.current = delta;
+      }
       userInteractRef.current = performance.now();
     };
     const onUp = (e: PointerEvent) => {
@@ -194,15 +217,31 @@ export default function CameraRig({ mode, hovered, isMobile, onTransitionComplet
       return;
     }
 
-    // theater
+    // theater — seated sway + drag-to-look-around
     const sway = Math.sin(t * 0.4) * 0.06;
+    // On mobile, sit slightly farther back & higher FOV so the screen fits portrait.
+    const seatZ = isMobile ? 5.2 : theaterPos.current.z;
+    const seatY = isMobile ? 3.1 : theaterPos.current.y;
     camera.position.lerp(
-      new THREE.Vector3(theaterPos.current.x + sway, theaterPos.current.y, theaterPos.current.z),
+      new THREE.Vector3(theaterPos.current.x + sway, seatY, seatZ),
       0.05
     );
-    persp.fov = THREE.MathUtils.lerp(persp.fov, 55, 0.05);
+    const targetFov = isMobile ? 68 : 55;
+    persp.fov = THREE.MathUtils.lerp(persp.fov, targetFov, 0.05);
     persp.updateProjectionMatrix();
-    camera.lookAt(theaterTarget.current);
+
+    // Apply yaw/pitch around the screen target.
+    const base = theaterTarget.current;
+    const yaw = theaterYawRef.current;
+    const pitch = theaterPitchRef.current;
+    // Offset the lookAt point by yaw/pitch — gives a "look around" feel without leaving the seat.
+    const lookOffset = new THREE.Vector3(
+      Math.sin(yaw) * 6,
+      Math.sin(pitch) * 4,
+      Math.cos(yaw) * -1
+    );
+    const lookTarget = base.clone().add(lookOffset);
+    camera.lookAt(lookTarget);
   });
 
   return null;

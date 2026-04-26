@@ -11,7 +11,11 @@ import * as THREE from "three";
  *  - Interactive Discord widget rendered via drei <Html transform>
  *  - Per-frame pulse on the screen frame to feed the global Bloom pass
  */
-export default function TheaterInterior() {
+interface TheaterProps {
+  isMobile?: boolean;
+}
+
+export default function TheaterInterior({ isMobile = false }: TheaterProps) {
   const mossRefs = useRef<THREE.MeshStandardMaterial[]>([]);
   const screenGlowRef = useRef<THREE.MeshBasicMaterial>(null);
   const screenFrameRef = useRef<THREE.MeshStandardMaterial>(null);
@@ -174,10 +178,10 @@ export default function TheaterInterior() {
         position={[0, 3, -5.35]}
         transform
         occlude={false}
-        distanceFactor={4.2}
+        distanceFactor={isMobile ? 5.6 : 4.2}
         style={{
-          width: "780px",
-          height: "460px",
+          width: isMobile ? "560px" : "780px",
+          height: isMobile ? "640px" : "460px",
           borderRadius: "10px",
           overflow: "hidden",
           boxShadow:
@@ -187,8 +191,8 @@ export default function TheaterInterior() {
         <iframe
           title="Propworld Discord"
           src="https://discord.com/widget?id=1011591077406572574&theme=dark"
-          width="780"
-          height="460"
+          width={isMobile ? 560 : 780}
+          height={isMobile ? 640 : 460}
           frameBorder="0"
           sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts"
           style={{ border: 0, display: "block", background: "#1a1a1a" }}

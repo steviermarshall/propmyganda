@@ -75,7 +75,7 @@ export default function PropworldScene({ onModeChange }: Props) {
           </>
         )}
 
-        {mode === "theater" && <TheaterInterior />}
+        {mode === "theater" && <TheaterInterior isMobile={isMobile} />}
       </Suspense>
 
       <CameraRig
