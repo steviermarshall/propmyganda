@@ -11,7 +11,11 @@ import * as THREE from "three";
  *  - Interactive Discord widget rendered via drei <Html transform>
  *  - Per-frame pulse on the screen frame to feed the global Bloom pass
  */
-export default function TheaterInterior() {
+interface TheaterProps {
+  isMobile?: boolean;
+}
+
+export default function TheaterInterior({ isMobile = false }: TheaterProps) {
   const mossRefs = useRef<THREE.MeshStandardMaterial[]>([]);
   const screenGlowRef = useRef<THREE.MeshBasicMaterial>(null);
   const screenFrameRef = useRef<THREE.MeshStandardMaterial>(null);
