@@ -66,13 +66,15 @@ const Navbar = () => {
             ))}
           </div>
 
-          {/* Dashboard / Login link */}
-          <Link
-            to={session ? "/dashboard" : "/auth/login"}
-            className="hidden md:block text-[10px] tracking-[0.2em] uppercase font-bold border border-primary-foreground/40 px-4 py-2 hover:bg-primary-foreground hover:text-primary transition-colors text-primary-foreground"
-          >
-            {session ? "Dashboard" : "Staff"}
-          </Link>
+          {/* Dashboard / Login link (hidden on home — duplicated in hero) */}
+          {!isHome && (
+            <Link
+              to={session ? "/dashboard" : "/auth/login"}
+              className="hidden md:block text-[10px] tracking-[0.2em] uppercase font-bold border border-primary-foreground/40 px-4 py-2 hover:bg-primary-foreground hover:text-primary transition-colors text-primary-foreground"
+            >
+              {session ? "Dashboard" : "Staff"}
+            </Link>
+          )}
 
           {/* Mobile Toggle */}
           <button
