@@ -29,7 +29,6 @@ const Index = () => {
             <Link to="/" aria-label="PMG home" className="flex items-center">
               <img src={pmgLogo} alt="PMG" className="h-6 md:h-8 w-auto" />
             </Link>
-            <span className="hidden md:block">Est. Independent</span>
             <Link
               to={session ? "/dashboard" : "/auth/login"}
               className="text-[10px] tracking-[0.2em] uppercase font-bold border border-white/40 px-4 py-2 hover:bg-white hover:text-black transition-colors text-white"
@@ -64,7 +63,8 @@ const Index = () => {
 
           <div className="flex justify-between items-end text-[10px] md:text-xs tracking-[0.3em] uppercase text-white/60">
             <span>Scroll ↓</span>
-            <span className="hidden md:block">WebGL · v1.0</span>
+            <span className="hidden md:block">Est. Independent</span>
+            <span>WebGL · v1.0</span>
           </div>
         </div>
       </section>

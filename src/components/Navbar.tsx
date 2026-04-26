@@ -31,6 +31,8 @@ const Navbar = () => {
     setIsOpen(false);
   }, [location]);
 
+  const isHome = location.pathname === "/";
+
   return (
     <>
       <nav
@@ -39,9 +41,13 @@ const Navbar = () => {
         }`}
       >
         <div className="container-content flex items-center justify-between h-16 md:h-20">
-          <Link to="/" className="flex items-center" aria-label="PMG home">
-            <img src={pmgLogo} alt="PMG" className="h-6 md:h-8 w-auto" />
-          </Link>
+          {isHome ? (
+            <span aria-hidden className="w-6" />
+          ) : (
+            <Link to="/" className="flex items-center" aria-label="PMG home">
+              <img src={pmgLogo} alt="PMG" className="h-6 md:h-8 w-auto" />
+            </Link>
+          )}
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-8">
@@ -60,13 +66,15 @@ const Navbar = () => {
             ))}
           </div>
 
-          {/* Dashboard / Login link */}
-          <Link
-            to={session ? "/dashboard" : "/auth/login"}
-            className="hidden md:block text-[10px] tracking-[0.2em] uppercase font-bold border border-primary-foreground/40 px-4 py-2 hover:bg-primary-foreground hover:text-primary transition-colors text-primary-foreground"
-          >
-            {session ? "Dashboard" : "Staff"}
-          </Link>
+          {/* Dashboard / Login link (hidden on home — duplicated in hero) */}
+          {!isHome && (
+            <Link
+              to={session ? "/dashboard" : "/auth/login"}
+              className="hidden md:block text-[10px] tracking-[0.2em] uppercase font-bold border border-primary-foreground/40 px-4 py-2 hover:bg-primary-foreground hover:text-primary transition-colors text-primary-foreground"
+            >
+              {session ? "Dashboard" : "Staff"}
+            </Link>
+          )}
 
           {/* Mobile Toggle */}
           <button
