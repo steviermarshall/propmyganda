@@ -157,6 +157,25 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
     }
     pos.needsUpdate = true;
     g.computeVertexNormals();
+
+    // ---- Carve the doorway hole into the trunk ----
+    // Drop any triangle whose centroid falls inside the doorway silhouette,
+    // so bark never protrudes through the portal.
+    const idx = g.getIndex();
+    if (idx) {
+      const src = idx.array as ArrayLike<number>;
+      const kept: number[] = [];
+      for (let f = 0; f < src.length; f += 3) {
+        const a = src[f], b = src[f + 1], c = src[f + 2];
+        const cx = (pos.getX(a) + pos.getX(b) + pos.getX(c)) / 3;
+        const cy = (pos.getY(a) + pos.getY(b) + pos.getY(c)) / 3;
+        const cz = (pos.getZ(a) + pos.getZ(b) + pos.getZ(c)) / 3;
+        if (!insideDoorway(cx, cy, cz)) {
+          kept.push(a, b, c);
+        }
+      }
+      g.setIndex(kept);
+    }
     return g;
   }, []);
 
