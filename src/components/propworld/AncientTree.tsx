@@ -463,14 +463,25 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
               onHoverChange?.(false);
             }}
           >
-            {/* CARVED EDGE — a slightly larger arch sitting just BEHIND the
-                portal (pulled inward toward the trunk axis). Deep amber-black
-                emissive only, no shadows, so it reads as a recessed bark lip
-                framing the doorway. */}
+            {/* SEALED BACK WALL — pure black arch sitting deep inside the
+                trunk so you can't see through the hollow opening. */}
             <mesh
               geometry={archGeom}
-              scale={[1.14, 1.08, 1.14]}
-              position={[0, 0, -0.18]}
+              scale={[0.96, 0.97, 0.96]}
+              position={[0, 0, -0.6]}
+            >
+              <meshBasicMaterial
+                color="#000000"
+                toneMapped={false}
+                side={THREE.DoubleSide}
+              />
+            </mesh>
+
+            {/* CARVED EDGE — tight bark lip hugging the portal silhouette. */}
+            <mesh
+              geometry={archGeom}
+              scale={[1.05, 1.03, 1.05]}
+              position={[0, 0, -0.08]}
             >
               <meshBasicMaterial
                 color="#0a0402"
