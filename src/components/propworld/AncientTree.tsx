@@ -110,9 +110,7 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
       const z = pos.getZ(i);
 
       const t = THREE.MathUtils.clamp(y / HEIGHT, 0, 1);
-      // Bottom 30% is parallel-sided (full radius), then tapers smoothly
-      // up to the top radius. No bulging base.
-      const PARALLEL_END = 0.3;
+      // Bottom 30% is parallel-sided (full radius), then tapers smoothly.
       let taper: number;
       if (t <= PARALLEL_END) {
         taper = 1.0;
