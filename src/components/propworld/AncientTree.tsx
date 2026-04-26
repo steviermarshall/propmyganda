@@ -64,7 +64,16 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
       const z = pos.getZ(i);
 
       const t = THREE.MathUtils.clamp(y / HEIGHT, 0, 1);
-      const taper = THREE.MathUtils.lerp(1.0, TOP_R / BASE_R, t);
+      // Bottom 30% is parallel-sided (full radius), then tapers smoothly
+      // up to the top radius. No bulging base.
+      const PARALLEL_END = 0.3;
+      let taper: number;
+      if (t <= PARALLEL_END) {
+        taper = 1.0;
+      } else {
+        const tt = (t - PARALLEL_END) / (1 - PARALLEL_END);
+        taper = THREE.MathUtils.lerp(1.0, TOP_R / BASE_R, tt);
+      }
 
       // Apply taper first
       let nx = x * taper;
