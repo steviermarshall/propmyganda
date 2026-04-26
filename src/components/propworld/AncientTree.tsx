@@ -394,15 +394,19 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
             toneMapped={false}
           />
         </mesh>
+        {/* Solid bright core */}
         <mesh ref={orbCoreRef}>
-          <sphereGeometry args={[0.45, 32, 32]} />
-          <meshBasicMaterial color="#fff2c2" toneMapped={false} />
+          <sphereGeometry args={[0.42, 40, 40]} />
+          <meshBasicMaterial color="#fff4cc" toneMapped={false} />
         </mesh>
+
+        {/* Short-range warm fill — illuminates surrounding bark only,
+            no visible beam. Decay=2, distance=8. */}
         <pointLight
           ref={orbLightRef}
-          intensity={3}
-          color="#ffa040"
-          distance={16}
+          intensity={2.4}
+          color="#ffae5a"
+          distance={8}
           decay={2}
         />
       </group>
