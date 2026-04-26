@@ -391,39 +391,40 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
               onHoverChange?.(false);
             }}
           >
-            {/* Recessed black cavity — sits just behind the trunk surface
-                so the bark naturally frames the opening. */}
-            <mesh position={[0, 0.4, -0.05]}>
+            {/* Recessed black cavity - pushed slightly INTO the trunk
+                so bark wraps around the opening. */}
+            <mesh position={[0, 0, -0.08]}>
               <shapeGeometry args={[archShape]} />
-              <meshBasicMaterial color="#000000" toneMapped={false} />
+              <meshBasicMaterial color="#000000" toneMapped={false} side={THREE.DoubleSide} />
             </mesh>
 
-            {/* Carved bark arch frame (raised lip around the doorway) */}
-            <mesh position={[0, 0.4, 0.02]}>
+            {/* Carved bark arch frame - flush with the trunk surface */}
+            <mesh position={[0, 0, 0.02]}>
               <shapeGeometry args={[frameOuter]} />
               <meshStandardMaterial
                 color="#070b0f"
                 roughness={1}
                 emissive="#1a0e05"
                 emissiveIntensity={0.25}
+                side={THREE.DoubleSide}
               />
             </mesh>
 
-            {/* Subtle warm glow lining the arch interior */}
-            <mesh position={[0, 0.4, -0.02]} scale={[0.94, 0.94, 1]}>
+            {/* Warm glow lining the arch interior */}
+            <mesh position={[0, 0, -0.04]} scale={[0.92, 0.92, 1]}>
               <shapeGeometry args={[archShape]} />
               <meshBasicMaterial
                 color="#ff8a30"
                 transparent
-                opacity={0.25}
+                opacity={0.3}
                 blending={THREE.AdditiveBlending}
                 depthWrite={false}
                 toneMapped={false}
               />
             </mesh>
 
-            {/* ---------- Orb floating INSIDE the doorway ---------- */}
-            <group position={[0, 1.55, 0.55]}>
+            {/* Orb floating INSIDE the doorway - centered vertically, slightly forward */}
+            <group position={[0, DH * 0.45, 0.15]}>
               {/* Soft outer halo — fills the doorway space */}
               <mesh ref={orbHaloRef}>
                 <sphereGeometry args={[1.4, 32, 32]} />
