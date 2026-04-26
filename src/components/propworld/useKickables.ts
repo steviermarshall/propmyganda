@@ -25,10 +25,11 @@ export const kickables = {
     return Array.from(items.values());
   },
   /** Apply an impulse to any kickable inside a forward cone from the camera. */
-  kickFromCamera(origin: THREE.Vector3, dir: THREE.Vector3) {
-    const REACH = 3.5;
-    const CONE_DOT = 0.55; // ~55° half-angle
+  kickFromCamera(origin: THREE.Vector3, dir: THREE.Vector3): boolean {
+    const REACH = 9; // much longer reach — props live across the room
+    const CONE_DOT = 0.2; // ~78° half-angle, very wide
     const flatDir = new THREE.Vector3(dir.x, 0, dir.z).normalize();
+    let kickedAny = false;
 
     items.forEach((k) => {
       const toItem = new THREE.Vector3(
@@ -42,12 +43,33 @@ export const kickables = {
       const dot = itemDir.dot(flatDir);
       if (dot < CONE_DOT) return;
 
-      const power = THREE.MathUtils.clamp(1 - dist / (REACH + k.radius), 0.2, 1);
-      const speed = (6 + 4 * power) / k.mass;
+      const power = THREE.MathUtils.clamp(1 - dist / (REACH + k.radius), 0.25, 1);
+      const speed = (8 + 6 * power) / k.mass;
       k.velocity.x += itemDir.x * speed;
       k.velocity.z += itemDir.z * speed;
-      k.velocity.y += 1.5 * power;
-      k.angularY += (Math.random() - 0.5) * 6 + (itemDir.x - itemDir.z) * 2;
+      k.velocity.y += 2.5 * power;
+      k.angularY += (Math.random() - 0.5) * 8 + (itemDir.x - itemDir.z) * 3;
+      kickedAny = true;
     });
+    return kickedAny;
+  },
+
+  /** Direct kick on a specific item by id (used when user taps the prop itself). */
+  kickById(id: string, fromOrigin: THREE.Vector3) {
+    const k = items.get(id);
+    if (!k) return;
+    const toItem = new THREE.Vector3(
+      k.position.x - fromOrigin.x,
+      0,
+      k.position.z - fromOrigin.z
+    );
+    const itemDir = toItem.lengthSq() > 0.0001
+      ? toItem.normalize()
+      : new THREE.Vector3(1, 0, 0);
+    const speed = 12 / k.mass;
+    k.velocity.x += itemDir.x * speed;
+    k.velocity.z += itemDir.z * speed;
+    k.velocity.y += 3.5;
+    k.angularY += (Math.random() - 0.5) * 10;
   },
 };
