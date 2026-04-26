@@ -418,6 +418,22 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
               onHoverChange?.(false);
             }}
           >
+            {/* CARVED EDGE — a slightly larger arch sitting just BEHIND the
+                portal (pulled inward toward the trunk axis). Deep amber-black
+                emissive only, no shadows, so it reads as a recessed bark lip
+                framing the doorway. */}
+            <mesh
+              geometry={archGeom}
+              scale={[1.07, 1.05, 1.07]}
+              position={[0, 0, -0.04]}
+            >
+              <meshBasicMaterial
+                color="#1a0a04"
+                toneMapped={false}
+                side={THREE.DoubleSide}
+              />
+            </mesh>
+
             {/* THE DOORWAY IS THE ORB.
                 A single arch-shaped emissive surface that follows the
                 trunk's curvature. No frame, no protruding planes —
