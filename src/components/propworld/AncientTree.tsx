@@ -245,7 +245,7 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
       orbHaloRef.current.scale.set(s, s, s);
     }
     if (orbLightRef.current) {
-      orbLightRef.current.intensity = 2.4 + pulse * 2.8;
+      orbLightRef.current.intensity = 1.8 + pulse * 1.6;
     }
     mossRefs.current.forEach((m, i) => {
       if (m) m.emissiveIntensity = 0.3 + Math.sin(t * 1.2 + i) * 0.12;
