@@ -31,7 +31,7 @@ const Index = () => {
             </Link>
             <Link
               to="/auth/login"
-              className="text-[10px] tracking-[0.2em] uppercase font-bold border border-white/40 px-4 py-2 hover:bg-white hover:text-black transition-colors text-white"
+              className="mr-12 md:mr-0 text-[10px] tracking-[0.2em] uppercase font-bold border border-white/40 px-4 py-2 hover:bg-white hover:text-black transition-colors text-white"
             >
               Staff
             </Link>
