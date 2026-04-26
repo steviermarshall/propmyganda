@@ -504,30 +504,28 @@ export default function TheaterInterior({ isMobile = false }: TheaterProps) {
     const depthOuter = 0.18;
     const depthInner = 0.08;
 
-    // Antique gold materials
+    // Carved/painted wood materials — textured, non-metallic so embeds remain readable
     const goldOuter = (
       <meshStandardMaterial
-        color="#b88746"
-        roughness={0.45}
-        metalness={0.85}
-        emissive="#3a2510"
-        emissiveIntensity={0.15}
+        map={frameWoodTex}
+        color="#a87a3a"
+        roughness={0.85}
+        metalness={0.05}
       />
     );
     const goldHighlight = (
       <meshStandardMaterial
-        color="#e8c074"
-        roughness={0.35}
-        metalness={0.95}
-        emissive="#4a2f12"
-        emissiveIntensity={0.2}
+        map={frameWoodTex}
+        color="#c89a52"
+        roughness={0.7}
+        metalness={0.08}
       />
     );
     const goldShadow = (
       <meshStandardMaterial
-        color="#6b4a22"
-        roughness={0.7}
-        metalness={0.7}
+        color="#3a2614"
+        roughness={0.95}
+        metalness={0}
       />
     );
 
@@ -881,7 +879,7 @@ export default function TheaterInterior({ isMobile = false }: TheaterProps) {
 
             {panel.src ? (
               <Html
-                position={[0, 0, 0.02]}
+                position={[0, 0, 0.16]}
                 transform
                 occlude={false}
                 scale={htmlScale}
@@ -906,7 +904,7 @@ export default function TheaterInterior({ isMobile = false }: TheaterProps) {
               </Html>
             ) : (
               <Html
-                position={[0, 0, 0.02]}
+                position={[0, 0, 0.16]}
                 transform
                 occlude={false}
                 scale={htmlScale}
