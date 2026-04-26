@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import DashLayout from "@/components/dashboard/DashLayout";
+import PublicationDialog from "@/components/dashboard/PublicationDialog";
+import EventDialog from "@/components/dashboard/EventDialog";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -28,6 +30,12 @@ export default function MarketingDashboard() {
   const [tab, setTab] = useState<"metrics" | "publications" | "events">("metrics");
   const [loading, setLoading] = useState(true);
 
+  const [pubDialogOpen, setPubDialogOpen] = useState(false);
+  const [editingPub, setEditingPub] = useState<Publication | null>(null);
+
+  const [eventDialogOpen, setEventDialogOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<Event | null>(null);
+
   useEffect(() => {
     Promise.all([
       supabase.from("social_metrics").select("*").order("recorded_at", { ascending: false }).limit(20),
@@ -50,6 +58,36 @@ export default function MarketingDashboard() {
     const published_at = pub.published_at ? null : new Date().toISOString();
     await supabase.from("publications").update({ published_at }).eq("id", pub.id);
     setPubs((prev) => prev.map((p) => (p.id === pub.id ? { ...p, published_at } : p)));
+  }
+
+  async function deletePub(pub: Publication) {
+    if (!confirm(`Delete "${pub.title}"?`)) return;
+    const { error } = await supabase.from("publications").delete().eq("id", pub.id);
+    if (error) return alert(error.message);
+    setPubs((prev) => prev.filter((p) => p.id !== pub.id));
+  }
+
+  async function deleteEvent(ev: Event) {
+    if (!confirm(`Delete "${ev.title}"?`)) return;
+    const { error } = await supabase.from("events").delete().eq("id", ev.id);
+    if (error) return alert(error.message);
+    setEvents((prev) => prev.filter((e) => e.id !== ev.id));
+  }
+
+  function handlePubSaved(saved: Publication) {
+    setPubs((prev) => {
+      const exists = prev.some((p) => p.id === saved.id);
+      if (exists) return prev.map((p) => (p.id === saved.id ? saved : p));
+      return [saved, ...prev];
+    });
+  }
+
+  function handleEventSaved(saved: Event) {
+    setEvents((prev) => {
+      const exists = prev.some((e) => e.id === saved.id);
+      if (exists) return prev.map((e) => (e.id === saved.id ? saved : e));
+      return [saved, ...prev].sort((a, b) => +new Date(b.event_date) - +new Date(a.event_date));
+    });
   }
 
   return (
@@ -105,67 +143,130 @@ export default function MarketingDashboard() {
 
         {/* Publications */}
         {!loading && tab === "publications" && (
-          <div className="space-y-3">
-            {pubs.map((pub) => (
-              <div key={pub.id} className="border border-white/10 bg-white/[0.02] p-4 flex items-start gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[10px] uppercase tracking-wider text-white/40 border border-white/10 px-1.5 py-0.5">{pub.category}</span>
-                    {pub.featured && <span className="text-[10px] text-electric uppercase tracking-wider">Featured</span>}
-                    {!pub.published_at && <span className="text-[10px] text-yellow-400/70 uppercase tracking-wider">Draft</span>}
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <p className="text-xs uppercase tracking-widest text-white/40">{pubs.length} articles</p>
+              <button
+                onClick={() => { setEditingPub(null); setPubDialogOpen(true); }}
+                className="text-xs uppercase tracking-wider px-4 py-2 bg-electric text-black font-bold hover:opacity-80 transition-opacity"
+              >
+                + New Article
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {pubs.map((pub) => (
+                <div key={pub.id} className="border border-white/10 bg-white/[0.02] p-4 flex items-start gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-[10px] uppercase tracking-wider text-white/40 border border-white/10 px-1.5 py-0.5">{pub.category}</span>
+                      {pub.featured && <span className="text-[10px] text-electric uppercase tracking-wider">Featured</span>}
+                      {!pub.published_at && <span className="text-[10px] text-yellow-400/70 uppercase tracking-wider">Draft</span>}
+                    </div>
+                    <p className="font-bold text-sm truncate">{pub.title}</p>
+                    <p className="text-white/40 text-xs mt-0.5 line-clamp-1">{pub.excerpt}</p>
                   </div>
-                  <p className="font-bold text-sm truncate">{pub.title}</p>
-                  <p className="text-white/40 text-xs mt-0.5 line-clamp-1">{pub.excerpt}</p>
+                  <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+                    <button
+                      onClick={() => toggleFeatured(pub.id, pub.featured)}
+                      className={`text-[10px] uppercase tracking-wider px-2.5 py-1 border transition-colors ${
+                        pub.featured ? "border-electric text-electric" : "border-white/10 text-white/40 hover:border-white/30"
+                      }`}
+                    >
+                      {pub.featured ? "Featured" : "Feature"}
+                    </button>
+                    <button
+                      onClick={() => togglePublished(pub)}
+                      className={`text-[10px] uppercase tracking-wider px-2.5 py-1 border transition-colors ${
+                        pub.published_at ? "border-green-500/40 text-green-400" : "border-white/10 text-white/40 hover:border-white/30"
+                      }`}
+                    >
+                      {pub.published_at ? "Live" : "Publish"}
+                    </button>
+                    <button
+                      onClick={() => { setEditingPub(pub); setPubDialogOpen(true); }}
+                      className="text-[10px] uppercase tracking-wider px-2.5 py-1 border border-white/20 hover:border-white/40 transition-colors"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => deletePub(pub)}
+                      className="text-[10px] uppercase tracking-wider px-2.5 py-1 border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-colors"
+                    >
+                      Del
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    onClick={() => toggleFeatured(pub.id, pub.featured)}
-                    className={`text-[10px] uppercase tracking-wider px-2.5 py-1 border transition-colors ${
-                      pub.featured ? "border-electric text-electric" : "border-white/10 text-white/40 hover:border-white/30"
-                    }`}
-                  >
-                    {pub.featured ? "Featured" : "Feature"}
-                  </button>
-                  <button
-                    onClick={() => togglePublished(pub)}
-                    className={`text-[10px] uppercase tracking-wider px-2.5 py-1 border transition-colors ${
-                      pub.published_at ? "border-green-500/40 text-green-400" : "border-white/10 text-white/40 hover:border-white/30"
-                    }`}
-                  >
-                    {pub.published_at ? "Live" : "Publish"}
-                  </button>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         )}
 
         {/* Events */}
         {!loading && tab === "events" && (
-          <div className="space-y-3">
-            {events.length === 0 && <p className="text-white/40 text-sm">No events yet.</p>}
-            {events.map((ev) => (
-              <div key={ev.id} className="border border-white/10 bg-white/[0.02] p-4 flex items-center gap-4">
-                <div className="text-center shrink-0 w-12">
-                  <p className="text-xl font-display">{new Date(ev.event_date).getDate()}</p>
-                  <p className="text-[10px] text-white/40 uppercase">{new Date(ev.event_date).toLocaleString("en-US", { month: "short" })}</p>
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <p className="text-xs uppercase tracking-widest text-white/40">{events.length} events</p>
+              <button
+                onClick={() => { setEditingEvent(null); setEventDialogOpen(true); }}
+                className="text-xs uppercase tracking-wider px-4 py-2 bg-electric text-black font-bold hover:opacity-80 transition-opacity"
+              >
+                + New Event
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {events.length === 0 && <p className="text-white/40 text-sm">No events yet.</p>}
+              {events.map((ev) => (
+                <div key={ev.id} className="border border-white/10 bg-white/[0.02] p-4 flex items-center gap-4">
+                  <div className="text-center shrink-0 w-12">
+                    <p className="text-xl font-display">{new Date(ev.event_date).getDate()}</p>
+                    <p className="text-[10px] text-white/40 uppercase">{new Date(ev.event_date).toLocaleString("en-US", { month: "short" })}</p>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-sm truncate">{ev.title}</p>
+                    <p className="text-white/40 text-xs">{ev.venue ?? "—"} · {ev.city ?? "—"}</p>
+                  </div>
+                  <span className={`text-[10px] uppercase tracking-wider px-2 py-1 border shrink-0 ${
+                    ev.status === "upcoming" ? "border-green-500/40 text-green-400" :
+                    ev.status === "past" ? "border-white/10 text-white/30" :
+                    "border-red-500/40 text-red-400"
+                  }`}>
+                    {ev.status}
+                  </span>
+                  <div className="flex gap-1.5 shrink-0">
+                    <button
+                      onClick={() => { setEditingEvent(ev); setEventDialogOpen(true); }}
+                      className="text-[10px] uppercase tracking-wider px-2.5 py-1 border border-white/20 hover:border-white/40 transition-colors"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => deleteEvent(ev)}
+                      className="text-[10px] uppercase tracking-wider px-2.5 py-1 border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-colors"
+                    >
+                      Del
+                    </button>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-bold text-sm truncate">{ev.title}</p>
-                  <p className="text-white/40 text-xs">{ev.venue ?? "—"} · {ev.city ?? "—"}</p>
-                </div>
-                <span className={`text-[10px] uppercase tracking-wider px-2 py-1 border shrink-0 ${
-                  ev.status === "upcoming" ? "border-green-500/40 text-green-400" :
-                  ev.status === "past" ? "border-white/10 text-white/30" :
-                  "border-red-500/40 text-red-400"
-                }`}>
-                  {ev.status}
-                </span>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         )}
       </div>
+
+      <PublicationDialog
+        open={pubDialogOpen}
+        onOpenChange={setPubDialogOpen}
+        pub={editingPub}
+        onSaved={handlePubSaved}
+      />
+      <EventDialog
+        open={eventDialogOpen}
+        onOpenChange={setEventDialogOpen}
+        event={editingEvent}
+        onSaved={handleEventSaved}
+      />
     </DashLayout>
   );
 }

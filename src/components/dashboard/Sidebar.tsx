@@ -13,10 +13,11 @@ interface NavItem {
 }
 
 const NAV: NavItem[] = [
-  { label: "Overview",     path: "/dashboard/admin",        roles: ["admin"],                                        icon: "◈" },
-  { label: "Distribution", path: "/dashboard/distribution", roles: ["admin", "distribution"],                       icon: "◎" },
-  { label: "Marketing",    path: "/dashboard/marketing",    roles: ["admin", "marketing"],                          icon: "◐" },
-  { label: "Sponsorships", path: "/dashboard/sponsorships", roles: ["admin", "sponsorships"],                       icon: "◆" },
+  { label: "Overview",     path: "/dashboard/admin",        roles: ["admin"],                  icon: "◈" },
+  { label: "Distribution", path: "/dashboard/distribution", roles: ["admin", "distribution"],  icon: "◎" },
+  { label: "Marketing",    path: "/dashboard/marketing",    roles: ["admin", "marketing"],     icon: "◐" },
+  { label: "Sponsorships", path: "/dashboard/sponsorships", roles: ["admin", "sponsorships"],  icon: "◆" },
+  { label: "Settings",     path: "/dashboard/settings",     roles: ["admin"],                  icon: "◇" },
 ];
 
 export default function Sidebar() {

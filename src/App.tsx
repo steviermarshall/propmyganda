@@ -20,6 +20,7 @@ import ProductDetail from "./pages/ProductDetail";
 import Contact from "./pages/Contact";
 import Events from "./pages/Events";
 import Publication from "./pages/Publication";
+import World from "./pages/World";
 import NotFound from "./pages/NotFound";
 
 import Login from "./pages/auth/Login";
@@ -30,6 +31,7 @@ import AdminDashboard from "./pages/dashboard/AdminDashboard";
 import DistributionDashboard from "./pages/dashboard/DistributionDashboard";
 import MarketingDashboard from "./pages/dashboard/MarketingDashboard";
 import SponsorsDashboard from "./pages/dashboard/SponsorsDashboard";
+import SettingsDashboard from "./pages/dashboard/SettingsDashboard";
 
 const queryClient = new QueryClient();
 
@@ -58,6 +60,7 @@ const AppRoutes = () => {
         <Route path="/dashboard/distribution" element={<ProtectedRoute allowedRoles={["admin","distribution"]}><DistributionDashboard /></ProtectedRoute>} />
         <Route path="/dashboard/marketing"    element={<ProtectedRoute allowedRoles={["admin","marketing"]}><MarketingDashboard /></ProtectedRoute>} />
         <Route path="/dashboard/sponsorships" element={<ProtectedRoute allowedRoles={["admin","sponsorships"]}><SponsorsDashboard /></ProtectedRoute>} />
+        <Route path="/dashboard/settings"     element={<ProtectedRoute allowedRoles={["admin"]}><SettingsDashboard /></ProtectedRoute>} />
       </Routes>
     );
   }
@@ -75,6 +78,7 @@ const AppRoutes = () => {
           <Route path="/contact"       element={<Contact />} />
           <Route path="/events"        element={<Events />} />
           <Route path="/publication"   element={<Publication />} />
+          <Route path="/world"         element={<World />} />
           <Route path="*"              element={<NotFound />} />
         </Routes>
       </PublicLayout>

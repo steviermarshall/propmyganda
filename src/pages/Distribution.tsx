@@ -1,8 +1,11 @@
-import { useState } from "react";
-import { artists } from "@/lib/data";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
+import { artistImage } from "@/lib/fallback-assets";
 import Marquee from "@/components/Marquee";
 import ScrollReveal from "@/components/webgl/ScrollReveal";
+
+type Artist = Database["public"]["Tables"]["artists"]["Row"];
 
 const services = [
   { name: "Digital Distribution", desc: "We deliver your music to every major platform — Spotify, Apple Music, Amazon, Tidal, YouTube Music, and 150+ more. Global reach, zero compromise." },
@@ -23,6 +26,7 @@ const stats = [
 const Distribution = () => {
   const [activeService, setActiveService] = useState(0);
   const [activeArtist, setActiveArtist] = useState(0);
+  const [artists, setArtists] = useState<Artist[]>([]);
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,6 +41,18 @@ const Distribution = () => {
     current_distributor: "",
     message: "",
   });
+
+  useEffect(() => {
+    supabase
+      .from("artists")
+      .select("*")
+      .eq("active", true)
+      .order("featured", { ascending: false })
+      .order("name")
+      .then(({ data }) => {
+        setArtists((data ?? []) as Artist[]);
+      });
+  }, []);
 
   function set(field: string, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -105,47 +121,58 @@ const Distribution = () => {
           <ScrollReveal>
             <h2 className="font-display text-4xl md:text-6xl uppercase mb-12">The Roster</h2>
           </ScrollReveal>
-          <ScrollReveal delay={0.15} className="flex flex-col md:flex-row gap-8">
-            <div className="md:w-48 flex md:flex-col gap-2 overflow-x-auto md:overflow-visible pb-2 md:pb-0">
-              {artists.map((a, i) => (
-                <button
-                  key={a.id}
-                  onClick={() => setActiveArtist(i)}
-                  className={`text-left text-xs tracking-[0.15em] uppercase font-bold whitespace-nowrap px-3 py-2.5 border-l-2 transition-all ${
-                    i === activeArtist
-                      ? "border-electric text-foreground bg-electric/5"
-                      : "border-transparent text-muted-foreground hover:text-foreground hover:border-foreground/30"
-                  }`}
-                >
-                  {a.name}
-                </button>
-              ))}
-            </div>
-            <div className="flex-1">
-              <div className="flex flex-col md:flex-row gap-8">
-                <div className="md:w-1/2 aspect-square overflow-hidden bg-secondary">
-                  <img
-                    src={artists[activeArtist].image}
-                    alt={artists[activeArtist].name}
-                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"
-                    loading="lazy"
-                    width={800}
-                    height={800}
-                  />
-                </div>
-                <div className="md:w-1/2 flex flex-col justify-center">
-                  <p className="text-xs tracking-[0.2em] uppercase text-muted-foreground mb-2">{artists[activeArtist].genre}</p>
-                  <h3 className="font-display text-4xl md:text-5xl uppercase leading-none">{artists[activeArtist].name}</h3>
-                  <p className="text-muted-foreground mt-4 text-sm leading-relaxed">
-                    One of PMG's cornerstone artists. {artists[activeArtist].name} embodies what it means to be 100% independent.
-                  </p>
-                  <button className="mt-6 self-start bg-black text-white px-6 py-3 text-xs tracking-[0.2em] uppercase font-bold hover:bg-electric hover:text-black transition-colors">
-                    Listen Now
+          {artists.length > 0 && (
+            <ScrollReveal delay={0.15} className="flex flex-col md:flex-row gap-8">
+              <div className="md:w-48 flex md:flex-col gap-2 overflow-x-auto md:overflow-visible pb-2 md:pb-0">
+                {artists.map((a, i) => (
+                  <button
+                    key={a.id}
+                    onClick={() => setActiveArtist(i)}
+                    className={`text-left text-xs tracking-[0.15em] uppercase font-bold whitespace-nowrap px-3 py-2.5 border-l-2 transition-all ${
+                      i === activeArtist
+                        ? "border-electric text-foreground bg-electric/5"
+                        : "border-transparent text-muted-foreground hover:text-foreground hover:border-foreground/30"
+                    }`}
+                  >
+                    {a.name}
                   </button>
+                ))}
+              </div>
+              <div className="flex-1">
+                <div className="flex flex-col md:flex-row gap-8">
+                  <div className="md:w-1/2 aspect-square overflow-hidden bg-secondary">
+                    <img
+                      src={artistImage(artists[activeArtist].slug, artists[activeArtist].image_url)}
+                      alt={artists[activeArtist].name}
+                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"
+                      loading="lazy"
+                      width={800}
+                      height={800}
+                    />
+                  </div>
+                  <div className="md:w-1/2 flex flex-col justify-center">
+                    {artists[activeArtist].genre && (
+                      <p className="text-xs tracking-[0.2em] uppercase text-muted-foreground mb-2">{artists[activeArtist].genre}</p>
+                    )}
+                    <h3 className="font-display text-4xl md:text-5xl uppercase leading-none">{artists[activeArtist].name}</h3>
+                    <p className="text-muted-foreground mt-4 text-sm leading-relaxed">
+                      {artists[activeArtist].bio ?? `One of PMG's cornerstone artists. ${artists[activeArtist].name} embodies what it means to be 100% independent.`}
+                    </p>
+                    {(artists[activeArtist].spotify_url || artists[activeArtist].apple_music_url) && (
+                      <a
+                        href={artists[activeArtist].spotify_url ?? artists[activeArtist].apple_music_url ?? "#"}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-6 self-start bg-black text-white px-6 py-3 text-xs tracking-[0.2em] uppercase font-bold hover:bg-electric hover:text-black transition-colors"
+                      >
+                        Listen Now
+                      </a>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          </ScrollReveal>
+            </ScrollReveal>
+          )}
         </div>
       </section>
 

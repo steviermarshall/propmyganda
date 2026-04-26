@@ -10,6 +10,7 @@ const navLinks = [
   { label: "Events",       path: "/events" },
   { label: "Distribution", path: "/distribution" },
   { label: "Publication",  path: "/publication" },
+  { label: "World",        path: "/world" },
   { label: "Store",        path: "/store" },
   { label: "Contact",      path: "/contact" },
 ];

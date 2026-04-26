@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import DashLayout from "@/components/dashboard/DashLayout";
+import ArtistDialog from "@/components/dashboard/ArtistDialog";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import { artistImage } from "@/lib/fallback-assets";
 
 type App = Database["public"]["Tables"]["distribution_applications"]["Row"];
 type Artist = Database["public"]["Tables"]["artists"]["Row"];
@@ -19,6 +21,9 @@ export default function DistributionDashboard() {
   const [tab, setTab] = useState<"applications" | "artists">("applications");
   const [loading, setLoading] = useState(true);
 
+  const [editing, setEditing] = useState<Artist | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+
   useEffect(() => {
     Promise.all([
       supabase.from("distribution_applications").select("*").order("submitted_at", { ascending: false }),
@@ -33,6 +38,34 @@ export default function DistributionDashboard() {
   async function updateStatus(id: string, status: App["status"]) {
     await supabase.from("distribution_applications").update({ status, reviewed_at: new Date().toISOString() }).eq("id", id);
     setApps((prev) => prev.map((a) => (a.id === id ? { ...a, status } : a)));
+  }
+
+  function openNew() {
+    setEditing(null);
+    setDialogOpen(true);
+  }
+
+  function openEdit(artist: Artist) {
+    setEditing(artist);
+    setDialogOpen(true);
+  }
+
+  function handleSaved(saved: Artist) {
+    setArtists((prev) => {
+      const exists = prev.some((a) => a.id === saved.id);
+      if (exists) return prev.map((a) => (a.id === saved.id ? saved : a));
+      return [...prev, saved].sort((a, b) => a.name.localeCompare(b.name));
+    });
+  }
+
+  async function handleDelete(artist: Artist) {
+    if (!confirm(`Remove ${artist.name}? This deletes all their releases too.`)) return;
+    const { error } = await supabase.from("artists").delete().eq("id", artist.id);
+    if (error) {
+      alert(`Delete failed: ${error.message}`);
+      return;
+    }
+    setArtists((prev) => prev.filter((a) => a.id !== artist.id));
   }
 
   return (
@@ -92,24 +125,65 @@ export default function DistributionDashboard() {
 
         {/* Artists */}
         {!loading && tab === "artists" && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {artists.map((artist) => (
-              <div key={artist.id} className="border border-white/10 bg-white/[0.02] p-4 flex items-center gap-4">
-                {artist.image_url && (
-                  <img src={artist.image_url} alt={artist.name} className="w-12 h-12 object-cover" />
-                )}
-                <div className="flex-1 min-w-0">
-                  <p className="font-bold text-sm uppercase tracking-wide truncate">{artist.name}</p>
-                  <p className="text-white/40 text-xs">{artist.genre ?? "—"}</p>
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <p className="text-xs uppercase tracking-widest text-white/40">{artists.length} artists</p>
+              <button
+                onClick={openNew}
+                className="text-xs uppercase tracking-wider px-4 py-2 bg-electric text-black font-bold hover:opacity-80 transition-opacity"
+              >
+                + Add Artist
+              </button>
+            </div>
+
+            {artists.length === 0 && (
+              <p className="text-white/40 text-sm">No artists yet.</p>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {artists.map((artist) => (
+                <div key={artist.id} className="border border-white/10 bg-white/[0.02] p-4 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={artistImage(artist.slug, artist.image_url)}
+                      alt={artist.name}
+                      className="w-12 h-12 object-cover"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-sm uppercase tracking-wide truncate">{artist.name}</p>
+                      <p className="text-white/40 text-xs truncate">{artist.genre ?? "—"}</p>
+                    </div>
+                    <span className={`text-[10px] px-2 py-0.5 border shrink-0 ${artist.active ? "border-green-500/40 text-green-400" : "border-white/10 text-white/30"}`}>
+                      {artist.active ? "Active" : "Off"}
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => openEdit(artist)}
+                      className="flex-1 text-[10px] uppercase tracking-wider px-3 py-1.5 border border-white/20 hover:border-white/40 transition-colors"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDelete(artist)}
+                      className="text-[10px] uppercase tracking-wider px-3 py-1.5 border border-red-500/30 text-red-400 hover:bg-red-500/10 transition-colors"
+                    >
+                      Del
+                    </button>
+                  </div>
                 </div>
-                <span className={`text-[10px] px-2 py-0.5 border ${artist.active ? "border-green-500/40 text-green-400" : "border-white/10 text-white/30"}`}>
-                  {artist.active ? "Active" : "Inactive"}
-                </span>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         )}
       </div>
+
+      <ArtistDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        artist={editing}
+        onSaved={handleSaved}
+      />
     </DashLayout>
   );
 }

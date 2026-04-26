@@ -182,6 +182,55 @@ export type Database = {
         Insert: Omit<Database["public"]["Tables"]["cron_logs"]["Row"], "id">;
         Update: Partial<Database["public"]["Tables"]["cron_logs"]["Insert"]>;
       };
+      products: {
+        Row: {
+          id: string;
+          slug: string;
+          name: string;
+          artist: string;
+          price_cents: number;
+          category: "Music" | "Clothing" | "Accessories";
+          description: string | null;
+          image_url: string | null;
+          inventory: number | null;
+          sizes: string[];
+          external_url: string | null;
+          featured: boolean;
+          active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database["public"]["Tables"]["products"]["Row"], "id" | "created_at" | "updated_at">;
+        Update: Partial<Database["public"]["Tables"]["products"]["Insert"]>;
+      };
+      contact_messages: {
+        Row: {
+          id: string;
+          name: string;
+          email: string;
+          subject: string | null;
+          message: string;
+          status: "new" | "read" | "replied" | "archived";
+          created_at: string;
+        };
+        Insert: Omit<Database["public"]["Tables"]["contact_messages"]["Row"], "id" | "created_at">;
+        Update: Partial<Database["public"]["Tables"]["contact_messages"]["Insert"]>;
+      };
+      site_settings: {
+        Row: {
+          id: number;
+          discord_invite_url: string | null;
+          discord_server_id: string | null;
+          instagram_url: string | null;
+          twitter_url: string | null;
+          youtube_url: string | null;
+          tiktok_url: string | null;
+          contact_email: string | null;
+          updated_at: string;
+        };
+        Insert: Partial<Database["public"]["Tables"]["site_settings"]["Row"]>;
+        Update: Partial<Database["public"]["Tables"]["site_settings"]["Row"]>;
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
