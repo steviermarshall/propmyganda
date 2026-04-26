@@ -5,6 +5,7 @@ import * as THREE from "three";
 interface Props {
   onEnter: () => void;
   onHoverChange?: (hovered: boolean) => void;
+  isMobile?: boolean;
 }
 
 /**
@@ -15,7 +16,7 @@ interface Props {
  * - Layered leafy crown
  * - Glowing amber ORB portal at the base (no beams)
  */
-export default function AncientTree({ onEnter, onHoverChange }: Props) {
+export default function AncientTree({ onEnter, onHoverChange, isMobile }: Props) {
   const orbCoreRef = useRef<THREE.Mesh>(null);
   const orbGlowRef = useRef<THREE.MeshBasicMaterial>(null);
   const orbHaloRef = useRef<THREE.Mesh>(null);
@@ -538,6 +539,16 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
               distance={10}
               decay={2}
             />
+
+            {/* Invisible enlarged hit-target — makes the portal easy to tap
+                on touch devices (fingers are bigger than mouse cursors). */}
+            <mesh
+              position={[0, DOORWAY_Y_CENTER, trunkR + 0.6]}
+              visible={false}
+            >
+              <sphereGeometry args={[isMobile ? DW * 1.4 : DW * 0.9, 16, 12]} />
+              <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+            </mesh>
           </group>
         );
       })()}

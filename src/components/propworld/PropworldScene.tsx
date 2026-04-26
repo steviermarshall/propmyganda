@@ -2,6 +2,7 @@ import { Suspense, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { EffectComposer, Bloom, Vignette } from "@react-three/postprocessing";
 import * as THREE from "three";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 import Ground from "./Ground";
 import Forest from "./Forest";
@@ -19,18 +20,29 @@ interface Props {
 export default function PropworldScene({ onModeChange }: Props) {
   const [mode, setMode] = useState<Mode>("forest");
   const [hovered, setHovered] = useState(false);
+  const isMobile = useIsMobile();
 
   function setModeAndNotify(next: Mode) {
     setMode(next);
     onModeChange?.(next);
   }
 
+  // Pull camera farther back on mobile so the tall tree fits portrait viewports.
+  const initialCamZ = isMobile ? 20 : 14;
+  const initialCamY = isMobile ? 7 : 5;
+  const initialFov = isMobile ? 62 : 55;
+
   return (
     <Canvas
-      shadows
-      camera={{ position: [0, 5, 14], fov: 55 }}
-      dpr={[1, 2]}
-      gl={{ antialias: true, alpha: false, toneMapping: THREE.ACESFilmicToneMapping }}
+      shadows={!isMobile}
+      camera={{ position: [0, initialCamY, initialCamZ], fov: initialFov }}
+      dpr={isMobile ? [1, 1.5] : [1, 2]}
+      gl={{
+        antialias: !isMobile,
+        alpha: false,
+        toneMapping: THREE.ACESFilmicToneMapping,
+        powerPreference: "high-performance",
+      }}
     >
       <color attach="background" args={["#04141a"]} />
       <fog attach="fog" args={["#0a2530", 6, 32]} />
@@ -41,9 +53,9 @@ export default function PropworldScene({ onModeChange }: Props) {
         position={[3, 18, 2]}
         intensity={1.1}
         color="#bff0ff"
-        castShadow
-        shadow-mapSize-width={1024}
-        shadow-mapSize-height={1024}
+        castShadow={!isMobile}
+        shadow-mapSize-width={isMobile ? 512 : 1024}
+        shadow-mapSize-height={isMobile ? 512 : 1024}
       />
       <hemisphereLight args={["#5fb3c8", "#06140f", 0.55]} />
       <pointLight position={[-9, 5, -7]} intensity={0.7} color="#1e6bb0" />
@@ -57,8 +69,9 @@ export default function PropworldScene({ onModeChange }: Props) {
             <AncientTree
               onEnter={() => setModeAndNotify("transitioning")}
               onHoverChange={setHovered}
+              isMobile={isMobile}
             />
-            <Fireflies count={650} />
+            <Fireflies count={isMobile ? 280 : 650} />
           </>
         )}
 
@@ -68,6 +81,7 @@ export default function PropworldScene({ onModeChange }: Props) {
       <CameraRig
         mode={mode}
         hovered={hovered && mode === "forest"}
+        isMobile={isMobile}
         onTransitionComplete={() => setModeAndNotify("theater")}
       />
 

@@ -41,7 +41,10 @@ const Propworld = () => {
               </span>
             </h1>
             <p className="mt-4 max-w-md text-sm md:text-base text-white/60">
-              Click the glowing hollow to step inside.
+              Tap the glowing hollow to step inside.
+            </p>
+            <p className="mt-2 max-w-md text-[10px] md:text-xs tracking-[0.25em] uppercase text-white/40">
+              Drag to look around
             </p>
           </motion.div>
         )}

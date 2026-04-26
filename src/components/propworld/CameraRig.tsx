@@ -5,17 +5,22 @@ import * as THREE from "three";
 interface Props {
   mode: "forest" | "transitioning" | "theater";
   hovered?: boolean;
+  isMobile?: boolean;
   onTransitionComplete: () => void;
 }
 
 /**
  * Camera choreography:
- *  - forest: gentle orbit; on hover, slowly drift forward toward the tree
+ *  - forest: gentle orbit; on hover/touch, slowly drift forward toward the tree
  *  - transitioning: cinematic zoom into the hollow with FOV punch
  *  - theater: settle in the seat with subtle sway
+ *
+ * Interactivity:
+ *  - Drag (mouse or touch) to rotate around the tree manually.
+ *  - Releases back to auto-orbit after a short idle.
  */
-export default function CameraRig({ mode, hovered, onTransitionComplete }: Props) {
-  const { camera } = useThree();
+export default function CameraRig({ mode, hovered, isMobile, onTransitionComplete }: Props) {
+  const { camera, gl } = useThree();
   const startTimeRef = useRef<number | null>(null);
   const startPosRef = useRef(new THREE.Vector3());
   const startFovRef = useRef(55);
@@ -26,9 +31,67 @@ export default function CameraRig({ mode, hovered, onTransitionComplete }: Props
   // Orbit angle accumulator so we can freeze it during transitions
   const angleRef = useRef(0);
 
+  // Drag-to-rotate state
+  const draggingRef = useRef(false);
+  const lastXRef = useRef(0);
+  const userInteractRef = useRef(0); // timestamp of last user interaction
+  const userAngleVelRef = useRef(0); // momentum
+
   const forestTarget = useRef(new THREE.Vector3(0, 4, 0));
   const theaterTarget = useRef(new THREE.Vector3(0, 3, -5.35));
   const theaterPos = useRef(new THREE.Vector3(0, 3, 4));
+
+  // Pointer drag handlers — attached to the canvas DOM element.
+  useEffect(() => {
+    const dom = gl.domElement;
+
+    const onDown = (e: PointerEvent) => {
+      if (mode !== "forest") return;
+      // Only primary button / touch
+      if (e.pointerType === "mouse" && e.button !== 0) return;
+      draggingRef.current = true;
+      lastXRef.current = e.clientX;
+      userInteractRef.current = performance.now();
+      try {
+        dom.setPointerCapture(e.pointerId);
+      } catch {
+        /* ignore */
+      }
+    };
+    const onMove = (e: PointerEvent) => {
+      if (!draggingRef.current) return;
+      const dx = e.clientX - lastXRef.current;
+      lastXRef.current = e.clientX;
+      // Width-normalized rotation: full screen drag ≈ ~PI rad
+      const sensitivity = (Math.PI / window.innerWidth) * 1.2;
+      const delta = -dx * sensitivity;
+      angleRef.current += delta;
+      userAngleVelRef.current = delta;
+      userInteractRef.current = performance.now();
+    };
+    const onUp = (e: PointerEvent) => {
+      draggingRef.current = false;
+      try {
+        dom.releasePointerCapture(e.pointerId);
+      } catch {
+        /* ignore */
+      }
+    };
+
+    dom.addEventListener("pointerdown", onDown);
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+    // Prevent the page from scrolling while dragging on touch devices.
+    dom.style.touchAction = "none";
+
+    return () => {
+      dom.removeEventListener("pointerdown", onDown);
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+    };
+  }, [gl, mode]);
 
   useEffect(() => {
     if (mode === "transitioning") {
@@ -40,31 +103,45 @@ export default function CameraRig({ mode, hovered, onTransitionComplete }: Props
     }
     if (mode === "forest") {
       const persp = camera as THREE.PerspectiveCamera;
-      persp.fov = 55;
+      persp.fov = isMobile ? 62 : 55;
       persp.updateProjectionMatrix();
     }
-  }, [mode, camera]);
+  }, [mode, camera, isMobile]);
 
   useFrame((state, delta) => {
     const t = state.clock.getElapsedTime();
     const persp = camera as THREE.PerspectiveCamera;
 
     if (mode === "forest") {
-      // Slow continuous orbit
-      angleRef.current += delta * 0.08;
-      const baseRadius = 14;
+      const idleMs = performance.now() - userInteractRef.current;
+      const isUserActive = draggingRef.current || idleMs < 1500;
 
-      // Hover: lerp drift toward the tree (reduce radius), ease back when not hovered
-      const targetDrift = hovered ? 4.5 : 0;
+      if (draggingRef.current) {
+        // angle controlled directly by pointer move
+      } else if (isUserActive && Math.abs(userAngleVelRef.current) > 0.0001) {
+        // Coast on momentum, then decay
+        angleRef.current += userAngleVelRef.current;
+        userAngleVelRef.current *= 0.92;
+      } else {
+        // Auto orbit
+        angleRef.current += delta * 0.08;
+      }
+
+      const baseRadius = isMobile ? 20 : 14;
+
+      // Hover/touch-near: lerp drift toward the tree
+      const targetDrift = hovered ? (isMobile ? 6 : 4.5) : 0;
       driftRef.current = THREE.MathUtils.lerp(driftRef.current, targetDrift, 0.025);
       const radius = baseRadius - driftRef.current;
 
       camera.position.x = Math.sin(angleRef.current) * radius;
       camera.position.z = Math.cos(angleRef.current) * radius;
-      camera.position.y = 5 + Math.sin(t * 0.3) * 0.4 - driftRef.current * 0.15;
+      camera.position.y =
+        (isMobile ? 7 : 5) + Math.sin(t * 0.3) * 0.4 - driftRef.current * 0.15;
 
       // Hover: tighten FOV for a subtle "leaning in" feel
-      const targetFov = hovered ? 48 : 55;
+      const baseFov = isMobile ? 62 : 55;
+      const targetFov = hovered ? baseFov - 7 : baseFov;
       persp.fov = THREE.MathUtils.lerp(persp.fov, targetFov, 0.04);
       persp.updateProjectionMatrix();
 
@@ -80,9 +157,9 @@ export default function CameraRig({ mode, hovered, onTransitionComplete }: Props
       const e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
 
       const p0 = startPosRef.current;
-      const p1 = new THREE.Vector3(0, 2.8, 6.0);   // align with entrance
-      const p2 = new THREE.Vector3(0, 2.8, 3.25);  // mouth of the hollow
-      const p3 = new THREE.Vector3(0, 3, 4);       // theater seat
+      const p1 = new THREE.Vector3(0, 2.8, 6.0);
+      const p2 = new THREE.Vector3(0, 2.8, 3.25);
+      const p3 = new THREE.Vector3(0, 3, 4);
 
       let pos: THREE.Vector3;
       if (e < 0.4) {
@@ -94,7 +171,6 @@ export default function CameraRig({ mode, hovered, onTransitionComplete }: Props
       }
       camera.position.copy(pos);
 
-      // FOV punch — narrows on approach, widens as you "step in"
       const fov =
         e < 0.75
           ? THREE.MathUtils.lerp(startFovRef.current, 38, e / 0.75)
