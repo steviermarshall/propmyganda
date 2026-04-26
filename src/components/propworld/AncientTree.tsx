@@ -312,10 +312,6 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
           floats inside the doorway and its glow fills the cavity. */}
       {(() => {
         // ---- Derive doorway from actual trunk thickness ----
-        // The doorway sits at its vertical CENTER around y = DOORWAY_Y_CENTER.
-        // We compute the trunk's radius at that height using the SAME
-        // parallel/taper formula used by the trunk geometry, so the arch
-        // always scales with the real trunk silhouette.
         const PARALLEL_END = 0.3;
         const trunkRadiusAt = (y: number) => {
           const t = THREE.MathUtils.clamp(y / HEIGHT, 0, 1);
@@ -330,53 +326,84 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
           return BASE_R * taper;
         };
 
-        // Doorway sits in the lower (parallel) section of the trunk.
         const DOORWAY_BASE_Y = 0;
-        const DOORWAY_TOP_Y = HEIGHT * 0.28; // stay within parallel zone
-        const DH = DOORWAY_TOP_Y - DOORWAY_BASE_Y; // total height
+        const DOORWAY_TOP_Y = HEIGHT * 0.28;
+        const DH = DOORWAY_TOP_Y - DOORWAY_BASE_Y;
         const DOORWAY_Y_CENTER = (DOORWAY_BASE_Y + DOORWAY_TOP_Y) / 2;
 
-        // Trunk radius at the doorway's center → drives width.
         const trunkR = trunkRadiusAt(DOORWAY_Y_CENTER);
-        // Doorway width = ~70% of the trunk diameter at this height.
-        const DW = Math.min(trunkR * 1.4, DH * 0.7); // keep tall-arch proportion
-        const DR = DW / 2; // arch radius (semicircle on top)
+        const DW = Math.min(trunkR * 1.4, DH * 0.7);
+        const DR = DW / 2;
 
-        // Sit FLUSH with — and slightly RECESSED INTO — the trunk surface.
-        // Negative offset pushes the cavity inside the trunk so the bark
-        // wraps around the opening instead of the arch floating in front.
-        const DZ = trunkR - 0.15;
+        // Build a CURVED arch mesh that wraps onto the trunk surface.
+        // The arch occupies an angular slice of the trunk's cylinder.
+        // Half-angle = arc-length / radius; we use trunk radius for curvature.
+        const halfAngle = DW / 2 / trunkR;
+        const segsX = 48; // horizontal segments around the trunk
+        const segsY = 96; // vertical segments along the doorway height
+        const positions: number[] = [];
+        const uvs: number[] = [];
+        const indices: number[] = [];
 
-        // Arched shape (rectangle bottom + semicircle top)
-        const archShape = new THREE.Shape();
-        archShape.moveTo(-DR, 0);
-        archShape.lineTo(-DR, DH - DR);
-        archShape.absarc(0, DH - DR, DR, Math.PI, 0, true);
-        archShape.lineTo(DR, 0);
-        archShape.lineTo(-DR, 0);
+        // Test if a 2D point (localX, localY) is inside the arch silhouette.
+        // localY in [0, DH], localX in [-DR, DR].
+        const insideArch = (lx: number, ly: number) => {
+          if (ly < 0 || ly > DH) return false;
+          if (lx < -DR || lx > DR) return false;
+          if (ly <= DH - DR) return true; // rectangle portion
+          // Top semicircle: center (0, DH-DR), radius DR
+          const dx = lx;
+          const dy = ly - (DH - DR);
+          return dx * dx + dy * dy <= DR * DR;
+        };
 
-        // Outer bark frame — proportional to doorway size (not fixed margins)
-        const FRAME_THICKNESS = Math.max(0.18, DW * 0.16);
-        const FW = DW + FRAME_THICKNESS * 2;
-        const FH = DH + FRAME_THICKNESS;
-        const FR = FW / 2;
-        const frameOuter = new THREE.Shape();
-        frameOuter.moveTo(-FR, 0);
-        frameOuter.lineTo(-FR, FH - FR);
-        frameOuter.absarc(0, FH - FR, FR, Math.PI, 0, true);
-        frameOuter.lineTo(FR, 0);
-        frameOuter.lineTo(-FR, 0);
-        const frameHole = new THREE.Path();
-        frameHole.moveTo(-DR, 0);
-        frameHole.lineTo(-DR, DH - DR);
-        frameHole.absarc(0, DH - DR, DR, Math.PI, 0, true);
-        frameHole.lineTo(DR, 0);
-        frameHole.lineTo(-DR, 0);
-        frameOuter.holes.push(frameHole);
+        // Generate a grid of vertices spanning the arch's bounding box,
+        // projected onto the trunk's cylindrical surface. Vertices outside
+        // the arch silhouette get pushed slightly inward AND get a UV mask
+        // so the fragment shader (via vertex color alpha) discards them —
+        // simpler approach: only build faces where ALL 4 corners are inside.
+        const inside: boolean[] = [];
+        for (let iy = 0; iy <= segsY; iy++) {
+          const v = iy / segsY;
+          const ly = v * DH;
+          for (let ix = 0; ix <= segsX; ix++) {
+            const u = ix / segsX;
+            const lx = (u - 0.5) * DW;
+
+            // Map lx → angle on trunk cylinder (front-facing, around +Z axis)
+            // Front of trunk = angle 0 measured from +Z; +X is right.
+            const angle = (lx / trunkR); // small-angle wrap is fine here
+            const px = Math.sin(angle) * (trunkR + 0.02); // tiny outward offset
+            const pz = Math.cos(angle) * (trunkR + 0.02);
+            const py = ly;
+
+            positions.push(px, py, pz);
+            uvs.push(u, v);
+            inside.push(insideArch(lx, ly));
+          }
+        }
+        const stride = segsX + 1;
+        for (let iy = 0; iy < segsY; iy++) {
+          for (let ix = 0; ix < segsX; ix++) {
+            const a = iy * stride + ix;
+            const b = a + 1;
+            const c = a + stride;
+            const d = c + 1;
+            // Only include face if all 4 corners are inside the arch
+            if (inside[a] && inside[b] && inside[c] && inside[d]) {
+              indices.push(a, c, b, b, c, d);
+            }
+          }
+        }
+
+        const archGeom = new THREE.BufferGeometry();
+        archGeom.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+        archGeom.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
+        archGeom.setIndex(indices);
+        archGeom.computeVertexNormals();
 
         return (
           <group
-            position={[0, 0, DZ]}
             onClick={(e) => {
               e.stopPropagation();
               onEnter();
@@ -391,127 +418,54 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
               onHoverChange?.(false);
             }}
           >
-            {/* ===== OCCLUSION-LAYERED DOORWAY ===== */}
-
-            {/* L4 — DEEPEST: cavity back wall (furthest into the trunk).
-                Pure black; the orb sits in front of this. */}
-            <mesh position={[0, 0, -1.2]} scale={[0.86, 0.86, 1]}>
-              <shapeGeometry args={[archShape]} />
-              <meshBasicMaterial color="#000000" toneMapped={false} side={THREE.DoubleSide} />
-            </mesh>
-
-            {/* L3 — INNER CAVITY WALLS: extruded arch shell creating real
-                depth between the back wall and the front opening. The
-                inside of these walls catches the orb's warm light. */}
-            <mesh position={[0, 0, -1.2]}>
-              <extrudeGeometry
-                args={[
-                  archShape,
-                  {
-                    depth: 1.2,
-                    bevelEnabled: true,
-                    bevelSegments: 3,
-                    bevelSize: 0.08,
-                    bevelThickness: 0.08,
-                    curveSegments: 24,
-                  },
-                ]}
-              />
-              <meshStandardMaterial
-                color="#0a0604"
-                roughness={1}
-                metalness={0}
-                side={THREE.BackSide}
-                emissive="#2a1408"
-                emissiveIntensity={0.35}
-              />
-            </mesh>
-
-            {/* L2 — INNER SHADOW RING: dark soft gradient just inside the
-                opening, sells the recessed depth at the mouth. */}
-            <mesh position={[0, 0, -0.02]} scale={[1.0, 1.0, 1]}>
-              <shapeGeometry args={[archShape]} />
+            {/* THE DOORWAY IS THE ORB.
+                A single arch-shaped emissive surface that follows the
+                trunk's curvature. No frame, no protruding planes —
+                it reads as a glowing portal carved INTO the bark. */}
+            <mesh ref={orbCoreRef as unknown as React.Ref<THREE.Mesh>} geometry={archGeom}>
               <meshBasicMaterial
-                color="#000000"
+                color="#fff2c2"
+                toneMapped={false}
+                side={THREE.DoubleSide}
+              />
+            </mesh>
+
+            {/* Soft warm bloom-catcher just outside the arch surface */}
+            <mesh geometry={archGeom} scale={[1.04, 1.04, 1.04]}>
+              <meshBasicMaterial
+                ref={orbGlowRef}
+                color="#ffb96a"
                 transparent
                 opacity={0.55}
+                blending={THREE.AdditiveBlending}
                 depthWrite={false}
+                toneMapped={false}
                 side={THREE.DoubleSide}
               />
             </mesh>
 
-            {/* L1 — CARVED BARK FRAME (closest to camera): raised lip
-                around the doorway, sits on the trunk surface. */}
-            <mesh position={[0, 0, 0.04]}>
-              <shapeGeometry args={[frameOuter]} />
-              <meshStandardMaterial
-                color="#070b0f"
-                roughness={1}
-                emissive="#1a0e05"
-                emissiveIntensity={0.3}
-                side={THREE.DoubleSide}
-              />
-            </mesh>
-
-            {/* Warm rim light hugging the inside edge of the opening */}
-            <mesh position={[0, 0, 0.0]} scale={[0.96, 0.96, 1]}>
-              <shapeGeometry args={[archShape]} />
+            {/* Outer soft halo bleeding onto surrounding bark */}
+            <mesh ref={orbHaloRef} geometry={archGeom} scale={[1.18, 1.12, 1.18]}>
               <meshBasicMaterial
-                color="#ff8a30"
+                color="#ff9a3a"
                 transparent
                 opacity={0.22}
                 blending={THREE.AdditiveBlending}
                 depthWrite={false}
                 toneMapped={false}
+                side={THREE.DoubleSide}
               />
             </mesh>
 
-            {/* ===== ORB — sits DEEP inside the cavity ===== */}
-            {/* Negative Z pushes it back into the recessed opening so
-                the frame and inner walls occlude its outer halo. */}
-            <group position={[0, DH * 0.45, -0.55]}>
-              {/* Soft halo — sized so it stays inside the doorway opening */}
-              <mesh ref={orbHaloRef}>
-                <sphereGeometry args={[Math.min(DR * 0.95, 1.0), 32, 32]} />
-                <meshBasicMaterial
-                  color="#ffb14a"
-                  transparent
-                  opacity={0.32}
-                  blending={THREE.AdditiveBlending}
-                  depthWrite={false}
-                  toneMapped={false}
-                />
-              </mesh>
-
-              {/* Glow shell */}
-              <mesh>
-                <sphereGeometry args={[0.8, 32, 32]} />
-                <meshBasicMaterial
-                  ref={orbGlowRef}
-                  color="#ffd27a"
-                  transparent
-                  opacity={0.9}
-                  blending={THREE.AdditiveBlending}
-                  depthWrite={false}
-                  toneMapped={false}
-                />
-              </mesh>
-
-              {/* Solid bright core */}
-              <mesh ref={orbCoreRef}>
-                <sphereGeometry args={[0.45, 32, 32]} />
-                <meshBasicMaterial color="#fff2c2" toneMapped={false} />
-              </mesh>
-
-              {/* Warm fill light — illuminates the cavity walls/frame */}
-              <pointLight
-                ref={orbLightRef}
-                intensity={2.6}
-                color="#ffa040"
-                distance={9}
-                decay={2}
-              />
-            </group>
+            {/* Warm fill light bleeding from the portal onto bark */}
+            <pointLight
+              ref={orbLightRef}
+              position={[0, DOORWAY_Y_CENTER, trunkR + 0.5]}
+              intensity={2.6}
+              color="#ffa040"
+              distance={10}
+              decay={2}
+            />
           </group>
         );
       })()}
