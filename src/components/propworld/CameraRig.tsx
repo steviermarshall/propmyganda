@@ -47,6 +47,10 @@ export default function CameraRig({ mode, hovered, isMobile, onTransitionComplet
   const theaterPitchRef = useRef(0);
   const theaterYawTargetRef = useRef(0);
   const theaterPitchTargetRef = useRef(0);
+  // Theater dolly: how far we've moved along the view direction (clamped inside room).
+  // Negative = backed up away from where we're looking. Positive = pushed forward.
+  const theaterDollyRef = useRef(0);
+  const theaterDollyTargetRef = useRef(0);
   // Velocity (rad/s) for fling/momentum
   const yawVelRef = useRef(0);
   const pitchVelRef = useRef(0);
@@ -58,15 +62,36 @@ export default function CameraRig({ mode, hovered, isMobile, onTransitionComplet
   const pressTimeRef = useRef(0);
   const movedRef = useRef(false);
 
-  // Pointer drag handlers — attached to the canvas DOM element.
+  // Pointer + pinch + wheel handlers
   useEffect(() => {
     const dom = gl.domElement;
+    // Track active pointers for pinch detection
+    const activePointers = new Map<number, { x: number; y: number }>();
+    let pinchStartDist = 0;
+    let pinchStartDolly = 0;
+    let isPinching = false;
+
+    const dollyClamp = (v: number) => THREE.MathUtils.clamp(v, -6, 3.5);
 
     const onDown = (e: PointerEvent) => {
       if (mode !== "forest" && mode !== "theater") return;
       if (e.pointerType === "mouse" && e.button !== 0) return;
       const target = e.target as HTMLElement | null;
       if (target && target.tagName !== "CANVAS") return;
+
+      activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+      // If two fingers down, start pinch
+      if (activePointers.size === 2 && mode === "theater") {
+        const pts = Array.from(activePointers.values());
+        pinchStartDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+        pinchStartDolly = theaterDollyTargetRef.current;
+        isPinching = true;
+        draggingRef.current = false; // cancel single-finger drag
+        userInteractRef.current = performance.now();
+        return;
+      }
+
       draggingRef.current = true;
       lastXRef.current = e.clientX;
       lastYRef.current = e.clientY;
@@ -74,7 +99,6 @@ export default function CameraRig({ mode, hovered, isMobile, onTransitionComplet
       pressYRef.current = e.clientY;
       pressTimeRef.current = performance.now();
       movedRef.current = false;
-      // Kill momentum so the user gets immediate control
       yawVelRef.current = 0;
       pitchVelRef.current = 0;
       userAngleVelRef.current = 0;
@@ -86,6 +110,22 @@ export default function CameraRig({ mode, hovered, isMobile, onTransitionComplet
       }
     };
     const onMove = (e: PointerEvent) => {
+      if (activePointers.has(e.pointerId)) {
+        activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      }
+
+      // Pinch (two pointers): adjust dolly distance based on pinch ratio
+      if (isPinching && activePointers.size >= 2 && mode === "theater") {
+        const pts = Array.from(activePointers.values()).slice(0, 2);
+        const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+        if (pinchStartDist > 0) {
+          const delta = (dist - pinchStartDist) / 60; // pixels-per-unit
+          theaterDollyTargetRef.current = dollyClamp(pinchStartDolly + delta);
+        }
+        userInteractRef.current = performance.now();
+        return;
+      }
+
       if (!draggingRef.current) return;
       const dx = e.clientX - lastXRef.current;
       const dy = e.clientY - lastYRef.current;
@@ -97,7 +137,6 @@ export default function CameraRig({ mode, hovered, isMobile, onTransitionComplet
       if (Math.hypot(totalDx, totalDy) > 6) movedRef.current = true;
 
       if (mode === "theater") {
-        // Higher sensitivity on mobile so flicks rotate more
         const sens =
           (Math.PI / Math.max(window.innerWidth, 1)) * (isMobile ? 1.0 : 0.7);
         theaterYawTargetRef.current -= dx * sens;
@@ -106,8 +145,7 @@ export default function CameraRig({ mode, hovered, isMobile, onTransitionComplet
           -0.45,
           0.45
         );
-        // Track instantaneous velocity for fling
-        yawVelRef.current = -dx * sens * 60; // approx rad/s @ 60fps
+        yawVelRef.current = -dx * sens * 60;
         pitchVelRef.current = -dy * sens * 0.55 * 60;
       } else {
         const sensitivity = (Math.PI / window.innerWidth) * 1.2;
@@ -118,13 +156,25 @@ export default function CameraRig({ mode, hovered, isMobile, onTransitionComplet
       userInteractRef.current = performance.now();
     };
     const onUp = (e: PointerEvent) => {
-      if (!draggingRef.current) return;
+      activePointers.delete(e.pointerId);
+      if (activePointers.size < 2) {
+        isPinching = false;
+        pinchStartDist = 0;
+      }
+
+      if (!draggingRef.current) {
+        try {
+          dom.releasePointerCapture(e.pointerId);
+        } catch {
+          /* ignore */
+        }
+        return;
+      }
       draggingRef.current = false;
       const elapsed = performance.now() - pressTimeRef.current;
       const isTap = !movedRef.current && elapsed < 300;
 
       if (isTap && mode === "theater") {
-        // KICK! Send an impulse along the camera's forward direction.
         const dir = new THREE.Vector3();
         camera.getWorldDirection(dir);
         kickables.kickFromCamera(camera.position.clone(), dir);
@@ -137,10 +187,20 @@ export default function CameraRig({ mode, hovered, isMobile, onTransitionComplet
       }
     };
 
+    // Mouse wheel = dolly back/forward in theater
+    const onWheel = (e: WheelEvent) => {
+      if (mode !== "theater") return;
+      e.preventDefault();
+      const delta = e.deltaY * 0.004; // wheel down (positive) = back up
+      theaterDollyTargetRef.current = dollyClamp(theaterDollyTargetRef.current - delta);
+      userInteractRef.current = performance.now();
+    };
+
     dom.addEventListener("pointerdown", onDown);
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
     window.addEventListener("pointercancel", onUp);
+    dom.addEventListener("wheel", onWheel, { passive: false });
     dom.style.touchAction = "none";
 
     return () => {
@@ -148,6 +208,7 @@ export default function CameraRig({ mode, hovered, isMobile, onTransitionComplet
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointercancel", onUp);
+      dom.removeEventListener("wheel", onWheel);
     };
   }, [gl, mode, camera, isMobile]);
 
@@ -289,9 +350,27 @@ export default function CameraRig({ mode, hovered, isMobile, onTransitionComplet
       smooth
     );
 
-    // Camera sits at the center with a gentle bob
+    // Smooth dolly toward target
+    theaterDollyRef.current = THREE.MathUtils.lerp(
+      theaterDollyRef.current,
+      theaterDollyTargetRef.current,
+      smooth
+    );
+
+    // Camera sits at the center, dolly slides it along view direction (clamped inside walls)
     const bob = Math.sin(t * 0.4) * 0.05;
-    camera.position.lerp(new THREE.Vector3(0, 2.6 + bob, 0), 0.08);
+    const yawNow = theaterYawRef.current;
+    const dolly = theaterDollyRef.current;
+    // Move along XZ direction we're facing
+    const targetPos = new THREE.Vector3(
+      Math.sin(yawNow) * dolly,
+      2.6 + bob,
+      Math.cos(yawNow) * dolly
+    );
+    // Keep inside the room (walls at ±7.5; leave margin)
+    targetPos.x = THREE.MathUtils.clamp(targetPos.x, -6.5, 6.5);
+    targetPos.z = THREE.MathUtils.clamp(targetPos.z, -6.5, 6.5);
+    camera.position.lerp(targetPos, 0.12);
 
     const targetFov = isMobile ? 75 : 70;
     persp.fov = THREE.MathUtils.lerp(persp.fov, targetFov, 0.05);
