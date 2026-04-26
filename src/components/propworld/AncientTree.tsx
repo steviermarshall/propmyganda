@@ -123,18 +123,7 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
     return arr;
   }, []);
 
-  // Vertical bark ridges (thin tall boxes hugging the trunk)
-  const barkRidges = useMemo(() => {
-    const arr: { a: number; y: number; h: number }[] = [];
-    const count = 22;
-    for (let i = 0; i < count; i++) {
-      const a = (i / count) * Math.PI * 2 + Math.sin(i * 1.3) * 0.1;
-      const y = HEIGHT * (0.15 + ((i % 5) / 5) * 0.6);
-      const h = 4 + ((Math.sin(i * 2.1) + 1) / 2) * 5;
-      arr.push({ a, y, h });
-    }
-    return arr;
-  }, []);
+
 
   // Knots / burls
   const knots = useMemo(() => {
