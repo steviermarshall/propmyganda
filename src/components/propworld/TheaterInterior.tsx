@@ -1,26 +1,93 @@
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Cylinder, Html } from "@react-three/drei";
+import { Cylinder, Html, Text } from "@react-three/drei";
 import * as THREE from "three";
 
 /**
- * Mystical movie theater inside the ancient tree:
- *  - Curved wooden walls (open cylinder) with deep bark tone
- *  - Bioluminescent moss patches that breathe (animated emissive)
- *  - A large curved screen on the front wall
- *  - Interactive Discord widget rendered via drei <Html transform>
- *  - Per-frame pulse on the screen frame to feed the global Bloom pass
+ * Mystical "treelink" theater inside the ancient tree.
+ *
+ * The user sits at the center of a fully enclosed rounded wooden chamber.
+ * Around the curved walls, six platform embed panels are evenly distributed
+ * so visitors can spin / drag the camera (handled in CameraRig) to discover
+ * each one: Discord, Spotify, YouTube, TikTok, Instagram, and a "+ More" slot.
+ *
+ * Bioluminescent moss patches breathe between the panels for atmosphere
+ * and feed the global Bloom pass.
  */
 interface TheaterProps {
   isMobile?: boolean;
 }
 
+type Platform = {
+  id: string;
+  label: string;
+  // null = placeholder panel (no iframe yet)
+  src: string | null;
+  // tint used on the panel frame glow
+  color: string;
+};
+
+const PLATFORMS: Platform[] = [
+  {
+    id: "discord",
+    label: "DISCORD",
+    src: "https://discord.com/widget?id=1011591077406572574&theme=dark",
+    color: "#5865F2",
+  },
+  {
+    id: "spotify",
+    label: "SPOTIFY",
+    // Placeholder Spotify embed — swap playlist/artist URI when ready
+    src: "https://open.spotify.com/embed/playlist/37i9dQZF1DXcBWIGoYBM5M?utm_source=generator&theme=0",
+    color: "#1DB954",
+  },
+  {
+    id: "youtube",
+    label: "YOUTUBE",
+    // Placeholder channel/video — swap when ready
+    src: "https://www.youtube.com/embed/videoseries?list=PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf",
+    color: "#FF0033",
+  },
+  {
+    id: "tiktok",
+    label: "TIKTOK",
+    src: null,
+    color: "#FF2D55",
+  },
+  {
+    id: "instagram",
+    label: "INSTAGRAM",
+    src: null,
+    color: "#E1306C",
+  },
+  {
+    id: "more",
+    label: "+ MORE SOON",
+    src: null,
+    color: "#ffc870",
+  },
+];
+
+const WALL_RADIUS = 8;
+const PANEL_RADIUS = WALL_RADIUS - 0.15; // sits just inside the wall
+
 export default function TheaterInterior({ isMobile = false }: TheaterProps) {
   const mossRefs = useRef<THREE.MeshStandardMaterial[]>([]);
-  const screenGlowRef = useRef<THREE.MeshBasicMaterial>(null);
-  const screenFrameRef = useRef<THREE.MeshStandardMaterial>(null);
+  const frameRefs = useRef<THREE.MeshStandardMaterial[]>([]);
 
-  // Deterministic moss patch placements scattered along the curved wall.
+  // Evenly distribute panels around the full circle
+  const panels = useMemo(() => {
+    return PLATFORMS.map((p, i) => {
+      const angle = (i / PLATFORMS.length) * Math.PI * 2;
+      const x = Math.sin(angle) * PANEL_RADIUS;
+      const z = Math.cos(angle) * PANEL_RADIUS;
+      // Rotate panel to face the center (camera sits at origin)
+      const rotY = angle + Math.PI;
+      return { ...p, angle, position: [x, 3, z] as [number, number, number], rotY };
+    });
+  }, []);
+
+  // Deterministic moss patch placements scattered between panels
   const mossPatches = useMemo(() => {
     const arr: {
       pos: [number, number, number];
@@ -29,24 +96,23 @@ export default function TheaterInterior({ isMobile = false }: TheaterProps) {
       seed: number;
       hue: "teal" | "cyan" | "mint";
     }[] = [];
-    const count = 22;
+    const count = 28;
     const rng = (n: number) => {
       const x = Math.sin(n * 9173.13) * 43758.5453;
       return x - Math.floor(x);
     };
     for (let i = 0; i < count; i++) {
-      // Spread across the visible (back) half of the cylinder
-      const a = -Math.PI * 0.7 + rng(i) * Math.PI * 1.4;
-      const r = 7.85; // just inside wall radius (8) so it sits on the surface
+      const a = rng(i) * Math.PI * 2;
+      const r = WALL_RADIUS - 0.15;
       const x = Math.sin(a) * r;
-      const z = -Math.cos(a) * r + 2;
+      const z = Math.cos(a) * r;
       const y = 0.6 + rng(i + 50) * 5.2;
       const w = 0.35 + rng(i + 100) * 0.6;
       const h = 0.25 + rng(i + 200) * 0.45;
       const hueRoll = rng(i + 300);
       arr.push({
         pos: [x, y, z],
-        rot: [0, a + Math.PI, 0], // face inward toward center
+        rot: [0, a + Math.PI, 0],
         scale: [w, h],
         seed: rng(i + 400) * Math.PI * 2,
         hue: hueRoll < 0.4 ? "teal" : hueRoll < 0.75 ? "cyan" : "mint",
@@ -66,59 +132,72 @@ export default function TheaterInterior({ isMobile = false }: TheaterProps) {
       const pulse = 0.5 + Math.sin(t * 0.7 + seed) * 0.5;
       mat.emissiveIntensity = 1.2 + pulse * 1.8;
     });
-    if (screenGlowRef.current) {
-      const pulse = 0.5 + Math.sin(t * 0.6) * 0.5;
-      screenGlowRef.current.opacity = 0.18 + pulse * 0.12;
-    }
-    if (screenFrameRef.current) {
-      const pulse = 0.5 + Math.sin(t * 0.6) * 0.5;
-      screenFrameRef.current.emissiveIntensity = 0.6 + pulse * 0.8;
-    }
+    frameRefs.current.forEach((mat, i) => {
+      if (!mat) return;
+      const pulse = 0.5 + Math.sin(t * 0.6 + i * 0.8) * 0.5;
+      mat.emissiveIntensity = 0.5 + pulse * 0.7;
+    });
   });
+
+  // Embed panel size (in world units)
+  const PANEL_W = 4.2;
+  const PANEL_H = 2.8;
+  // HTML iframe pixel size (drei Html transform scales by distanceFactor)
+  const iframeW = isMobile ? 520 : 640;
+  const iframeH = isMobile ? 360 : 420;
 
   return (
     <group>
       {/* ---------- Floor ---------- */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.5, 0]} receiveShadow>
-        <circleGeometry args={[10, 64]} />
+        <circleGeometry args={[WALL_RADIUS + 0.5, 64]} />
         <meshStandardMaterial color="#1a0e08" roughness={0.92} />
       </mesh>
       {/* Subtle floor glow ring */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.49, 0]}>
-        <ringGeometry args={[7, 9.5, 64]} />
+        <ringGeometry args={[WALL_RADIUS - 1.5, WALL_RADIUS - 0.2, 64]} />
         <meshBasicMaterial
           color="#ffaa55"
           transparent
-          opacity={0.06}
+          opacity={0.08}
           blending={THREE.AdditiveBlending}
         />
       </mesh>
 
-      {/* ---------- Curved wooden back wall ---------- */}
-      <Cylinder
-        args={[8, 8, 7, 64, 1, true, -Math.PI * 0.7, Math.PI * 1.4]}
-        position={[0, 3, 2]}
-      >
+      {/* ---------- Fully enclosed curved wooden wall (360°) ---------- */}
+      <Cylinder args={[WALL_RADIUS, WALL_RADIUS, 7, 96, 1, true]} position={[0, 3, 0]}>
         <meshStandardMaterial
           color="#2a160c"
           roughness={0.88}
           metalness={0.08}
-          side={THREE.DoubleSide}
+          side={THREE.BackSide}
         />
       </Cylinder>
 
       {/* Inner darker shadow ring at the bottom of the wall */}
       <Cylinder
-        args={[7.95, 7.95, 1.2, 64, 1, true, -Math.PI * 0.7, Math.PI * 1.4]}
-        position={[0, 0.1, 2]}
+        args={[WALL_RADIUS - 0.05, WALL_RADIUS - 0.05, 1.2, 96, 1, true]}
+        position={[0, 0.1, 0]}
       >
-        <meshStandardMaterial color="#0e0703" roughness={1} side={THREE.DoubleSide} />
+        <meshStandardMaterial color="#0e0703" roughness={1} side={THREE.BackSide} />
       </Cylinder>
 
-      {/* Ceiling cap */}
-      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 6.5, 2]}>
-        <circleGeometry args={[8.2, 64]} />
-        <meshStandardMaterial color="#170c06" roughness={0.95} side={THREE.DoubleSide} />
+      {/* Domed ceiling cap */}
+      <mesh position={[0, 6.5, 0]}>
+        <sphereGeometry args={[WALL_RADIUS, 64, 32, 0, Math.PI * 2, 0, Math.PI / 2]} />
+        <meshStandardMaterial color="#170c06" roughness={0.95} side={THREE.BackSide} />
+      </mesh>
+
+      {/* Top accent rim light along the upper edge of the wall */}
+      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 6.45, 0]}>
+        <torusGeometry args={[WALL_RADIUS - 0.05, 0.04, 8, 128]} />
+        <meshBasicMaterial
+          color="#7afcd1"
+          transparent
+          opacity={0.55}
+          blending={THREE.AdditiveBlending}
+          toneMapped={false}
+        />
       </mesh>
 
       {/* ---------- Bioluminescent moss patches ---------- */}
@@ -141,82 +220,127 @@ export default function TheaterInterior({ isMobile = false }: TheaterProps) {
         </mesh>
       ))}
 
-      {/* ---------- Curved screen ---------- */}
-      {/* Curved frame: a thin cylinder slice behind the screen */}
-      <Cylinder
-        args={[6.2, 6.2, 5.6, 48, 1, true, Math.PI - 0.45, 0.9]}
-        position={[0, 3, 1.2]}
-      >
-        <meshStandardMaterial
-          ref={screenFrameRef}
-          color="#3b2415"
-          emissive="#ffb060"
-          emissiveIntensity={0.8}
-          roughness={0.5}
-          metalness={0.35}
-          side={THREE.DoubleSide}
-          toneMapped={false}
-        />
-      </Cylinder>
+      {/* ---------- Platform embed panels around the room ---------- */}
+      {panels.map((panel, i) => (
+        <group
+          key={panel.id}
+          position={panel.position}
+          rotation={[0, panel.rotY, 0]}
+        >
+          {/* Glowing panel frame */}
+          <mesh position={[0, 0, -0.05]}>
+            <planeGeometry args={[PANEL_W + 0.4, PANEL_H + 0.7]} />
+            <meshStandardMaterial
+              ref={(el) => {
+                if (el) frameRefs.current[i] = el;
+              }}
+              color="#3b2415"
+              emissive={panel.color}
+              emissiveIntensity={0.7}
+              roughness={0.5}
+              metalness={0.35}
+              toneMapped={false}
+            />
+          </mesh>
 
-      {/* Soft additive glow disc behind the screen — feeds Bloom */}
-      <mesh position={[0, 3, -5.55]}>
-        <planeGeometry args={[10.5, 6.8]} />
-        <meshBasicMaterial
-          ref={screenGlowRef}
-          color="#ffc870"
-          transparent
-          opacity={0.22}
-          blending={THREE.AdditiveBlending}
-          depthWrite={false}
-          toneMapped={false}
-        />
+          {/* Additive backlight glow */}
+          <mesh position={[0, 0, -0.1]}>
+            <planeGeometry args={[PANEL_W + 1.6, PANEL_H + 1.8]} />
+            <meshBasicMaterial
+              color={panel.color}
+              transparent
+              opacity={0.18}
+              blending={THREE.AdditiveBlending}
+              depthWrite={false}
+              toneMapped={false}
+            />
+          </mesh>
+
+          {/* Label above the panel */}
+          <Text
+            position={[0, PANEL_H / 2 + 0.28, 0.02]}
+            fontSize={0.22}
+            color="#ffe4b8"
+            anchorX="center"
+            anchorY="middle"
+            outlineWidth={0.008}
+            outlineColor="#000000"
+          >
+            {panel.label}
+          </Text>
+
+          {/* Embed (iframe) or placeholder */}
+          {panel.src ? (
+            <Html
+              position={[0, 0, 0.02]}
+              transform
+              occlude={false}
+              distanceFactor={2.4}
+              style={{
+                width: `${iframeW}px`,
+                height: `${iframeH}px`,
+                borderRadius: "10px",
+                overflow: "hidden",
+                boxShadow: `0 0 60px ${panel.color}66, 0 0 20px ${panel.color}55 inset`,
+              }}
+            >
+              <iframe
+                title={panel.label}
+                src={panel.src}
+                width={iframeW}
+                height={iframeH}
+                frameBorder="0"
+                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts allow-presentation allow-forms"
+                style={{ border: 0, display: "block", background: "#1a1a1a" }}
+              />
+            </Html>
+          ) : (
+            <Html
+              position={[0, 0, 0.02]}
+              transform
+              occlude={false}
+              distanceFactor={2.4}
+              style={{
+                width: `${iframeW}px`,
+                height: `${iframeH}px`,
+                borderRadius: "10px",
+                overflow: "hidden",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background:
+                  "linear-gradient(135deg, rgba(20,10,5,0.9), rgba(40,20,10,0.9))",
+                color: "#ffe4b8",
+                fontFamily: "system-ui, sans-serif",
+                fontSize: "28px",
+                letterSpacing: "0.15em",
+                textAlign: "center",
+                boxShadow: `0 0 60px ${panel.color}55, 0 0 20px ${panel.color}55 inset`,
+              }}
+            >
+              <div style={{ padding: "24px" }}>
+                <div style={{ fontSize: "14px", opacity: 0.7, marginBottom: 12 }}>
+                  COMING SOON
+                </div>
+                <div>{panel.label}</div>
+              </div>
+            </Html>
+          )}
+        </group>
+      ))}
+
+      {/* ---------- Center pedestal / firepit-style accent ---------- */}
+      <mesh position={[0, -0.35, 0]}>
+        <cylinderGeometry args={[0.6, 0.8, 0.3, 24]} />
+        <meshStandardMaterial color="#2a160c" roughness={0.9} />
       </mesh>
-
-      {/* The interactive Discord widget — sits inside the curved frame */}
-      <Html
-        position={[0, 3, -5.35]}
-        transform
-        occlude={false}
-        distanceFactor={isMobile ? 5.6 : 4.2}
-        style={{
-          width: isMobile ? "560px" : "780px",
-          height: isMobile ? "640px" : "460px",
-          borderRadius: "10px",
-          overflow: "hidden",
-          boxShadow:
-            "0 0 120px rgba(255, 180, 80, 0.45), 0 0 40px rgba(122, 252, 209, 0.25) inset",
-        }}
-      >
-        <iframe
-          title="Propworld Discord"
-          src="https://discord.com/widget?id=1011591077406572574&theme=dark"
-          width={isMobile ? 560 : 780}
-          height={isMobile ? 640 : 460}
-          frameBorder="0"
-          sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts"
-          style={{ border: 0, display: "block", background: "#1a1a1a" }}
-        />
-      </Html>
-
-      {/* Top accent rim light along the upper edge of the wall */}
-      <mesh rotation={[0, 0, 0]} position={[0, 6.2, 2]}>
-        <torusGeometry args={[7.95, 0.04, 8, 96, Math.PI * 1.4]} />
-        <meshBasicMaterial
-          color="#7afcd1"
-          transparent
-          opacity={0.55}
-          blending={THREE.AdditiveBlending}
-          toneMapped={false}
-        />
-      </mesh>
+      <pointLight position={[0, 0.4, 0]} intensity={1.2} color="#ffaa55" distance={14} />
 
       {/* ---------- Lighting ---------- */}
-      <pointLight position={[0, 4, -3]} intensity={1.4} color="#ffc870" distance={22} />
-      <pointLight position={[-5, 2, 1]} intensity={0.55} color="#7afcd1" distance={14} />
-      <pointLight position={[5, 2, 1]} intensity={0.55} color="#7afcd1" distance={14} />
-      <pointLight position={[0, 0.2, 4]} intensity={0.35} color="#ffaa55" distance={10} />
-      <ambientLight intensity={0.22} color="#3a2a1a" />
+      <pointLight position={[0, 5, 0]} intensity={0.9} color="#ffc870" distance={20} />
+      <pointLight position={[0, 2, 0]} intensity={0.4} color="#7afcd1" distance={16} />
+      <ambientLight intensity={0.28} color="#3a2a1a" />
     </group>
   );
 }

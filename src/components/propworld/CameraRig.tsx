@@ -73,15 +73,12 @@ export default function CameraRig({ mode, hovered, isMobile, onTransitionComplet
       lastXRef.current = e.clientX;
       lastYRef.current = e.clientY;
       if (mode === "theater") {
-        const sens = (Math.PI / window.innerWidth) * 1.0;
-        theaterYawRef.current = THREE.MathUtils.clamp(
-          theaterYawRef.current - dx * sens,
-          -0.9,
-          0.9
-        );
+        const sens = (Math.PI / window.innerWidth) * 1.4;
+        // Full 360° yaw — no clamp
+        theaterYawRef.current = theaterYawRef.current - dx * sens;
         theaterPitchRef.current = THREE.MathUtils.clamp(
-          theaterPitchRef.current - dy * sens * 0.7,
-          -0.4,
+          theaterPitchRef.current - dy * sens * 0.6,
+          -0.5,
           0.5
         );
       } else {
@@ -217,30 +214,31 @@ export default function CameraRig({ mode, hovered, isMobile, onTransitionComplet
       return;
     }
 
-    // theater — seated sway + drag-to-look-around
-    const sway = Math.sin(t * 0.4) * 0.06;
-    // On mobile, sit slightly farther back & higher FOV so the screen fits portrait.
-    const seatZ = isMobile ? 5.2 : theaterPos.current.z;
-    const seatY = isMobile ? 3.1 : theaterPos.current.y;
-    camera.position.lerp(
-      new THREE.Vector3(theaterPos.current.x + sway, seatY, seatZ),
-      0.05
-    );
-    const targetFov = isMobile ? 68 : 55;
+    // theater — sit in the center of the rounded room, auto-rotate + drag to look around (full 360°)
+    const idleMs = performance.now() - userInteractRef.current;
+    const isUserActive = draggingRef.current || idleMs < 2500;
+
+    // Auto-rotate yaw when idle so users see embeds drift past
+    if (!isUserActive) {
+      theaterYawRef.current += delta * 0.12;
+    }
+
+    // Camera sits at the center of the room with a gentle bob
+    const bob = Math.sin(t * 0.4) * 0.05;
+    camera.position.lerp(new THREE.Vector3(0, 2.6 + bob, 0), 0.08);
+
+    const targetFov = isMobile ? 75 : 70;
     persp.fov = THREE.MathUtils.lerp(persp.fov, targetFov, 0.05);
     persp.updateProjectionMatrix();
 
-    // Apply yaw/pitch around the screen target.
-    const base = theaterTarget.current;
+    // Full 360° look-around: build a target on a unit sphere from yaw/pitch
     const yaw = theaterYawRef.current;
     const pitch = theaterPitchRef.current;
-    // Offset the lookAt point by yaw/pitch — gives a "look around" feel without leaving the seat.
-    const lookOffset = new THREE.Vector3(
-      Math.sin(yaw) * 6,
-      Math.sin(pitch) * 4,
-      Math.cos(yaw) * -1
+    const lookTarget = new THREE.Vector3(
+      camera.position.x + Math.sin(yaw) * Math.cos(pitch) * 5,
+      camera.position.y + Math.sin(pitch) * 5,
+      camera.position.z + Math.cos(yaw) * Math.cos(pitch) * 5
     );
-    const lookTarget = base.clone().add(lookOffset);
     camera.lookAt(lookTarget);
   });
 
