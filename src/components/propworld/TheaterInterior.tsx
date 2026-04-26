@@ -339,7 +339,33 @@ export default function TheaterInterior({ isMobile = false }: TheaterProps) {
     </group>
   );
 
-  // Slanted wooden picture frame around an embed
+  // Simple wooden folding-style chair (centered at base of seat)
+  const Chair = () => (
+    <group>
+      {/* Seat */}
+      <mesh position={[0, 0.45, 0]} castShadow>
+        <boxGeometry args={[0.55, 0.08, 0.55]} />
+        <meshStandardMaterial color="#6b4a2a" roughness={0.9} />
+      </mesh>
+      {/* Backrest */}
+      <mesh position={[0, 0.85, -0.23]} castShadow>
+        <boxGeometry args={[0.55, 0.7, 0.07]} />
+        <meshStandardMaterial color="#6b4a2a" roughness={0.9} />
+      </mesh>
+      {/* 4 legs */}
+      {[
+        [-0.22, 0.22, -0.22],
+        [0.22, 0.22, -0.22],
+        [-0.22, 0.22, 0.22],
+        [0.22, 0.22, 0.22],
+      ].map((p, i) => (
+        <mesh key={i} position={p as [number, number, number]} castShadow>
+          <boxGeometry args={[0.06, 0.45, 0.06]} />
+          <meshStandardMaterial color="#5a3f24" roughness={0.9} />
+        </mesh>
+      ))}
+    </group>
+  );
   const PictureFrame = ({
     width,
     height,
