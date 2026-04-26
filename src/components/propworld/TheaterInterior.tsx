@@ -6,6 +6,10 @@ import * as THREE from "three";
 import concreteWallUrl from "@/assets/concrete-wall.jpg";
 import concreteFloorUrl from "@/assets/concrete-floor.jpg";
 import ceilingWoodUrl from "@/assets/ceiling-wood.jpg";
+import graffitiBronxUrl from "@/assets/graffiti-bronx.png";
+import graffitiQueensUrl from "@/assets/graffiti-queens.png";
+import graffitiNycUrl from "@/assets/graffiti-nyc.png";
+import graffitiBrooklynUrl from "@/assets/graffiti-brooklyn.png";
 import { kickables, type Kickable } from "./useKickables";
 
 const ROOM_BOUND = 7.5; // wall half-size used by KickableProp collisions (room is 16 wide)
@@ -255,11 +259,18 @@ const ROOM_HEIGHT = 7;
 
 export default function TheaterInterior({ isMobile = false }: TheaterProps) {
   // Load and configure tileable textures
-  const [wallTex, floorTex, ceilingTex] = useLoader(THREE.TextureLoader, [
-    concreteWallUrl,
-    concreteFloorUrl,
-    ceilingWoodUrl,
-  ]);
+  const [wallTex, floorTex, ceilingTex, gBronx, gQueens, gNyc, gBrooklyn] = useLoader(
+    THREE.TextureLoader,
+    [
+      concreteWallUrl,
+      concreteFloorUrl,
+      ceilingWoodUrl,
+      graffitiBronxUrl,
+      graffitiQueensUrl,
+      graffitiNycUrl,
+      graffitiBrooklynUrl,
+    ],
+  );
 
   useMemo(() => {
     [wallTex, floorTex, ceilingTex].forEach((t) => {
@@ -268,10 +279,14 @@ export default function TheaterInterior({ isMobile = false }: TheaterProps) {
       // sRGB so colors don't look washed out
       t.colorSpace = THREE.SRGBColorSpace;
     });
+    [gBronx, gQueens, gNyc, gBrooklyn].forEach((t) => {
+      t.colorSpace = THREE.SRGBColorSpace;
+      t.anisotropy = 8;
+    });
     wallTex.repeat.set(2, 1);
     floorTex.repeat.set(3, 3);
     ceilingTex.repeat.set(3, 3);
-  }, [wallTex, floorTex, ceilingTex]);
+  }, [wallTex, floorTex, ceilingTex, gBronx, gQueens, gNyc, gBrooklyn]);
 
   // Wood texture for picture frames (reuse ceiling wood, smaller repeat)
   const frameWoodTex = useMemo(() => {
@@ -635,6 +650,67 @@ export default function TheaterInterior({ isMobile = false }: TheaterProps) {
       <mesh position={[-HALF, ROOM_HEIGHT / 2 - 0.5, 0]} rotation={[0, Math.PI / 2, 0]} receiveShadow>
         <planeGeometry args={[ROOM_SIZE, ROOM_HEIGHT]} />
         <meshStandardMaterial map={wallTex} roughness={1} />
+      </mesh>
+
+      {/* ---------- NYC Graffiti decals on walls ---------- */}
+      {/* Tucked into low corners so they don't fight with picture frames (frames at y=2.6) */}
+      {/* North wall — BRONX, lower left */}
+      <mesh position={[-4.2, 0.6, HALF - 0.02]} rotation={[0, Math.PI, 0]}>
+        <planeGeometry args={[4.4, 2.2]} />
+        <meshStandardMaterial
+          map={gBronx}
+          transparent
+          alphaTest={0.05}
+          roughness={1}
+          depthWrite={false}
+          polygonOffset
+          polygonOffsetFactor={-1}
+        />
+      </mesh>
+      {/* South wall — BROOKLYN, lower right */}
+      <mesh position={[3.8, 0.5, -HALF + 0.02]}>
+        <planeGeometry args={[4.6, 2.3]} />
+        <meshStandardMaterial
+          map={gBrooklyn}
+          transparent
+          alphaTest={0.05}
+          roughness={1}
+          depthWrite={false}
+          polygonOffset
+          polygonOffsetFactor={-1}
+        />
+      </mesh>
+      {/* East wall — NYC crown piece, low center */}
+      <mesh
+        position={[HALF - 0.02, 0.7, 0]}
+        rotation={[0, -Math.PI / 2, 0]}
+      >
+        <planeGeometry args={[5.0, 2.5]} />
+        <meshStandardMaterial
+          map={gNyc}
+          transparent
+          alphaTest={0.05}
+          roughness={1}
+          depthWrite={false}
+          polygonOffset
+          polygonOffsetFactor={-1}
+        />
+      </mesh>
+      {/* West wall — QUEENS, low center */}
+      <mesh
+        position={[-HALF + 0.02, 0.6, 0]}
+        rotation={[0, Math.PI / 2, 0]}
+      >
+        <planeGeometry args={[4.8, 2.4]} />
+        <meshStandardMaterial
+          map={gQueens}
+          transparent
+          alphaTest={0.05}
+          roughness={1}
+          depthWrite={false}
+          polygonOffset
+          polygonOffsetFactor={-1}
+        />
       </mesh>
 
       {/* ---------- Ceiling (dark wood planks) ---------- */}
