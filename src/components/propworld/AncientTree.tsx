@@ -382,34 +382,9 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
           A tall arched opening carved into the trunk (no door). The orb
           floats inside the doorway and its glow fills the cavity. */}
       {(() => {
-        // ---- Derive doorway from actual trunk thickness ----
-        const PARALLEL_END = 0.3;
-        const trunkRadiusAt = (y: number) => {
-          const t = THREE.MathUtils.clamp(y / HEIGHT, 0, 1);
-          const taper =
-            t <= PARALLEL_END
-              ? 1.0
-              : THREE.MathUtils.lerp(
-                  1.0,
-                  TOP_R / BASE_R,
-                  (t - PARALLEL_END) / (1 - PARALLEL_END),
-                );
-          return BASE_R * taper;
-        };
-
-        const DOORWAY_BASE_Y = 0;
-        const DOORWAY_TOP_Y = HEIGHT * 0.28;
-        const DH = DOORWAY_TOP_Y - DOORWAY_BASE_Y;
-        const DOORWAY_Y_CENTER = (DOORWAY_BASE_Y + DOORWAY_TOP_Y) / 2;
-
-        const trunkR = trunkRadiusAt(DOORWAY_Y_CENTER);
-        const DW = Math.min(trunkR * 1.4, DH * 0.7);
-        const DR = DW / 2;
-
-        // Build a CURVED arch mesh that wraps onto the trunk surface.
-        // The arch occupies an angular slice of the trunk's cylinder.
-        // Half-angle = arc-length / radius; we use trunk radius for curvature.
-        const halfAngle = DW / 2 / trunkR;
+        // Use the shared component-scope doorway constants so the trunk
+        // hole, knots, moss, and portal all align to the same silhouette.
+        const trunkR = doorwayTrunkR;
         const segsX = 48; // horizontal segments around the trunk
         const segsY = 96; // vertical segments along the doorway height
         const positions: number[] = [];
