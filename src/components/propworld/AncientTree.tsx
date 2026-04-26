@@ -26,7 +26,8 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
   const BASE_R = 4.2;
   const TOP_R = 1.6;
 
-  // Trunk — sinuous tapered tube
+  // Trunk — sinuous tapered tube with PROCEDURAL BARK displacement
+  // Multi-octave noise + angular ridges create deep vertical grooves and burls.
   const trunkGeom = useMemo(() => {
     const curve = new THREE.CatmullRomCurve3([
       new THREE.Vector3(0, 0, 0),
@@ -36,17 +37,70 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
       new THREE.Vector3(-0.2, HEIGHT * 0.9, 0.2),
       new THREE.Vector3(0.1, HEIGHT, 0),
     ]);
-    const g = new THREE.TubeGeometry(curve, 100, BASE_R, 24, false);
+    // Higher radial + tubular segments so displacement reads as real bark
+    const g = new THREE.TubeGeometry(curve, 220, BASE_R, 64, false);
     const pos = g.attributes.position as THREE.BufferAttribute;
+
+    // Fast hash-based pseudo noise (deterministic)
+    const hash = (x: number, y: number, z: number) => {
+      const s = Math.sin(x * 12.9898 + y * 78.233 + z * 37.719) * 43758.5453;
+      return s - Math.floor(s);
+    };
+    const fbm = (x: number, y: number, z: number) => {
+      let v = 0;
+      let amp = 1;
+      let freq = 1;
+      for (let o = 0; o < 4; o++) {
+        v += (hash(x * freq, y * freq, z * freq) - 0.5) * amp;
+        amp *= 0.5;
+        freq *= 2.1;
+      }
+      return v;
+    };
+
     for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i);
       const y = pos.getY(i);
+      const z = pos.getZ(i);
+
       const t = THREE.MathUtils.clamp(y / HEIGHT, 0, 1);
-      // smoother taper with subtle bulges
       const taper = THREE.MathUtils.lerp(1.0, TOP_R / BASE_R, t);
-      const bulge = 1 + Math.sin(y * 0.6) * 0.04;
-      const r = taper * bulge;
-      pos.setX(i, pos.getX(i) * r);
-      pos.setZ(i, pos.getZ(i) * r);
+
+      // Apply taper first
+      let nx = x * taper;
+      let nz = z * taper;
+
+      // Compute angle around trunk axis for vertical ridges
+      const angle = Math.atan2(nz, nx);
+      const radial = Math.sqrt(nx * nx + nz * nz);
+
+      // Vertical ridges: high-frequency angular grooves, slightly twisting up
+      const ridges =
+        Math.sin(angle * 22 + y * 0.18) * 0.5 +
+        Math.sin(angle * 11 - y * 0.07) * 0.35;
+
+      // FBM for organic bumps & burls
+      const noise = fbm(nx * 0.8, y * 0.45, nz * 0.8) * 1.6;
+
+      // Larger low-freq bulges
+      const bulge = Math.sin(y * 0.35 + angle * 2) * 0.18;
+
+      // Stronger displacement at the base, easing toward the top
+      const baseFalloff = THREE.MathUtils.lerp(1.0, 0.45, t);
+
+      // Total radial displacement (in world units)
+      const disp = (ridges * 0.18 + noise * 0.22 + bulge) * baseFalloff;
+
+      // Push outward along the radial direction
+      if (radial > 0.0001) {
+        const dirX = nx / radial;
+        const dirZ = nz / radial;
+        nx += dirX * disp;
+        nz += dirZ * disp;
+      }
+
+      pos.setX(i, nx);
+      pos.setZ(i, nz);
     }
     pos.needsUpdate = true;
     g.computeVertexNormals();
@@ -69,18 +123,7 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
     return arr;
   }, []);
 
-  // Vertical bark ridges (thin tall boxes hugging the trunk)
-  const barkRidges = useMemo(() => {
-    const arr: { a: number; y: number; h: number }[] = [];
-    const count = 22;
-    for (let i = 0; i < count; i++) {
-      const a = (i / count) * Math.PI * 2 + Math.sin(i * 1.3) * 0.1;
-      const y = HEIGHT * (0.15 + ((i % 5) / 5) * 0.6);
-      const h = 4 + ((Math.sin(i * 2.1) + 1) / 2) * 5;
-      arr.push({ a, y, h });
-    }
-    return arr;
-  }, []);
+
 
   // Knots / burls
   const knots = useMemo(() => {
@@ -191,7 +234,7 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
       orbHaloRef.current.scale.set(s, s, s);
     }
     if (orbLightRef.current) {
-      orbLightRef.current.intensity = 2.4 + pulse * 2.8;
+      orbLightRef.current.intensity = 1.8 + pulse * 1.6;
     }
     mossRefs.current.forEach((m, i) => {
       if (m) m.emissiveIntensity = 0.3 + Math.sin(t * 1.2 + i) * 0.12;
@@ -214,37 +257,21 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
         </mesh>
       ))}
 
-      {/* Trunk */}
+      {/* Trunk — procedural bark via vertex displacement */}
       <mesh geometry={trunkGeom} castShadow receiveShadow>
-        <meshStandardMaterial color="#11181f" roughness={0.98} />
+        <meshStandardMaterial
+          color="#141c24"
+          roughness={1}
+          flatShading
+          emissive="#0a1814"
+          emissiveIntensity={0.08}
+        />
       </mesh>
 
-      {/* Vertical bark ridges */}
-      {barkRidges.map((b, i) => {
-        const t = b.y / HEIGHT;
-        const trunkR = THREE.MathUtils.lerp(BASE_R, TOP_R, t) * 1.0;
-        return (
-          <mesh
-            key={`ridge-${i}`}
-            position={[Math.cos(b.a) * trunkR, b.y, Math.sin(b.a) * trunkR]}
-            rotation={[0, -b.a + Math.PI / 2, 0]}
-          >
-            <boxGeometry args={[0.18, b.h, 0.45]} />
-            <meshStandardMaterial color="#05090d" roughness={1} />
-          </mesh>
-        );
-      })}
-
-      {/* Horizontal bark bands */}
-      {[0.18, 0.36, 0.54, 0.72].map((tt, i) => {
-        const r = THREE.MathUtils.lerp(BASE_R, TOP_R, tt) * 1.03;
-        return (
-          <mesh key={`band-${i}`} position={[0, HEIGHT * tt, 0]}>
-            <cylinderGeometry args={[r, r, 0.22, 24]} />
-            <meshStandardMaterial color="#060a0e" roughness={1} />
-          </mesh>
-        );
-      })}
+      {/* Subtle dark inner shell to deepen the crevices visually */}
+      <mesh geometry={trunkGeom} scale={[0.985, 1, 0.985]}>
+        <meshStandardMaterial color="#03070a" roughness={1} />
+      </mesh>
 
       {/* Knots */}
       {knots.map((k, i) => (
@@ -297,7 +324,10 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
         </group>
       ))}
 
-      {/* ---------- Glowing Orb Portal (interactive, no beams) ---------- */}
+      {/* ---------- Glowing Orb Portal ----------
+          Clean texture-driven portal: solid bright core + two additive
+          glow shells + a soft outer halo. The point light is short-range
+          and low-intensity so it never reads as a visible beam. */}
       <group
         position={[0, 2.0, BASE_R * 0.95 + 0.3]}
         onClick={(e) => {
@@ -314,38 +344,58 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
           onHoverChange?.(false);
         }}
       >
+        {/* Outermost soft halo — wide, very faint */}
         <mesh ref={orbHaloRef}>
-          <sphereGeometry args={[1.4, 32, 32]} />
+          <sphereGeometry args={[1.8, 40, 40]} />
           <meshBasicMaterial
-            color="#ffb14a"
+            color="#ff9a3a"
             transparent
-            opacity={0.28}
+            opacity={0.18}
             blending={THREE.AdditiveBlending}
             depthWrite={false}
             toneMapped={false}
           />
         </mesh>
+
+        {/* Mid glow shell — warmer amber */}
         <mesh>
-          <sphereGeometry args={[0.8, 32, 32]} />
+          <sphereGeometry args={[1.05, 40, 40]} />
+          <meshBasicMaterial
+            color="#ffb96a"
+            transparent
+            opacity={0.55}
+            blending={THREE.AdditiveBlending}
+            depthWrite={false}
+            toneMapped={false}
+          />
+        </mesh>
+
+        {/* Inner bright shell */}
+        <mesh>
+          <sphereGeometry args={[0.7, 40, 40]} />
           <meshBasicMaterial
             ref={orbGlowRef}
-            color="#ffd27a"
+            color="#ffe2a8"
             transparent
-            opacity={0.9}
+            opacity={0.85}
             blending={THREE.AdditiveBlending}
             depthWrite={false}
             toneMapped={false}
           />
         </mesh>
+        {/* Solid bright core */}
         <mesh ref={orbCoreRef}>
-          <sphereGeometry args={[0.45, 32, 32]} />
-          <meshBasicMaterial color="#fff2c2" toneMapped={false} />
+          <sphereGeometry args={[0.42, 40, 40]} />
+          <meshBasicMaterial color="#fff4cc" toneMapped={false} />
         </mesh>
+
+        {/* Short-range warm fill — illuminates surrounding bark only,
+            no visible beam. Decay=2, distance=8. */}
         <pointLight
           ref={orbLightRef}
-          intensity={3}
-          color="#ffa040"
-          distance={16}
+          intensity={2.4}
+          color="#ffae5a"
+          distance={8}
           decay={2}
         />
       </group>
