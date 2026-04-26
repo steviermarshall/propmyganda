@@ -455,10 +455,12 @@ export default function TheaterInterior({ isMobile = false }: TheaterProps) {
   // World-space target: fit width of frame, keep 16:9
   const PANEL_INNER_W = PANEL_W - 0.2;
   const PANEL_INNER_H = PANEL_INNER_W * (9 / 16);
-  // Html transform uses 1 world unit ≈ distanceFactor * 100px by default; we
-  // bypass that by computing an explicit scale so the iframe always fills the
-  // frame regardless of viewport.
-  const htmlScale = PANEL_INNER_W / IFRAME_BASE_W;
+  // Drei Html transform maps CSS pixels through its default distance factor:
+  // 1 CSS px ≈ 10 / 400 world units before the group's scale is applied.
+  // Include that ratio so a 960px iframe fills the frame instead of rendering
+  // as a tiny, unreadable speck.
+  const HTML_WORLD_UNITS_PER_PIXEL = 10 / 400;
+  const htmlScale = PANEL_INNER_W / (IFRAME_BASE_W * HTML_WORLD_UNITS_PER_PIXEL);
 
   // (Prop components Pipe, Barrel, Box, Ladder, Chair are defined at module scope below)
 
@@ -889,6 +891,7 @@ export default function TheaterInterior({ isMobile = false }: TheaterProps) {
                   position={[0, 0, 0.16]}
                   transform
                   occlude={false}
+                  distanceFactor={10}
                   scale={htmlScale}
                   style={{
                     width: `${IFRAME_BASE_W}px`,
@@ -927,6 +930,7 @@ export default function TheaterInterior({ isMobile = false }: TheaterProps) {
                 position={[0, 0, 0.16]}
                 transform
                 occlude={false}
+                distanceFactor={10}
                 scale={htmlScale}
                 style={{
                   width: `${IFRAME_BASE_W}px`,
