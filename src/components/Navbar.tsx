@@ -40,7 +40,7 @@ const Navbar = () => {
           scrolled ? "bg-primary" : "bg-transparent"
         }`}
       >
-        <div className="container-content flex items-center justify-between h-16 md:h-20">
+        <div className="container-content relative flex items-center justify-between h-16 md:h-20">
           {isHome ? (
             <span aria-hidden className="w-6" />
           ) : (
@@ -49,8 +49,8 @@ const Navbar = () => {
             </Link>
           )}
 
-          {/* Desktop Nav */}
-          <div className="hidden md:flex items-center gap-8">
+          {/* Desktop Nav — absolutely centered */}
+          <div className="hidden md:flex items-center gap-8 absolute left-1/2 -translate-x-1/2">
             {navLinks.map((link) => (
               <Link
                 key={link.path}
