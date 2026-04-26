@@ -190,8 +190,12 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
       const y = 4 + (i % 4) * 4;
       const t = y / HEIGHT;
       const trunkR = THREE.MathUtils.lerp(BASE_R, TOP_R, t) * 0.95;
+      const px = Math.cos(a) * trunkR;
+      const pz = Math.sin(a) * trunkR;
+      // Skip knots that fall inside the doorway zone
+      if (insideDoorway(px, y, pz)) continue;
       arr.push({
-        pos: [Math.cos(a) * trunkR, y, Math.sin(a) * trunkR],
+        pos: [px, y, pz],
         r: 0.5 + ((Math.sin(i * 3.7) + 1) / 2) * 0.4,
       });
     }
