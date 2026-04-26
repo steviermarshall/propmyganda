@@ -904,7 +904,7 @@ export default function TheaterInterior({ isMobile = false }: TheaterProps) {
               </Html>
             ) : (
               <Html
-                position={[0, 0, 0.02]}
+                position={[0, 0, 0.16]}
                 transform
                 occlude={false}
                 scale={htmlScale}
