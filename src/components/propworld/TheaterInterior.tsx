@@ -99,7 +99,18 @@ function KickableProp({
     }
   });
 
-  return <group ref={groupRef}>{children}</group>;
+  return (
+    <group
+      ref={groupRef}
+      onPointerDown={(e) => {
+        // Direct tap on this prop — instant kick away from the camera
+        e.stopPropagation();
+        kickables.kickById(id, e.camera.position.clone());
+      }}
+    >
+      {children}
+    </group>
+  );
 }
 
 /**
