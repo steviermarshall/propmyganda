@@ -73,15 +73,12 @@ export default function CameraRig({ mode, hovered, isMobile, onTransitionComplet
       lastXRef.current = e.clientX;
       lastYRef.current = e.clientY;
       if (mode === "theater") {
-        const sens = (Math.PI / window.innerWidth) * 1.0;
-        theaterYawRef.current = THREE.MathUtils.clamp(
-          theaterYawRef.current - dx * sens,
-          -0.9,
-          0.9
-        );
+        const sens = (Math.PI / window.innerWidth) * 1.4;
+        // Full 360° yaw — no clamp
+        theaterYawRef.current = theaterYawRef.current - dx * sens;
         theaterPitchRef.current = THREE.MathUtils.clamp(
-          theaterPitchRef.current - dy * sens * 0.7,
-          -0.4,
+          theaterPitchRef.current - dy * sens * 0.6,
+          -0.5,
           0.5
         );
       } else {
