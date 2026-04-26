@@ -275,14 +275,8 @@ export default function TheaterInterior({ isMobile = false }: TheaterProps) {
     </group>
   );
 
-  const Barrel = ({
-    position,
-    color = "#3a5d4a",
-  }: {
-    position: [number, number, number];
-    color?: string;
-  }) => (
-    <group position={position}>
+  const Barrel = ({ color = "#3a5d4a" }: { color?: string }) => (
+    <group>
       <mesh castShadow>
         <cylinderGeometry args={[0.55, 0.55, 1.3, 24]} />
         <meshStandardMaterial color={color} roughness={0.75} metalness={0.45} />
@@ -299,15 +293,11 @@ export default function TheaterInterior({ isMobile = false }: TheaterProps) {
   );
 
   const Box = ({
-    position,
-    rotation = 0,
     size = [0.9, 0.9, 0.9] as [number, number, number],
   }: {
-    position: [number, number, number];
-    rotation?: number;
     size?: [number, number, number];
   }) => (
-    <mesh position={position} rotation={[0, rotation, 0]} castShadow>
+    <mesh castShadow>
       <boxGeometry args={size} />
       <meshStandardMaterial color="#a47844" roughness={0.95} />
     </mesh>
