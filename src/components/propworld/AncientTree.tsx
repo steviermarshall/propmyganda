@@ -311,13 +311,43 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
           A tall arched opening carved into the trunk (no door). The orb
           floats inside the doorway and its glow fills the cavity. */}
       {(() => {
-        // Doorway dims (world units)
-        const DW = 1.8;   // width
-        const DH = 3.2;   // total height (rectangle + arch)
-        const DR = DW / 2; // arch radius
-        const DZ = BASE_R * 0.96; // sit on the trunk's front surface
+        // ---- Derive doorway from actual trunk thickness ----
+        // The doorway sits at its vertical CENTER around y = DOORWAY_Y_CENTER.
+        // We compute the trunk's radius at that height using the SAME
+        // parallel/taper formula used by the trunk geometry, so the arch
+        // always scales with the real trunk silhouette.
+        const PARALLEL_END = 0.3;
+        const trunkRadiusAt = (y: number) => {
+          const t = THREE.MathUtils.clamp(y / HEIGHT, 0, 1);
+          const taper =
+            t <= PARALLEL_END
+              ? 1.0
+              : THREE.MathUtils.lerp(
+                  1.0,
+                  TOP_R / BASE_R,
+                  (t - PARALLEL_END) / (1 - PARALLEL_END),
+                );
+          return BASE_R * taper;
+        };
 
-        // Build an arched shape (rectangle bottom + semicircle top)
+        // Doorway sits in the lower (parallel) section of the trunk.
+        const DOORWAY_BASE_Y = 0;
+        const DOORWAY_TOP_Y = HEIGHT * 0.28; // stay within parallel zone
+        const DH = DOORWAY_TOP_Y - DOORWAY_BASE_Y; // total height
+        const DOORWAY_Y_CENTER = (DOORWAY_BASE_Y + DOORWAY_TOP_Y) / 2;
+
+        // Trunk radius at the doorway's center → drives width.
+        const trunkR = trunkRadiusAt(DOORWAY_Y_CENTER);
+        // Doorway width = ~70% of the trunk diameter at this height.
+        const DW = Math.min(trunkR * 1.4, DH * 0.7); // keep tall-arch proportion
+        const DR = DW / 2; // arch radius (semicircle on top)
+
+        // Sit FLUSH with — and slightly RECESSED INTO — the trunk surface.
+        // Negative offset pushes the cavity inside the trunk so the bark
+        // wraps around the opening instead of the arch floating in front.
+        const DZ = trunkR - 0.15;
+
+        // Arched shape (rectangle bottom + semicircle top)
         const archShape = new THREE.Shape();
         archShape.moveTo(-DR, 0);
         archShape.lineTo(-DR, DH - DR);
@@ -325,11 +355,12 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
         archShape.lineTo(DR, 0);
         archShape.lineTo(-DR, 0);
 
-        // Outer frame shape (slightly larger arch with inner hole)
-        const frameOuter = new THREE.Shape();
-        const FW = DW + 0.55;
-        const FH = DH + 0.45;
+        // Outer bark frame — proportional to doorway size (not fixed margins)
+        const FRAME_THICKNESS = Math.max(0.18, DW * 0.16);
+        const FW = DW + FRAME_THICKNESS * 2;
+        const FH = DH + FRAME_THICKNESS;
         const FR = FW / 2;
+        const frameOuter = new THREE.Shape();
         frameOuter.moveTo(-FR, 0);
         frameOuter.lineTo(-FR, FH - FR);
         frameOuter.absarc(0, FH - FR, FR, Math.PI, 0, true);
@@ -360,39 +391,40 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
               onHoverChange?.(false);
             }}
           >
-            {/* Recessed black cavity — sits just behind the trunk surface
-                so the bark naturally frames the opening. */}
-            <mesh position={[0, 0.4, -0.05]}>
+            {/* Recessed black cavity - pushed slightly INTO the trunk
+                so bark wraps around the opening. */}
+            <mesh position={[0, 0, -0.08]}>
               <shapeGeometry args={[archShape]} />
-              <meshBasicMaterial color="#000000" toneMapped={false} />
+              <meshBasicMaterial color="#000000" toneMapped={false} side={THREE.DoubleSide} />
             </mesh>
 
-            {/* Carved bark arch frame (raised lip around the doorway) */}
-            <mesh position={[0, 0.4, 0.02]}>
+            {/* Carved bark arch frame - flush with the trunk surface */}
+            <mesh position={[0, 0, 0.02]}>
               <shapeGeometry args={[frameOuter]} />
               <meshStandardMaterial
                 color="#070b0f"
                 roughness={1}
                 emissive="#1a0e05"
                 emissiveIntensity={0.25}
+                side={THREE.DoubleSide}
               />
             </mesh>
 
-            {/* Subtle warm glow lining the arch interior */}
-            <mesh position={[0, 0.4, -0.02]} scale={[0.94, 0.94, 1]}>
+            {/* Warm glow lining the arch interior */}
+            <mesh position={[0, 0, -0.04]} scale={[0.92, 0.92, 1]}>
               <shapeGeometry args={[archShape]} />
               <meshBasicMaterial
                 color="#ff8a30"
                 transparent
-                opacity={0.25}
+                opacity={0.3}
                 blending={THREE.AdditiveBlending}
                 depthWrite={false}
                 toneMapped={false}
               />
             </mesh>
 
-            {/* ---------- Orb floating INSIDE the doorway ---------- */}
-            <group position={[0, 1.55, 0.55]}>
+            {/* Orb floating INSIDE the doorway - centered vertically, slightly forward */}
+            <group position={[0, DH * 0.45, 0.15]}>
               {/* Soft outer halo — fills the doorway space */}
               <mesh ref={orbHaloRef}>
                 <sphereGeometry args={[1.4, 32, 32]} />
