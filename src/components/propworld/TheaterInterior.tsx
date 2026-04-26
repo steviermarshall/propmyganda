@@ -259,11 +259,18 @@ const ROOM_HEIGHT = 7;
 
 export default function TheaterInterior({ isMobile = false }: TheaterProps) {
   // Load and configure tileable textures
-  const [wallTex, floorTex, ceilingTex] = useLoader(THREE.TextureLoader, [
-    concreteWallUrl,
-    concreteFloorUrl,
-    ceilingWoodUrl,
-  ]);
+  const [wallTex, floorTex, ceilingTex, gBronx, gQueens, gNyc, gBrooklyn] = useLoader(
+    THREE.TextureLoader,
+    [
+      concreteWallUrl,
+      concreteFloorUrl,
+      ceilingWoodUrl,
+      graffitiBronxUrl,
+      graffitiQueensUrl,
+      graffitiNycUrl,
+      graffitiBrooklynUrl,
+    ],
+  );
 
   useMemo(() => {
     [wallTex, floorTex, ceilingTex].forEach((t) => {
@@ -272,10 +279,14 @@ export default function TheaterInterior({ isMobile = false }: TheaterProps) {
       // sRGB so colors don't look washed out
       t.colorSpace = THREE.SRGBColorSpace;
     });
+    [gBronx, gQueens, gNyc, gBrooklyn].forEach((t) => {
+      t.colorSpace = THREE.SRGBColorSpace;
+      t.anisotropy = 8;
+    });
     wallTex.repeat.set(2, 1);
     floorTex.repeat.set(3, 3);
     ceilingTex.repeat.set(3, 3);
-  }, [wallTex, floorTex, ceilingTex]);
+  }, [wallTex, floorTex, ceilingTex, gBronx, gQueens, gNyc, gBrooklyn]);
 
   // Wood texture for picture frames (reuse ceiling wood, smaller repeat)
   const frameWoodTex = useMemo(() => {
