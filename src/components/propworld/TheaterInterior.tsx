@@ -67,7 +67,6 @@ export default function TheaterInterior({ isMobile = false }: TheaterProps) {
       t.wrapS = t.wrapT = THREE.RepeatWrapping;
       t.anisotropy = 8;
       // sRGB so colors don't look washed out
-      // @ts-expect-error - colorSpace exists in modern three
       t.colorSpace = THREE.SRGBColorSpace;
     });
     wallTex.repeat.set(2, 1);
