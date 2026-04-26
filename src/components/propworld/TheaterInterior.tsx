@@ -362,8 +362,18 @@ export default function TheaterInterior({ isMobile = false }: TheaterProps) {
 
   const PANEL_W = 4.2;
   const PANEL_H = 2.6;
-  const iframeW = isMobile ? 520 : 640;
-  const iframeH = isMobile ? 360 : 420;
+  // Render iframe at a fixed 16:9 pixel size, then scale-to-fit the panel via
+  // <Html transform> so it stays readable and properly framed on any device.
+  // The pixel resolution is constant -> sharp text and consistent UI controls.
+  const IFRAME_BASE_W = 960;
+  const IFRAME_BASE_H = 540; // 16:9
+  // World-space target: fit width of frame, keep 16:9
+  const PANEL_INNER_W = PANEL_W - 0.2;
+  const PANEL_INNER_H = PANEL_INNER_W * (9 / 16);
+  // Html transform uses 1 world unit ≈ distanceFactor * 100px by default; we
+  // bypass that by computing an explicit scale so the iframe always fills the
+  // frame regardless of viewport.
+  const htmlScale = PANEL_INNER_W / IFRAME_BASE_W;
 
   // (Prop components Pipe, Barrel, Box, Ladder, Chair are defined at module scope below)
 
@@ -623,23 +633,24 @@ export default function TheaterInterior({ isMobile = false }: TheaterProps) {
                 position={[0, 0, 0.02]}
                 transform
                 occlude={false}
-                distanceFactor={2.4}
+                scale={htmlScale}
                 style={{
-                  width: `${iframeW}px`,
-                  height: `${iframeH}px`,
+                  width: `${IFRAME_BASE_W}px`,
+                  height: `${IFRAME_BASE_H}px`,
                   overflow: "hidden",
                   background: "#1a1a1a",
+                  borderRadius: "4px",
                 }}
               >
                 <iframe
                   title={panel.label}
                   src={panel.src}
-                  width={iframeW}
-                  height={iframeH}
+                  width={IFRAME_BASE_W}
+                  height={IFRAME_BASE_H}
                   frameBorder="0"
                   allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
                   sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts allow-presentation allow-forms"
-                  style={{ border: 0, display: "block", background: "#1a1a1a" }}
+                  style={{ border: 0, display: "block", background: "#1a1a1a", width: "100%", height: "100%" }}
                 />
               </Html>
             ) : (
@@ -647,10 +658,10 @@ export default function TheaterInterior({ isMobile = false }: TheaterProps) {
                 position={[0, 0, 0.02]}
                 transform
                 occlude={false}
-                distanceFactor={2.4}
+                scale={htmlScale}
                 style={{
-                  width: `${iframeW}px`,
-                  height: `${iframeH}px`,
+                  width: `${IFRAME_BASE_W}px`,
+                  height: `${IFRAME_BASE_H}px`,
                   overflow: "hidden",
                   display: "flex",
                   alignItems: "center",
@@ -658,13 +669,13 @@ export default function TheaterInterior({ isMobile = false }: TheaterProps) {
                   background: "linear-gradient(135deg, #181818, #2a2a2a)",
                   color: panel.color,
                   fontFamily: "system-ui, sans-serif",
-                  fontSize: "28px",
+                  fontSize: "42px",
                   letterSpacing: "0.15em",
                   textAlign: "center",
                 }}
               >
                 <div style={{ padding: 24 }}>
-                  <div style={{ fontSize: 14, opacity: 0.7, marginBottom: 12, color: "#bbb" }}>
+                  <div style={{ fontSize: 22, opacity: 0.7, marginBottom: 16, color: "#bbb" }}>
                     COMING SOON
                   </div>
                   <div>{panel.label}</div>
