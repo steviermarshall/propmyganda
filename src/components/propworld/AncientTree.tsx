@@ -342,58 +342,44 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
           onHoverChange?.(false);
         }}
       >
-        {/* Outermost soft halo — wide, very faint */}
+        {/* Soft outer halo */}
         <mesh ref={orbHaloRef}>
-          <sphereGeometry args={[1.8, 40, 40]} />
+          <sphereGeometry args={[1.4, 32, 32]} />
           <meshBasicMaterial
-            color="#ff9a3a"
+            color="#ffb14a"
             transparent
-            opacity={0.18}
+            opacity={0.28}
             blending={THREE.AdditiveBlending}
             depthWrite={false}
             toneMapped={false}
           />
         </mesh>
 
-        {/* Mid glow shell — warmer amber */}
+        {/* Glow shell */}
         <mesh>
-          <sphereGeometry args={[1.05, 40, 40]} />
-          <meshBasicMaterial
-            color="#ffb96a"
-            transparent
-            opacity={0.55}
-            blending={THREE.AdditiveBlending}
-            depthWrite={false}
-            toneMapped={false}
-          />
-        </mesh>
-
-        {/* Inner bright shell */}
-        <mesh>
-          <sphereGeometry args={[0.7, 40, 40]} />
+          <sphereGeometry args={[0.8, 32, 32]} />
           <meshBasicMaterial
             ref={orbGlowRef}
-            color="#ffe2a8"
+            color="#ffd27a"
             transparent
-            opacity={0.85}
+            opacity={0.9}
             blending={THREE.AdditiveBlending}
             depthWrite={false}
             toneMapped={false}
           />
         </mesh>
+
         {/* Solid bright core */}
         <mesh ref={orbCoreRef}>
-          <sphereGeometry args={[0.42, 40, 40]} />
-          <meshBasicMaterial color="#fff4cc" toneMapped={false} />
+          <sphereGeometry args={[0.45, 32, 32]} />
+          <meshBasicMaterial color="#fff2c2" toneMapped={false} />
         </mesh>
 
-        {/* Short-range warm fill — illuminates surrounding bark only,
-            no visible beam. Decay=2, distance=8. */}
         <pointLight
           ref={orbLightRef}
           intensity={2.4}
-          color="#ffae5a"
-          distance={8}
+          color="#ffa040"
+          distance={10}
           decay={2}
         />
       </group>
