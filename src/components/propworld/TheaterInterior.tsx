@@ -413,35 +413,195 @@ export default function TheaterInterior({ isMobile = false }: TheaterProps) {
     height: number;
     children?: React.ReactNode;
   }) => {
-    const t = 0.18; // frame thickness
-    const d = 0.12; // frame depth
+    // Ornate baroque gold frame — layered moldings + carved scroll corners
+    const outer = 0.55; // outer molding width
+    const inner = 0.18; // inner bevel width
+    const depthOuter = 0.18;
+    const depthInner = 0.08;
+
+    // Antique gold materials
+    const goldOuter = (
+      <meshStandardMaterial
+        color="#b88746"
+        roughness={0.45}
+        metalness={0.85}
+        emissive="#3a2510"
+        emissiveIntensity={0.15}
+      />
+    );
+    const goldHighlight = (
+      <meshStandardMaterial
+        color="#e8c074"
+        roughness={0.35}
+        metalness={0.95}
+        emissive="#4a2f12"
+        emissiveIntensity={0.2}
+      />
+    );
+    const goldShadow = (
+      <meshStandardMaterial
+        color="#6b4a22"
+        roughness={0.7}
+        metalness={0.7}
+      />
+    );
+
+    // Carved scrollwork cluster placed at each corner
+    const Scroll = ({ flipX = 1, flipY = 1 }: { flipX?: number; flipY?: number }) => (
+      <group scale={[flipX, flipY, 1]}>
+        {/* Main acanthus curl — torus segment */}
+        <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, 0.04]} castShadow>
+          <torusGeometry args={[0.18, 0.07, 10, 16, Math.PI * 1.1]} />
+          {goldHighlight}
+        </mesh>
+        {/* Secondary smaller curl */}
+        <mesh rotation={[Math.PI / 2, 0, Math.PI / 3]} position={[0.12, 0.12, 0.06]} castShadow>
+          <torusGeometry args={[0.09, 0.045, 8, 12, Math.PI * 1.3]} />
+          {goldHighlight}
+        </mesh>
+        {/* Leaf bump */}
+        <mesh position={[0.05, 0.05, 0.08]} castShadow>
+          <sphereGeometry args={[0.09, 12, 10]} />
+          {goldOuter}
+        </mesh>
+        {/* Tiny stud */}
+        <mesh position={[-0.05, -0.05, 0.1]}>
+          <sphereGeometry args={[0.04, 8, 8]} />
+          {goldHighlight}
+        </mesh>
+      </group>
+    );
+
+    // A repeating ornament along an edge
+    const EdgeOrnaments = ({
+      length,
+      vertical = false,
+    }: {
+      length: number;
+      vertical?: boolean;
+    }) => {
+      const count = Math.max(2, Math.floor(length / 0.55));
+      const step = length / (count + 1);
+      const items = Array.from({ length: count }, (_, i) => {
+        const p = -length / 2 + step * (i + 1);
+        const pos: [number, number, number] = vertical ? [0, p, 0.05] : [p, 0, 0.05];
+        return (
+          <mesh key={i} position={pos} castShadow>
+            <sphereGeometry args={[0.05, 10, 8]} />
+            {goldHighlight}
+          </mesh>
+        );
+      });
+      return <group>{items}</group>;
+    };
+
+    const W = width;
+    const H = height;
+
     return (
       <group>
-        {/* Backing board (dark, sits inside the frame) */}
-        <mesh position={[0, 0, -0.005]}>
-          <planeGeometry args={[width, height]} />
-          <meshStandardMaterial color="#0a0a0a" roughness={0.95} />
+        {/* Backing board (dark canvas behind artwork) */}
+        <mesh position={[0, 0, -0.01]}>
+          <planeGeometry args={[W, H]} />
+          <meshStandardMaterial color="#1a0f08" roughness={0.95} />
         </mesh>
-        {/* Top */}
-        <mesh position={[0, height / 2 + t / 2, 0]} castShadow>
-          <boxGeometry args={[width + t * 2, t, d]} />
-          <meshStandardMaterial map={frameWoodTex} roughness={0.85} />
+
+        {/* ---- Outer thick gold molding (with bevel via two stacked boxes) ---- */}
+        {/* Top outer */}
+        <mesh position={[0, H / 2 + outer / 2, 0]} castShadow>
+          <boxGeometry args={[W + outer * 2, outer, depthOuter]} />
+          {goldOuter}
         </mesh>
-        {/* Bottom */}
-        <mesh position={[0, -height / 2 - t / 2, 0]} castShadow>
-          <boxGeometry args={[width + t * 2, t, d]} />
-          <meshStandardMaterial map={frameWoodTex} roughness={0.85} />
+        {/* Bottom outer */}
+        <mesh position={[0, -H / 2 - outer / 2, 0]} castShadow>
+          <boxGeometry args={[W + outer * 2, outer, depthOuter]} />
+          {goldOuter}
         </mesh>
-        {/* Left */}
-        <mesh position={[-width / 2 - t / 2, 0, 0]} castShadow>
-          <boxGeometry args={[t, height, d]} />
-          <meshStandardMaterial map={frameWoodTex} roughness={0.85} />
+        {/* Left outer */}
+        <mesh position={[-W / 2 - outer / 2, 0, 0]} castShadow>
+          <boxGeometry args={[outer, H, depthOuter]} />
+          {goldOuter}
         </mesh>
-        {/* Right */}
-        <mesh position={[width / 2 + t / 2, 0, 0]} castShadow>
-          <boxGeometry args={[t, height, d]} />
-          <meshStandardMaterial map={frameWoodTex} roughness={0.85} />
+        {/* Right outer */}
+        <mesh position={[W / 2 + outer / 2, 0, 0]} castShadow>
+          <boxGeometry args={[outer, H, depthOuter]} />
+          {goldOuter}
         </mesh>
+
+        {/* ---- Mid raised highlight ridge ---- */}
+        <mesh position={[0, H / 2 + outer / 2, depthOuter / 2]}>
+          <boxGeometry args={[W + outer * 2, outer * 0.35, 0.04]} />
+          {goldHighlight}
+        </mesh>
+        <mesh position={[0, -H / 2 - outer / 2, depthOuter / 2]}>
+          <boxGeometry args={[W + outer * 2, outer * 0.35, 0.04]} />
+          {goldHighlight}
+        </mesh>
+        <mesh position={[-W / 2 - outer / 2, 0, depthOuter / 2]}>
+          <boxGeometry args={[outer * 0.35, H, 0.04]} />
+          {goldHighlight}
+        </mesh>
+        <mesh position={[W / 2 + outer / 2, 0, depthOuter / 2]}>
+          <boxGeometry args={[outer * 0.35, H, 0.04]} />
+          {goldHighlight}
+        </mesh>
+
+        {/* ---- Inner dark recess (creates depth between outer and image) ---- */}
+        <mesh position={[0, H / 2 + inner / 2, depthInner / 2 + 0.01]}>
+          <boxGeometry args={[W + inner * 2, inner, depthInner]} />
+          {goldShadow}
+        </mesh>
+        <mesh position={[0, -H / 2 - inner / 2, depthInner / 2 + 0.01]}>
+          <boxGeometry args={[W + inner * 2, inner, depthInner]} />
+          {goldShadow}
+        </mesh>
+        <mesh position={[-W / 2 - inner / 2, 0, depthInner / 2 + 0.01]}>
+          <boxGeometry args={[inner, H, depthInner]} />
+          {goldShadow}
+        </mesh>
+        <mesh position={[W / 2 + inner / 2, 0, depthInner / 2 + 0.01]}>
+          <boxGeometry args={[inner, H, depthInner]} />
+          {goldShadow}
+        </mesh>
+
+        {/* ---- Repeating bead ornaments along edges ---- */}
+        <group position={[0, H / 2 + outer / 2, depthOuter / 2 + 0.02]}>
+          <EdgeOrnaments length={W + outer * 1.6} />
+        </group>
+        <group position={[0, -H / 2 - outer / 2, depthOuter / 2 + 0.02]}>
+          <EdgeOrnaments length={W + outer * 1.6} />
+        </group>
+        <group position={[-W / 2 - outer / 2, 0, depthOuter / 2 + 0.02]}>
+          <EdgeOrnaments length={H + outer * 0.4} vertical />
+        </group>
+        <group position={[W / 2 + outer / 2, 0, depthOuter / 2 + 0.02]}>
+          <EdgeOrnaments length={H + outer * 0.4} vertical />
+        </group>
+
+        {/* ---- Carved scroll corners ---- */}
+        <group position={[-W / 2 - outer / 2, H / 2 + outer / 2, depthOuter / 2]}>
+          <Scroll flipX={-1} flipY={1} />
+        </group>
+        <group position={[W / 2 + outer / 2, H / 2 + outer / 2, depthOuter / 2]}>
+          <Scroll flipX={1} flipY={1} />
+        </group>
+        <group position={[-W / 2 - outer / 2, -H / 2 - outer / 2, depthOuter / 2]}>
+          <Scroll flipX={-1} flipY={-1} />
+        </group>
+        <group position={[W / 2 + outer / 2, -H / 2 - outer / 2, depthOuter / 2]}>
+          <Scroll flipX={1} flipY={-1} />
+        </group>
+
+        {/* ---- Top center cartouche ornament ---- */}
+        <mesh position={[0, H / 2 + outer + 0.05, depthOuter / 2]} castShadow>
+          <sphereGeometry args={[0.14, 14, 10]} />
+          {goldHighlight}
+        </mesh>
+        <mesh position={[0, H / 2 + outer + 0.05, depthOuter / 2 + 0.05]}>
+          <sphereGeometry args={[0.06, 10, 8]} />
+          {goldOuter}
+        </mesh>
+
         {children}
       </group>
     );
