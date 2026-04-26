@@ -26,6 +26,52 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
   const BASE_R = 4.2;
   const TOP_R = 1.6;
 
+  // ---- Shared doorway zone (used by trunk geometry, knots, moss, portal) ----
+  // The doorway occupies an angular slice on the +Z (front) face of the trunk,
+  // from y=0 up to DOORWAY_TOP_Y. Trunk geometry skips faces inside this
+  // silhouette so no bark protrudes through the portal.
+  const PARALLEL_END = 0.3;
+  const trunkRadiusAt = (y: number) => {
+    const t = THREE.MathUtils.clamp(y / HEIGHT, 0, 1);
+    const taper =
+      t <= PARALLEL_END
+        ? 1.0
+        : THREE.MathUtils.lerp(
+            1.0,
+            TOP_R / BASE_R,
+            (t - PARALLEL_END) / (1 - PARALLEL_END),
+          );
+    return BASE_R * taper;
+  };
+  const DOORWAY_BASE_Y = 0;
+  const DOORWAY_TOP_Y = HEIGHT * 0.28;
+  const DH = DOORWAY_TOP_Y - DOORWAY_BASE_Y;
+  const DOORWAY_Y_CENTER = (DOORWAY_BASE_Y + DOORWAY_TOP_Y) / 2;
+  const doorwayTrunkR = trunkRadiusAt(DOORWAY_Y_CENTER);
+  const DW = Math.min(doorwayTrunkR * 1.4, DH * 0.7);
+  const DR = DW / 2;
+
+  // Returns true if a point on the trunk surface (world coords) falls inside
+  // the doorway silhouette — used to exclude trunk faces, knots, moss.
+  const insideDoorway = (x: number, y: number, z: number) => {
+    if (y < DOORWAY_BASE_Y - 0.4 || y > DOORWAY_TOP_Y + 0.4) return false;
+    if (z <= 0) return false; // back of trunk
+    // Approximate horizontal arc-position on the front face
+    const angle = Math.atan2(x, z); // 0 = front, ±π/2 = sides
+    const trunkR = trunkRadiusAt(Math.max(0, y));
+    const lx = angle * trunkR;
+    if (Math.abs(lx) > DR + 0.15) return false;
+    const ly = y - DOORWAY_BASE_Y;
+    if (ly < -0.2) return false;
+    if (ly > DH + 0.2) return false;
+    if (ly <= DH - DR) return true; // rectangle portion (with margin)
+    // Top semicircle
+    const dx = lx;
+    const dy = ly - (DH - DR);
+    return dx * dx + dy * dy <= (DR + 0.15) * (DR + 0.15);
+  };
+
+
   // Trunk — sinuous tapered tube with PROCEDURAL BARK displacement
   // Multi-octave noise + angular ridges create deep vertical grooves and burls.
   const trunkGeom = useMemo(() => {
@@ -64,9 +110,7 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
       const z = pos.getZ(i);
 
       const t = THREE.MathUtils.clamp(y / HEIGHT, 0, 1);
-      // Bottom 30% is parallel-sided (full radius), then tapers smoothly
-      // up to the top radius. No bulging base.
-      const PARALLEL_END = 0.3;
+      // Bottom 30% is parallel-sided (full radius), then tapers smoothly.
       let taper: number;
       if (t <= PARALLEL_END) {
         taper = 1.0;
@@ -113,6 +157,25 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
     }
     pos.needsUpdate = true;
     g.computeVertexNormals();
+
+    // ---- Carve the doorway hole into the trunk ----
+    // Drop any triangle whose centroid falls inside the doorway silhouette,
+    // so bark never protrudes through the portal.
+    const idx = g.getIndex();
+    if (idx) {
+      const src = idx.array as ArrayLike<number>;
+      const kept: number[] = [];
+      for (let f = 0; f < src.length; f += 3) {
+        const a = src[f], b = src[f + 1], c = src[f + 2];
+        const cx = (pos.getX(a) + pos.getX(b) + pos.getX(c)) / 3;
+        const cy = (pos.getY(a) + pos.getY(b) + pos.getY(c)) / 3;
+        const cz = (pos.getZ(a) + pos.getZ(b) + pos.getZ(c)) / 3;
+        if (!insideDoorway(cx, cy, cz)) {
+          kept.push(a, b, c);
+        }
+      }
+      g.setIndex(kept);
+    }
     return g;
   }, []);
 
@@ -127,8 +190,12 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
       const y = 4 + (i % 4) * 4;
       const t = y / HEIGHT;
       const trunkR = THREE.MathUtils.lerp(BASE_R, TOP_R, t) * 0.95;
+      const px = Math.cos(a) * trunkR;
+      const pz = Math.sin(a) * trunkR;
+      // Skip knots that fall inside the doorway zone
+      if (insideDoorway(px, y, pz)) continue;
       arr.push({
-        pos: [Math.cos(a) * trunkR, y, Math.sin(a) * trunkR],
+        pos: [px, y, pz],
         r: 0.5 + ((Math.sin(i * 3.7) + 1) / 2) * 0.4,
       });
     }
@@ -200,8 +267,12 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
       const y = 0.8 + i * 1.4 + Math.sin(i * 3.1) * 0.3;
       const t = Math.min(1, y / HEIGHT);
       const r = THREE.MathUtils.lerp(BASE_R, TOP_R, t) * 1.02;
+      const px = Math.cos(a) * r;
+      const pz = Math.sin(a) * r;
+      // Skip moss patches that fall inside the doorway zone
+      if (insideDoorway(px, y, pz)) continue;
       arr.push({
-        pos: [Math.cos(a) * r, y, Math.sin(a) * r],
+        pos: [px, y, pz],
         scale: 0.55 + ((Math.sin(i * 1.7) + 1) / 2) * 0.35,
       });
     }
@@ -311,34 +382,9 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
           A tall arched opening carved into the trunk (no door). The orb
           floats inside the doorway and its glow fills the cavity. */}
       {(() => {
-        // ---- Derive doorway from actual trunk thickness ----
-        const PARALLEL_END = 0.3;
-        const trunkRadiusAt = (y: number) => {
-          const t = THREE.MathUtils.clamp(y / HEIGHT, 0, 1);
-          const taper =
-            t <= PARALLEL_END
-              ? 1.0
-              : THREE.MathUtils.lerp(
-                  1.0,
-                  TOP_R / BASE_R,
-                  (t - PARALLEL_END) / (1 - PARALLEL_END),
-                );
-          return BASE_R * taper;
-        };
-
-        const DOORWAY_BASE_Y = 0;
-        const DOORWAY_TOP_Y = HEIGHT * 0.28;
-        const DH = DOORWAY_TOP_Y - DOORWAY_BASE_Y;
-        const DOORWAY_Y_CENTER = (DOORWAY_BASE_Y + DOORWAY_TOP_Y) / 2;
-
-        const trunkR = trunkRadiusAt(DOORWAY_Y_CENTER);
-        const DW = Math.min(trunkR * 1.4, DH * 0.7);
-        const DR = DW / 2;
-
-        // Build a CURVED arch mesh that wraps onto the trunk surface.
-        // The arch occupies an angular slice of the trunk's cylinder.
-        // Half-angle = arc-length / radius; we use trunk radius for curvature.
-        const halfAngle = DW / 2 / trunkR;
+        // Use the shared component-scope doorway constants so the trunk
+        // hole, knots, moss, and portal all align to the same silhouette.
+        const trunkR = doorwayTrunkR;
         const segsX = 48; // horizontal segments around the trunk
         const segsY = 96; // vertical segments along the doorway height
         const positions: number[] = [];
@@ -373,8 +419,8 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
             // Map lx → angle on trunk cylinder (front-facing, around +Z axis)
             // Front of trunk = angle 0 measured from +Z; +X is right.
             const angle = (lx / trunkR); // small-angle wrap is fine here
-            const px = Math.sin(angle) * (trunkR + 0.02); // tiny outward offset
-            const pz = Math.cos(angle) * (trunkR + 0.02);
+            const px = Math.sin(angle) * (trunkR + 0.18); // sit proud of carved hole
+            const pz = Math.cos(angle) * (trunkR + 0.18);
             const py = ly;
 
             positions.push(px, py, pz);
@@ -424,11 +470,11 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
                 framing the doorway. */}
             <mesh
               geometry={archGeom}
-              scale={[1.07, 1.05, 1.07]}
-              position={[0, 0, -0.04]}
+              scale={[1.14, 1.08, 1.14]}
+              position={[0, 0, -0.18]}
             >
               <meshBasicMaterial
-                color="#1a0a04"
+                color="#0a0402"
                 toneMapped={false}
                 side={THREE.DoubleSide}
               />
