@@ -30,10 +30,10 @@ const Index = () => {
               <img src={pmgLogo} alt="PMG" className="h-6 md:h-8 w-auto" />
             </Link>
             <Link
-              to={session ? "/dashboard" : "/auth/login"}
+              to="/auth/login"
               className="text-[10px] tracking-[0.2em] uppercase font-bold border border-white/40 px-4 py-2 hover:bg-white hover:text-black transition-colors text-white"
             >
-              {session ? "Dashboard" : "Staff"}
+              Staff
             </Link>
           </div>
 
