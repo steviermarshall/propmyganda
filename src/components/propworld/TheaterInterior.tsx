@@ -444,22 +444,50 @@ export default function TheaterInterior({ isMobile = false }: TheaterProps) {
       {/* ---------- Environmental props ---------- */}
       <Ladder position={[-3.2, -0.5, HALF - 0.9]} rotation={-0.2} />
 
-      <Barrel position={[HALF - 1.6, 0.15, 2.5]} color="#3a5d4a" />
-      <Barrel position={[HALF - 1.6, 0.15, 4]} color="#4a3a2a" />
-      <Barrel position={[HALF - 2.8, 0.15, 3.2]} color="#3a5d4a" />
+      {/* Kickable barrels — radius ~0.6, mass 1.4 */}
+      <KickableProp id="barrel-1" initialPosition={[HALF - 1.6, 0.15, 2.5]} radius={0.6} mass={1.4} groundY={0.15}>
+        <Barrel color="#3a5d4a" />
+      </KickableProp>
+      <KickableProp id="barrel-2" initialPosition={[HALF - 1.6, 0.15, 4]} radius={0.6} mass={1.4} groundY={0.15}>
+        <Barrel color="#4a3a2a" />
+      </KickableProp>
+      <KickableProp id="barrel-3" initialPosition={[HALF - 2.8, 0.15, 3.2]} radius={0.6} mass={1.4} groundY={0.15}>
+        <Barrel color="#3a5d4a" />
+      </KickableProp>
 
-      <Box position={[HALF - 1.8, 0, -3]} rotation={0.3} size={[1.1, 1, 1.1]} />
-      <Box position={[HALF - 2.9, 0, -3.4]} rotation={-0.2} size={[0.8, 0.8, 0.8]} />
-      <Box position={[HALF - 2.1, 1.05, -3.2]} rotation={0.5} size={[0.7, 0.7, 0.7]} />
+      {/* Kickable boxes — lighter so they fly farther */}
+      <KickableProp id="box-1" initialPosition={[HALF - 1.8, 0, -3]} initialRotationY={0.3} radius={0.6} mass={0.7} groundY={0}>
+        <Box size={[1.1, 1, 1.1]} />
+      </KickableProp>
+      <KickableProp id="box-2" initialPosition={[HALF - 2.9, 0, -3.4]} initialRotationY={-0.2} radius={0.45} mass={0.5} groundY={0}>
+        <Box size={[0.8, 0.8, 0.8]} />
+      </KickableProp>
+      <KickableProp id="box-3" initialPosition={[HALF - 2.1, 1.05, -3.2]} initialRotationY={0.5} radius={0.4} mass={0.4} groundY={0}>
+        <Box size={[0.7, 0.7, 0.7]} />
+      </KickableProp>
+      <KickableProp id="box-4" initialPosition={[-HALF + 1.6, 0, -1.5]} initialRotationY={-0.4} radius={0.55} mass={0.6} groundY={0}>
+        <Box size={[0.95, 0.95, 0.95]} />
+      </KickableProp>
+      <KickableProp id="box-5" initialPosition={[-HALF + 1.4, 0, 3]} initialRotationY={0.2} radius={0.6} mass={0.65} groundY={0}>
+        <Box size={[1.1, 0.9, 1.0]} />
+      </KickableProp>
 
-      <Box position={[-HALF + 1.6, 0, -1.5]} rotation={-0.4} size={[0.95, 0.95, 0.95]} />
-      <Box position={[-HALF + 1.4, 0, 3]} rotation={0.2} size={[1.1, 0.9, 1.0]} />
-
+      {/* Kickable debris (lightweight) */}
       {debris.map((d, i) => (
-        <mesh key={`debris-${i}`} position={d.pos} rotation={[0, d.rot, 0]} castShadow>
-          <boxGeometry args={[d.scale, d.scale * 0.5, d.scale]} />
-          <meshStandardMaterial color="#2e2c28" roughness={1} />
-        </mesh>
+        <KickableProp
+          key={`debris-${i}`}
+          id={`debris-${i}`}
+          initialPosition={d.pos}
+          initialRotationY={d.rot}
+          radius={d.scale * 0.7}
+          mass={0.25}
+          groundY={-0.42}
+        >
+          <mesh castShadow>
+            <boxGeometry args={[d.scale, d.scale * 0.5, d.scale]} />
+            <meshStandardMaterial color="#2e2c28" roughness={1} />
+          </mesh>
+        </KickableProp>
       ))}
 
       {/* ---------- Slanted picture-framed embeds on each wall ---------- */}
