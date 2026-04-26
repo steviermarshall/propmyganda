@@ -43,32 +43,31 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
           );
     return BASE_R * taper;
   };
-  const DOORWAY_BASE_Y = 0;
-  const DOORWAY_TOP_Y = HEIGHT * 0.28;
+  const DOORWAY_BASE_Y = 0.6;
+  const DOORWAY_TOP_Y = HEIGHT * 0.22;
   const DH = DOORWAY_TOP_Y - DOORWAY_BASE_Y;
   const DOORWAY_Y_CENTER = (DOORWAY_BASE_Y + DOORWAY_TOP_Y) / 2;
   const doorwayTrunkR = trunkRadiusAt(DOORWAY_Y_CENTER);
-  const DW = Math.min(doorwayTrunkR * 1.4, DH * 0.7);
+  const DW = Math.min(doorwayTrunkR * 0.95, DH * 0.55);
   const DR = DW / 2;
 
   // Returns true if a point on the trunk surface (world coords) falls inside
   // the doorway silhouette — used to exclude trunk faces, knots, moss.
+  // Tight margin (0.02) so bark sits flush against the portal edge.
   const insideDoorway = (x: number, y: number, z: number) => {
-    if (y < DOORWAY_BASE_Y - 0.4 || y > DOORWAY_TOP_Y + 0.4) return false;
+    if (y < DOORWAY_BASE_Y - 0.05 || y > DOORWAY_TOP_Y + 0.05) return false;
     if (z <= 0) return false; // back of trunk
-    // Approximate horizontal arc-position on the front face
-    const angle = Math.atan2(x, z); // 0 = front, ±π/2 = sides
+    const angle = Math.atan2(x, z);
     const trunkR = trunkRadiusAt(Math.max(0, y));
     const lx = angle * trunkR;
-    if (Math.abs(lx) > DR + 0.15) return false;
+    if (Math.abs(lx) > DR + 0.02) return false;
     const ly = y - DOORWAY_BASE_Y;
-    if (ly < -0.2) return false;
-    if (ly > DH + 0.2) return false;
-    if (ly <= DH - DR) return true; // rectangle portion (with margin)
-    // Top semicircle
+    if (ly < -0.02) return false;
+    if (ly > DH + 0.02) return false;
+    if (ly <= DH - DR) return true;
     const dx = lx;
     const dy = ly - (DH - DR);
-    return dx * dx + dy * dy <= (DR + 0.15) * (DR + 0.15);
+    return dx * dx + dy * dy <= (DR + 0.02) * (DR + 0.02);
   };
 
 
@@ -464,14 +463,25 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
               onHoverChange?.(false);
             }}
           >
-            {/* CARVED EDGE — a slightly larger arch sitting just BEHIND the
-                portal (pulled inward toward the trunk axis). Deep amber-black
-                emissive only, no shadows, so it reads as a recessed bark lip
-                framing the doorway. */}
+            {/* SEALED BACK WALL — pure black arch sitting deep inside the
+                trunk so you can't see through the hollow opening. */}
             <mesh
               geometry={archGeom}
-              scale={[1.14, 1.08, 1.14]}
-              position={[0, 0, -0.18]}
+              scale={[0.96, 0.97, 0.96]}
+              position={[0, 0, -0.6]}
+            >
+              <meshBasicMaterial
+                color="#000000"
+                toneMapped={false}
+                side={THREE.DoubleSide}
+              />
+            </mesh>
+
+            {/* CARVED EDGE — tight bark lip hugging the portal silhouette. */}
+            <mesh
+              geometry={archGeom}
+              scale={[1.05, 1.03, 1.05]}
+              position={[0, 0, -0.08]}
             >
               <meshBasicMaterial
                 color="#0a0402"
