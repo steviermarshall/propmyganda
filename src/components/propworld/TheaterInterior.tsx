@@ -633,23 +633,24 @@ export default function TheaterInterior({ isMobile = false }: TheaterProps) {
                 position={[0, 0, 0.02]}
                 transform
                 occlude={false}
-                distanceFactor={2.4}
+                scale={htmlScale}
                 style={{
-                  width: `${iframeW}px`,
-                  height: `${iframeH}px`,
+                  width: `${IFRAME_BASE_W}px`,
+                  height: `${IFRAME_BASE_H}px`,
                   overflow: "hidden",
                   background: "#1a1a1a",
+                  borderRadius: "4px",
                 }}
               >
                 <iframe
                   title={panel.label}
                   src={panel.src}
-                  width={iframeW}
-                  height={iframeH}
+                  width={IFRAME_BASE_W}
+                  height={IFRAME_BASE_H}
                   frameBorder="0"
                   allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
                   sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts allow-presentation allow-forms"
-                  style={{ border: 0, display: "block", background: "#1a1a1a" }}
+                  style={{ border: 0, display: "block", background: "#1a1a1a", width: "100%", height: "100%" }}
                 />
               </Html>
             ) : (
@@ -657,10 +658,10 @@ export default function TheaterInterior({ isMobile = false }: TheaterProps) {
                 position={[0, 0, 0.02]}
                 transform
                 occlude={false}
-                distanceFactor={2.4}
+                scale={htmlScale}
                 style={{
-                  width: `${iframeW}px`,
-                  height: `${iframeH}px`,
+                  width: `${IFRAME_BASE_W}px`,
+                  height: `${IFRAME_BASE_H}px`,
                   overflow: "hidden",
                   display: "flex",
                   alignItems: "center",
@@ -668,13 +669,13 @@ export default function TheaterInterior({ isMobile = false }: TheaterProps) {
                   background: "linear-gradient(135deg, #181818, #2a2a2a)",
                   color: panel.color,
                   fontFamily: "system-ui, sans-serif",
-                  fontSize: "28px",
+                  fontSize: "42px",
                   letterSpacing: "0.15em",
                   textAlign: "center",
                 }}
               >
                 <div style={{ padding: 24 }}>
-                  <div style={{ fontSize: 14, opacity: 0.7, marginBottom: 12, color: "#bbb" }}>
+                  <div style={{ fontSize: 22, opacity: 0.7, marginBottom: 16, color: "#bbb" }}>
                     COMING SOON
                   </div>
                   <div>{panel.label}</div>
