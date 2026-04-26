@@ -64,7 +64,16 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
       const z = pos.getZ(i);
 
       const t = THREE.MathUtils.clamp(y / HEIGHT, 0, 1);
-      const taper = THREE.MathUtils.lerp(1.0, TOP_R / BASE_R, t);
+      // Bottom 30% is parallel-sided (full radius), then tapers smoothly
+      // up to the top radius. No bulging base.
+      const PARALLEL_END = 0.3;
+      let taper: number;
+      if (t <= PARALLEL_END) {
+        taper = 1.0;
+      } else {
+        const tt = (t - PARALLEL_END) / (1 - PARALLEL_END);
+        taper = THREE.MathUtils.lerp(1.0, TOP_R / BASE_R, tt);
+      }
 
       // Apply taper first
       let nx = x * taper;
@@ -107,21 +116,6 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
     return g;
   }, []);
 
-  // Root buttresses
-  const roots = useMemo(() => {
-    const arr: { pos: [number, number, number]; rot: [number, number, number]; scale: number }[] = [];
-    const count = 11;
-    for (let i = 0; i < count; i++) {
-      const a = (i / count) * Math.PI * 2 + Math.sin(i) * 0.25;
-      const r = BASE_R * 0.85;
-      arr.push({
-        pos: [Math.cos(a) * r, 0.8, Math.sin(a) * r],
-        rot: [Math.PI / 2 - 0.35, 0, -a + Math.PI / 2],
-        scale: 0.95 + ((Math.sin(i * 7.3) + 1) / 2) * 0.5,
-      });
-    }
-    return arr;
-  }, []);
 
 
 
@@ -243,19 +237,8 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
 
   return (
     <group position={[0, 0, 0]}>
-      {/* Earth mound at base */}
-      <mesh position={[0, 0.2, 0]} receiveShadow>
-        <sphereGeometry args={[BASE_R * 1.4, 32, 18, 0, Math.PI * 2, 0, Math.PI / 2]} />
-        <meshStandardMaterial color="#0b2218" roughness={1} />
-      </mesh>
-
-      {/* Root buttresses */}
-      {roots.map((r, i) => (
-        <mesh key={`root-${i}`} position={r.pos} rotation={r.rot} castShadow>
-          <coneGeometry args={[0.85 * r.scale, 3.8 * r.scale, 7]} />
-          <meshStandardMaterial color="#0a0f14" roughness={1} />
-        </mesh>
-      ))}
+      {/* Trunk meets ground directly — no mound, no flared roots.
+          The bottom of the trunk is parallel-sided. */}
 
       {/* Trunk — procedural bark via vertex displacement */}
       <mesh geometry={trunkGeom} castShadow receiveShadow>
@@ -344,58 +327,44 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
           onHoverChange?.(false);
         }}
       >
-        {/* Outermost soft halo — wide, very faint */}
+        {/* Soft outer halo */}
         <mesh ref={orbHaloRef}>
-          <sphereGeometry args={[1.8, 40, 40]} />
+          <sphereGeometry args={[1.4, 32, 32]} />
           <meshBasicMaterial
-            color="#ff9a3a"
+            color="#ffb14a"
             transparent
-            opacity={0.18}
+            opacity={0.28}
             blending={THREE.AdditiveBlending}
             depthWrite={false}
             toneMapped={false}
           />
         </mesh>
 
-        {/* Mid glow shell — warmer amber */}
+        {/* Glow shell */}
         <mesh>
-          <sphereGeometry args={[1.05, 40, 40]} />
-          <meshBasicMaterial
-            color="#ffb96a"
-            transparent
-            opacity={0.55}
-            blending={THREE.AdditiveBlending}
-            depthWrite={false}
-            toneMapped={false}
-          />
-        </mesh>
-
-        {/* Inner bright shell */}
-        <mesh>
-          <sphereGeometry args={[0.7, 40, 40]} />
+          <sphereGeometry args={[0.8, 32, 32]} />
           <meshBasicMaterial
             ref={orbGlowRef}
-            color="#ffe2a8"
+            color="#ffd27a"
             transparent
-            opacity={0.85}
+            opacity={0.9}
             blending={THREE.AdditiveBlending}
             depthWrite={false}
             toneMapped={false}
           />
         </mesh>
+
         {/* Solid bright core */}
         <mesh ref={orbCoreRef}>
-          <sphereGeometry args={[0.42, 40, 40]} />
-          <meshBasicMaterial color="#fff4cc" toneMapped={false} />
+          <sphereGeometry args={[0.45, 32, 32]} />
+          <meshBasicMaterial color="#fff2c2" toneMapped={false} />
         </mesh>
 
-        {/* Short-range warm fill — illuminates surrounding bark only,
-            no visible beam. Decay=2, distance=8. */}
         <pointLight
           ref={orbLightRef}
           intensity={2.4}
-          color="#ffae5a"
-          distance={8}
+          color="#ffa040"
+          distance={10}
           decay={2}
         />
       </group>
