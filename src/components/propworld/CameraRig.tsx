@@ -252,16 +252,44 @@ export default function CameraRig({ mode, hovered, isMobile, onTransitionComplet
       return;
     }
 
-    // theater — sit in the center of the rounded room, auto-rotate + drag to look around (full 360°)
+    // theater — smoothed look-around with momentum
     const idleMs = performance.now() - userInteractRef.current;
-    const isUserActive = draggingRef.current || idleMs < 2500;
 
-    // Auto-rotate yaw when idle so users see embeds drift past
-    if (!isUserActive) {
-      theaterYawRef.current += delta * 0.12;
+    // Apply fling momentum after release (decay quickly)
+    if (!draggingRef.current) {
+      if (Math.abs(yawVelRef.current) > 0.001 || Math.abs(pitchVelRef.current) > 0.001) {
+        theaterYawTargetRef.current += yawVelRef.current * delta;
+        theaterPitchTargetRef.current = THREE.MathUtils.clamp(
+          theaterPitchTargetRef.current + pitchVelRef.current * delta,
+          -0.45,
+          0.45
+        );
+        // Exponential decay (~halves every ~0.3s)
+        const decay = Math.pow(0.06, delta);
+        yawVelRef.current *= decay;
+        pitchVelRef.current *= decay;
+      }
     }
 
-    // Camera sits at the center of the room with a gentle bob
+    // Gentle auto-rotate only after long idle (5s) and very slow
+    if (idleMs > 5000 && !draggingRef.current) {
+      theaterYawTargetRef.current += delta * 0.06;
+    }
+
+    // Critically-damped lerp toward target — frame-rate independent
+    const smooth = 1 - Math.exp(-delta * 12); // ~80ms time constant, very responsive
+    theaterYawRef.current = THREE.MathUtils.lerp(
+      theaterYawRef.current,
+      theaterYawTargetRef.current,
+      smooth
+    );
+    theaterPitchRef.current = THREE.MathUtils.lerp(
+      theaterPitchRef.current,
+      theaterPitchTargetRef.current,
+      smooth
+    );
+
+    // Camera sits at the center with a gentle bob
     const bob = Math.sin(t * 0.4) * 0.05;
     camera.position.lerp(new THREE.Vector3(0, 2.6 + bob, 0), 0.08);
 
@@ -269,7 +297,6 @@ export default function CameraRig({ mode, hovered, isMobile, onTransitionComplet
     persp.fov = THREE.MathUtils.lerp(persp.fov, targetFov, 0.05);
     persp.updateProjectionMatrix();
 
-    // Full 360° look-around: build a target on a unit sphere from yaw/pitch
     const yaw = theaterYawRef.current;
     const pitch = theaterPitchRef.current;
     const lookTarget = new THREE.Vector3(
