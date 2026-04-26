@@ -241,7 +241,7 @@ const PLATFORMS: Platform[] = [
   {
     id: "youtube",
     label: "YOUTUBE",
-    src: "https://www.youtube.com/embed/videoseries?list=PLrAXtmErZgOeiKm4sgNOknGvNjby9efdf",
+    src: "https://www.youtube.com/embed/xq6BOsXTWSI",
     color: "#FF0033",
   },
   { id: "tiktok", label: "TIKTOK", src: null, color: "#FF2D55" },
