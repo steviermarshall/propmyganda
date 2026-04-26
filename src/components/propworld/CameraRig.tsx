@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
+import { kickables } from "./useKickables";
 
 interface Props {
   mode: "forest" | "transitioning" | "theater";
