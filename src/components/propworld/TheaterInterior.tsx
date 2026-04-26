@@ -460,8 +460,10 @@ export default function TheaterInterior({ isMobile = false }: TheaterProps) {
       ))}
 
       {/* ---------- Ambient fill — kept low for moody contrast ---------- */}
-      <ambientLight intensity={0.18} color="#8a8074" />
-      <hemisphereLight args={["#b8b0a0", "#1a1814", 0.18]} />
+      <ambientLight intensity={0.45} color="#a89e90" />
+      <hemisphereLight args={["#d4ccba", "#2a2620", 0.4]} />
+      {/* Soft fill so far walls don't fall to black */}
+      <pointLight position={[0, 3, 0]} intensity={0.6} color="#e8d9b0" distance={22} decay={1.6} />
     </group>
   );
 }
