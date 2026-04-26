@@ -391,43 +391,88 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
               onHoverChange?.(false);
             }}
           >
-            {/* Recessed black cavity - pushed slightly INTO the trunk
-                so bark wraps around the opening. */}
-            <mesh position={[0, 0, -0.08]}>
+            {/* ===== OCCLUSION-LAYERED DOORWAY ===== */}
+
+            {/* L4 — DEEPEST: cavity back wall (furthest into the trunk).
+                Pure black; the orb sits in front of this. */}
+            <mesh position={[0, 0, -1.2]} scale={[0.86, 0.86, 1]}>
               <shapeGeometry args={[archShape]} />
               <meshBasicMaterial color="#000000" toneMapped={false} side={THREE.DoubleSide} />
             </mesh>
 
-            {/* Carved bark arch frame - flush with the trunk surface */}
-            <mesh position={[0, 0, 0.02]}>
+            {/* L3 — INNER CAVITY WALLS: extruded arch shell creating real
+                depth between the back wall and the front opening. The
+                inside of these walls catches the orb's warm light. */}
+            <mesh position={[0, 0, -1.2]}>
+              <extrudeGeometry
+                args={[
+                  archShape,
+                  {
+                    depth: 1.2,
+                    bevelEnabled: true,
+                    bevelSegments: 3,
+                    bevelSize: 0.08,
+                    bevelThickness: 0.08,
+                    curveSegments: 24,
+                  },
+                ]}
+              />
+              <meshStandardMaterial
+                color="#0a0604"
+                roughness={1}
+                metalness={0}
+                side={THREE.BackSide}
+                emissive="#2a1408"
+                emissiveIntensity={0.35}
+              />
+            </mesh>
+
+            {/* L2 — INNER SHADOW RING: dark soft gradient just inside the
+                opening, sells the recessed depth at the mouth. */}
+            <mesh position={[0, 0, -0.02]} scale={[1.0, 1.0, 1]}>
+              <shapeGeometry args={[archShape]} />
+              <meshBasicMaterial
+                color="#000000"
+                transparent
+                opacity={0.55}
+                depthWrite={false}
+                side={THREE.DoubleSide}
+              />
+            </mesh>
+
+            {/* L1 — CARVED BARK FRAME (closest to camera): raised lip
+                around the doorway, sits on the trunk surface. */}
+            <mesh position={[0, 0, 0.04]}>
               <shapeGeometry args={[frameOuter]} />
               <meshStandardMaterial
                 color="#070b0f"
                 roughness={1}
                 emissive="#1a0e05"
-                emissiveIntensity={0.25}
+                emissiveIntensity={0.3}
                 side={THREE.DoubleSide}
               />
             </mesh>
 
-            {/* Warm glow lining the arch interior */}
-            <mesh position={[0, 0, -0.04]} scale={[0.92, 0.92, 1]}>
+            {/* Warm rim light hugging the inside edge of the opening */}
+            <mesh position={[0, 0, 0.0]} scale={[0.96, 0.96, 1]}>
               <shapeGeometry args={[archShape]} />
               <meshBasicMaterial
                 color="#ff8a30"
                 transparent
-                opacity={0.3}
+                opacity={0.22}
                 blending={THREE.AdditiveBlending}
                 depthWrite={false}
                 toneMapped={false}
               />
             </mesh>
 
-            {/* Orb floating INSIDE the doorway - centered vertically, slightly forward */}
-            <group position={[0, DH * 0.45, 0.15]}>
-              {/* Soft outer halo — fills the doorway space */}
+            {/* ===== ORB — sits DEEP inside the cavity ===== */}
+            {/* Negative Z pushes it back into the recessed opening so
+                the frame and inner walls occlude its outer halo. */}
+            <group position={[0, DH * 0.45, -0.55]}>
+              {/* Soft halo — sized so it stays inside the doorway opening */}
               <mesh ref={orbHaloRef}>
-                <sphereGeometry args={[1.4, 32, 32]} />
+                <sphereGeometry args={[Math.min(DR * 0.95, 1.0), 32, 32]} />
                 <meshBasicMaterial
                   color="#ffb14a"
                   transparent
