@@ -3,9 +3,12 @@ import { useEffect, useState } from "react";
 import PMGScene from "@/components/webgl/PMGScene";
 import Marquee from "@/components/Marquee";
 import ScrollReveal from "@/components/webgl/ScrollReveal";
+import pmgLogo from "@/assets/pmg-logo-clean.png";
+import { useAuth } from "@/hooks/use-auth";
 
 const Index = () => {
   const [loaded, setLoaded] = useState(false);
+  const { session } = useAuth();
 
   useEffect(() => {
     const t = setTimeout(() => setLoaded(true), 400);
