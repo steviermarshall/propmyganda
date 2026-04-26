@@ -106,6 +106,76 @@ const Chair = () => (
   </group>
 );
 
+/**
+ * GraffitiDecals — places one randomized graffiti tag on each of the 4 walls.
+ * Position, scale and rotation re-roll on every mount (page load).
+ * Safe zones avoid the picture frames which are centered on each wall at
+ * y≈2.6 and span ~4.2 wide x ~2.6 tall.
+ */
+function GraffitiDecals({
+  textures,
+  roomHalf,
+}: {
+  textures: THREE.Texture[];
+  roomHalf: number;
+}) {
+  const placements = useMemo(() => {
+    const rng = () => Math.random();
+    const pickSafe = () => {
+      // "low" band (under frames) or "side" band (beside frames)
+      if (rng() < 0.55) {
+        return { x: (rng() - 0.5) * 10, y: -0.2 + rng() * 1.2 };
+      }
+      const sign = rng() < 0.5 ? -1 : 1;
+      return { x: sign * (3.6 + rng() * 2.0), y: rng() * 4.2 };
+    };
+
+    const tex = [...textures].sort(() => Math.random() - 0.5);
+
+    const walls = [
+      { pos: (x: number, y: number) => [x, y, roomHalf - 0.02] as [number, number, number], rotY: Math.PI },
+      { pos: (x: number, y: number) => [-x, y, -roomHalf + 0.02] as [number, number, number], rotY: 0 },
+      { pos: (x: number, y: number) => [roomHalf - 0.02, y, -x] as [number, number, number], rotY: -Math.PI / 2 },
+      { pos: (x: number, y: number) => [-roomHalf + 0.02, y, x] as [number, number, number], rotY: Math.PI / 2 },
+    ];
+
+    return walls.map((w, i) => {
+      const { x, y } = pickSafe();
+      const scale = 0.85 + rng() * 0.5;
+      const width = 4.4 * scale;
+      const height = width * 0.5;
+      const tilt = (rng() - 0.5) * 0.18;
+      return {
+        key: i,
+        position: w.pos(x, y),
+        rotation: [0, w.rotY, tilt] as [number, number, number],
+        size: [width, height] as [number, number],
+        texture: tex[i % tex.length],
+        offset: -1 - i * 0.5,
+      };
+    });
+  }, [textures, roomHalf]);
+
+  return (
+    <group>
+      {placements.map((p) => (
+        <mesh key={p.key} position={p.position} rotation={p.rotation}>
+          <planeGeometry args={p.size} />
+          <meshStandardMaterial
+            map={p.texture}
+            transparent
+            alphaTest={0.05}
+            roughness={1}
+            depthWrite={false}
+            polygonOffset
+            polygonOffsetFactor={p.offset}
+          />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
 
 /**
  * KickableProp — wraps any 3D content and makes it physically kickable.
