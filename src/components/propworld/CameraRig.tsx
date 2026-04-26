@@ -350,9 +350,27 @@ export default function CameraRig({ mode, hovered, isMobile, onTransitionComplet
       smooth
     );
 
-    // Camera sits at the center with a gentle bob
+    // Smooth dolly toward target
+    theaterDollyRef.current = THREE.MathUtils.lerp(
+      theaterDollyRef.current,
+      theaterDollyTargetRef.current,
+      smooth
+    );
+
+    // Camera sits at the center, dolly slides it along view direction (clamped inside walls)
     const bob = Math.sin(t * 0.4) * 0.05;
-    camera.position.lerp(new THREE.Vector3(0, 2.6 + bob, 0), 0.08);
+    const yawNow = theaterYawRef.current;
+    const dolly = theaterDollyRef.current;
+    // Move along XZ direction we're facing
+    const targetPos = new THREE.Vector3(
+      Math.sin(yawNow) * dolly,
+      2.6 + bob,
+      Math.cos(yawNow) * dolly
+    );
+    // Keep inside the room (walls at ±7.5; leave margin)
+    targetPos.x = THREE.MathUtils.clamp(targetPos.x, -6.5, 6.5);
+    targetPos.z = THREE.MathUtils.clamp(targetPos.z, -6.5, 6.5);
+    camera.position.lerp(targetPos, 0.12);
 
     const targetFov = isMobile ? 75 : 70;
     persp.fov = THREE.MathUtils.lerp(persp.fov, targetFov, 0.05);
