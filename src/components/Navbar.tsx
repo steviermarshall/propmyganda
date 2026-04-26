@@ -31,9 +31,23 @@ const Navbar = () => {
     setIsOpen(false);
   }, [location]);
 
+  const isHome = location.pathname === "/";
+
   return (
     <>
       <nav
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+          scrolled ? "bg-primary" : "bg-transparent"
+        }`}
+      >
+        <div className="container-content flex items-center justify-between h-16 md:h-20">
+          {isHome ? (
+            <span aria-hidden className="w-6" />
+          ) : (
+            <Link to="/" className="flex items-center" aria-label="PMG home">
+              <img src={pmgLogo} alt="PMG" className="h-6 md:h-8 w-auto" />
+            </Link>
+          )}
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
           scrolled ? "bg-primary" : "bg-transparent"
         }`}
