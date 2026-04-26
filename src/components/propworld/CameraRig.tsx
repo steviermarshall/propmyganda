@@ -99,7 +99,7 @@ export default function CameraRig({ mode, hovered, isMobile, onTransitionComplet
       if (mode === "theater") {
         // Higher sensitivity on mobile so flicks rotate more
         const sens =
-          (Math.PI / Math.max(window.innerWidth, 1)) * (isMobile ? 2.0 : 1.6);
+          (Math.PI / Math.max(window.innerWidth, 1)) * (isMobile ? 1.0 : 0.7);
         theaterYawTargetRef.current -= dx * sens;
         theaterPitchTargetRef.current = THREE.MathUtils.clamp(
           theaterPitchTargetRef.current - dy * sens * 0.55,
