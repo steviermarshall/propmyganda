@@ -51,11 +51,14 @@ export default function CameraRig({ mode, hovered, isMobile, onTransitionComplet
     const dom = gl.domElement;
 
     const onDown = (e: PointerEvent) => {
-      if (mode !== "forest") return;
-      // Only primary button / touch
+      if (mode !== "forest" && mode !== "theater") return;
       if (e.pointerType === "mouse" && e.button !== 0) return;
+      // Don't hijack drags that start on HTML overlays (e.g. Discord iframe in theater)
+      const target = e.target as HTMLElement | null;
+      if (target && target.tagName !== "CANVAS") return;
       draggingRef.current = true;
       lastXRef.current = e.clientX;
+      lastYRef.current = e.clientY;
       userInteractRef.current = performance.now();
       try {
         dom.setPointerCapture(e.pointerId);
@@ -66,12 +69,27 @@ export default function CameraRig({ mode, hovered, isMobile, onTransitionComplet
     const onMove = (e: PointerEvent) => {
       if (!draggingRef.current) return;
       const dx = e.clientX - lastXRef.current;
+      const dy = e.clientY - lastYRef.current;
       lastXRef.current = e.clientX;
-      // Width-normalized rotation: full screen drag ≈ ~PI rad
-      const sensitivity = (Math.PI / window.innerWidth) * 1.2;
-      const delta = -dx * sensitivity;
-      angleRef.current += delta;
-      userAngleVelRef.current = delta;
+      lastYRef.current = e.clientY;
+      if (mode === "theater") {
+        const sens = (Math.PI / window.innerWidth) * 1.0;
+        theaterYawRef.current = THREE.MathUtils.clamp(
+          theaterYawRef.current - dx * sens,
+          -0.9,
+          0.9
+        );
+        theaterPitchRef.current = THREE.MathUtils.clamp(
+          theaterPitchRef.current - dy * sens * 0.7,
+          -0.4,
+          0.5
+        );
+      } else {
+        const sensitivity = (Math.PI / window.innerWidth) * 1.2;
+        const delta = -dx * sensitivity;
+        angleRef.current += delta;
+        userAngleVelRef.current = delta;
+      }
       userInteractRef.current = performance.now();
     };
     const onUp = (e: PointerEvent) => {
