@@ -419,8 +419,8 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
             // Map lx → angle on trunk cylinder (front-facing, around +Z axis)
             // Front of trunk = angle 0 measured from +Z; +X is right.
             const angle = (lx / trunkR); // small-angle wrap is fine here
-            const px = Math.sin(angle) * (trunkR + 0.02); // tiny outward offset
-            const pz = Math.cos(angle) * (trunkR + 0.02);
+            const px = Math.sin(angle) * (trunkR + 0.18); // sit proud of carved hole
+            const pz = Math.cos(angle) * (trunkR + 0.18);
             const py = ly;
 
             positions.push(px, py, pz);
@@ -470,11 +470,11 @@ export default function AncientTree({ onEnter, onHoverChange }: Props) {
                 framing the doorway. */}
             <mesh
               geometry={archGeom}
-              scale={[1.07, 1.05, 1.07]}
-              position={[0, 0, -0.04]}
+              scale={[1.14, 1.08, 1.14]}
+              position={[0, 0, -0.18]}
             >
               <meshBasicMaterial
-                color="#1a0a04"
+                color="#0a0402"
                 toneMapped={false}
                 side={THREE.DoubleSide}
               />
