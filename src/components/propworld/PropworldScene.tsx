@@ -88,15 +88,26 @@ export default function PropworldScene({ onModeChange }: Props) {
 
       <EffectComposer>
         <Bloom
-          intensity={mode === "transitioning" ? 2.2 : mode === "theater" ? 1.6 : 1.25}
-          luminanceThreshold={mode === "theater" ? 0.15 : 0.18}
+          intensity={mode === "transitioning" ? 2.2 : mode === "theater" ? 1.4 : 1.25}
+          luminanceThreshold={mode === "theater" ? 0.2 : 0.18}
           luminanceSmoothing={0.9}
           mipmapBlur
         />
+        {mode === "theater" && !isMobile ? (
+          <ChromaticAberration
+            blendFunction={BlendFunction.NORMAL}
+            offset={[0.0012, 0.0012] as unknown as [number, number]}
+            radialModulation={false}
+            modulationOffset={0}
+          />
+        ) : null as unknown as JSX.Element}
+        {mode === "theater" && !isMobile ? (
+          <Noise opacity={0.04} blendFunction={BlendFunction.OVERLAY} />
+        ) : null as unknown as JSX.Element}
         <Vignette
           eskil={false}
-          offset={mode === "theater" ? 0.25 : 0.18}
-          darkness={mode === "transitioning" ? 1.0 : mode === "theater" ? 0.9 : 0.88}
+          offset={mode === "theater" ? 0.2 : 0.18}
+          darkness={mode === "transitioning" ? 1.0 : mode === "theater" ? 0.85 : 0.88}
         />
       </EffectComposer>
     </Canvas>
