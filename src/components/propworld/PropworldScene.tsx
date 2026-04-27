@@ -86,29 +86,34 @@ export default function PropworldScene({ onModeChange }: Props) {
         onTransitionComplete={() => setModeAndNotify("theater")}
       />
 
-      <EffectComposer>
-        <Bloom
-          intensity={mode === "transitioning" ? 2.2 : mode === "theater" ? 1.4 : 1.25}
-          luminanceThreshold={mode === "theater" ? 0.2 : 0.18}
-          luminanceSmoothing={0.9}
-          mipmapBlur
-        />
-        {mode === "theater" && !isMobile ? (
-          <ChromaticAberration
-            blendFunction={BlendFunction.NORMAL}
-            offset={new THREE.Vector2(0.0012, 0.0012)}
-            radialModulation={false}
-            modulationOffset={0}
-          />
-        ) : null as unknown as JSX.Element}
-        {mode === "theater" && !isMobile ? (
-          <Noise opacity={0.04} blendFunction={BlendFunction.OVERLAY} />
-        ) : null as unknown as JSX.Element}
-        <Vignette
-          eskil={false}
-          offset={mode === "theater" ? 0.2 : 0.18}
-          darkness={mode === "transitioning" ? 1.0 : mode === "theater" ? 0.85 : 0.88}
-        />
+      <EffectComposer key={`${mode}-${isMobile ? "m" : "d"}`}>
+        {[
+          <Bloom
+            key="bloom"
+            intensity={mode === "transitioning" ? 2.2 : mode === "theater" ? 1.4 : 1.25}
+            luminanceThreshold={mode === "theater" ? 0.2 : 0.18}
+            luminanceSmoothing={0.9}
+            mipmapBlur
+          />,
+          mode === "theater" && !isMobile ? (
+            <ChromaticAberration
+              key="ca"
+              blendFunction={BlendFunction.NORMAL}
+              offset={new THREE.Vector2(0.0012, 0.0012)}
+              radialModulation={false}
+              modulationOffset={0}
+            />
+          ) : null,
+          mode === "theater" && !isMobile ? (
+            <Noise key="noise" opacity={0.04} blendFunction={BlendFunction.OVERLAY} />
+          ) : null,
+          <Vignette
+            key="vignette"
+            eskil={false}
+            offset={mode === "theater" ? 0.2 : 0.18}
+            darkness={mode === "transitioning" ? 1.0 : mode === "theater" ? 0.85 : 0.88}
+          />,
+        ].filter(Boolean) as JSX.Element[]}
       </EffectComposer>
     </Canvas>
   );
