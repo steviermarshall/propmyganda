@@ -297,6 +297,7 @@ type Platform = {
   label: string;
   src: string | null;
   color: string;
+  cta?: { label: string; url: string };
 };
 
 const PLATFORMS: Platform[] = [
@@ -305,21 +306,47 @@ const PLATFORMS: Platform[] = [
     label: "DISCORD",
     src: "https://discord.com/widget?id=1011591077406572574&theme=dark",
     color: "#5865F2",
+    cta: { label: "JOIN SERVER", url: "https://discord.gg/RADeWseEq" },
   },
   {
     id: "spotify",
     label: "SPOTIFY",
     src: "https://open.spotify.com/embed/album/1QpBtjtvqnhKEBy4xcjn44?utm_source=generator&theme=0",
     color: "#1DB954",
+    cta: {
+      label: "OPEN IN SPOTIFY",
+      url: "https://open.spotify.com/album/1QpBtjtvqnhKEBy4xcjn44",
+    },
   },
   {
     id: "youtube",
     label: "YOUTUBE",
     src: "https://www.youtube.com/embed/xq6BOsXTWSI",
     color: "#FF0033",
+    cta: {
+      label: "SUBSCRIBE",
+      url: "https://youtube.com/@propmyganda?sub_confirmation=1",
+    },
   },
-  { id: "tiktok", label: "TIKTOK", src: null, color: "#FF2D55" },
-  { id: "instagram", label: "INSTAGRAM", src: null, color: "#E1306C" },
+  {
+    id: "tiktok",
+    label: "TIKTOK",
+    // Instagram/TikTok profile pages block iframe embedding, so render a
+    // styled CTA card (handled by the `src: null` branch) instead.
+    src: null,
+    color: "#FF2D55",
+    cta: { label: "FOLLOW ON TIKTOK", url: "https://www.tiktok.com/@propmyganda" },
+  },
+  {
+    id: "instagram",
+    label: "INSTAGRAM",
+    src: null,
+    color: "#E1306C",
+    cta: {
+      label: "FOLLOW @PROPMYGANDA_",
+      url: "https://www.instagram.com/propmyganda_/",
+    },
+  },
   { id: "more", label: "+ MORE SOON", src: null, color: "#ffc870" },
 ];
 
