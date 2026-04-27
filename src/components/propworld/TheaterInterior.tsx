@@ -817,10 +817,10 @@ export default function TheaterInterior({ isMobile = false }: TheaterProps) {
                     width: `${IFRAME_BASE_W}px`,
                     height: `${IFRAME_BASE_H}px`,
                     overflow: "hidden",
-                    background: "#0a0a0a",
+                    background: "linear-gradient(180deg, #050818 0%, #0a0a14 100%)",
                     borderRadius: "6px",
                     boxShadow:
-                      "0 0 0 2px rgba(255,255,255,0.08) inset, 0 0 0 1px rgba(0,0,0,0.9), 0 12px 40px rgba(0,0,0,0.7)",
+                      "0 0 0 1px rgba(122,216,255,0.55) inset, 0 0 0 3px rgba(180,80,255,0.18), 0 0 24px rgba(122,216,255,0.35), 0 0 60px rgba(180,80,255,0.25), 0 12px 40px rgba(0,0,0,0.7)",
                     colorScheme: "dark",
                     isolation: "isolate",
                   }}
