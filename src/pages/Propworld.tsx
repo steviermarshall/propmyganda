@@ -1,5 +1,6 @@
 import { Suspense, lazy, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import CosmicHUD from "@/components/propworld/CosmicHUD";
 
 const PropworldScene = lazy(() => import("@/components/propworld/PropworldScene"));
 
