@@ -11,6 +11,7 @@ import graffitiQueensUrl from "@/assets/graffiti-queens.png";
 import graffitiNycUrl from "@/assets/graffiti-nyc.png";
 import graffitiBrooklynUrl from "@/assets/graffiti-brooklyn.png";
 import { kickables, type Kickable } from "./useKickables";
+import CosmicEnvironment, { ImpactBursts } from "./CosmicEnvironment";
 
 const ROOM_BOUND = 7.5; // wall half-size used by KickableProp collisions (room is 16 wide)
 const ROOM_HEIGHT_PIPE = 7;
@@ -721,8 +722,11 @@ export default function TheaterInterior({ isMobile = false }: TheaterProps) {
 
   return (
     <group>
-      {/* ---------- Endless bright universe background ---------- */}
-      <BrightUniverse />
+      {/* ---------- Endless cosmic environment ---------- */}
+      <CosmicEnvironment isMobile={isMobile} onHittableHover={(h) => {
+        window.dispatchEvent(new CustomEvent("cosmic:hover", { detail: h }));
+      }} />
+      <ImpactBursts />
 
 
 
@@ -813,10 +817,10 @@ export default function TheaterInterior({ isMobile = false }: TheaterProps) {
                     width: `${IFRAME_BASE_W}px`,
                     height: `${IFRAME_BASE_H}px`,
                     overflow: "hidden",
-                    background: "#0a0a0a",
+                    background: "linear-gradient(180deg, #050818 0%, #0a0a14 100%)",
                     borderRadius: "6px",
                     boxShadow:
-                      "0 0 0 2px rgba(255,255,255,0.08) inset, 0 0 0 1px rgba(0,0,0,0.9), 0 12px 40px rgba(0,0,0,0.7)",
+                      "0 0 0 1px rgba(122,216,255,0.55) inset, 0 0 0 3px rgba(180,80,255,0.18), 0 0 24px rgba(122,216,255,0.35), 0 0 60px rgba(180,80,255,0.25), 0 12px 40px rgba(0,0,0,0.7)",
                     colorScheme: "dark",
                     isolation: "isolate",
                   }}
@@ -875,108 +879,7 @@ export default function TheaterInterior({ isMobile = false }: TheaterProps) {
         </group>
       ))}
 
-      {/* ---------- Bright universe ambient lighting ---------- */}
-      <ambientLight intensity={1.4} color="#ffffff" />
-      <hemisphereLight args={["#ffffff", "#a8c4ff", 1.1]} />
-      <directionalLight position={[6, 8, 4]} intensity={1.6} color="#ffffff" />
-      <directionalLight position={[-6, -4, -3]} intensity={0.8} color="#cfe1ff" />
     </group>
   );
 }
 
-/* ---------- Endless bright universe (starfield + nebulae) ---------- */
-function BrightUniverse() {
-  const stars1 = useRef<THREE.Points>(null);
-  const stars2 = useRef<THREE.Points>(null);
-
-  const make = (count: number, radius: number, color: string, size: number) => {
-    const positions = new Float32Array(count * 3);
-    for (let i = 0; i < count; i++) {
-      const u = Math.random();
-      const v = Math.random();
-      const theta = 2 * Math.PI * u;
-      const phi = Math.acos(2 * v - 1);
-      const r = radius * (0.6 + Math.random() * 0.4);
-      positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
-      positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-      positions[i * 3 + 2] = r * Math.cos(phi);
-    }
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-    const mat = new THREE.PointsMaterial({
-      color,
-      size,
-      sizeAttenuation: true,
-      transparent: true,
-      opacity: 0.95,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-      toneMapped: false,
-    });
-    return { geo, mat };
-  };
-
-  const near = useMemo(() => make(2200, 60, "#ffffff", 0.18), []);
-  const far = useMemo(() => make(3500, 140, "#dceaff", 0.35), []);
-
-  useFrame((_, dt) => {
-    if (stars1.current) stars1.current.rotation.y += dt * 0.01;
-    if (stars2.current) stars2.current.rotation.y -= dt * 0.005;
-  });
-
-  const nebulae: { p: [number, number, number]; c: string; s: number }[] = [
-    { p: [40, 10, -30], c: "#ffd4f0", s: 22 },
-    { p: [-50, -15, -20], c: "#bcd6ff", s: 28 },
-    { p: [10, 30, -60], c: "#fff2c8", s: 32 },
-    { p: [-30, 20, 40], c: "#d6c4ff", s: 24 },
-    { p: [60, -10, 20], c: "#c6f0ff", s: 26 },
-  ];
-
-  return (
-    <group>
-      {/* Bright sky dome (inside-out sphere with soft gradient) */}
-      <mesh scale={[-1, 1, 1]}>
-        <sphereGeometry args={[200, 32, 32]} />
-        <shaderMaterial
-          side={THREE.BackSide}
-          vertexShader={`
-            varying vec3 vPos;
-            void main() {
-              vPos = normalize(position);
-              gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-            }
-          `}
-          fragmentShader={`
-            varying vec3 vPos;
-            void main() {
-              float t = vPos.y * 0.5 + 0.5;
-              vec3 top = vec3(0.78, 0.86, 1.00);
-              vec3 mid = vec3(0.95, 0.92, 1.00);
-              vec3 bot = vec3(1.00, 0.88, 0.95);
-              vec3 col = mix(bot, mid, smoothstep(0.0, 0.5, t));
-              col = mix(col, top, smoothstep(0.5, 1.0, t));
-              gl_FragColor = vec4(col, 1.0);
-            }
-          `}
-        />
-      </mesh>
-
-      {nebulae.map((n, i) => (
-        <mesh key={i} position={n.p}>
-          <sphereGeometry args={[n.s, 24, 24]} />
-          <meshBasicMaterial
-            color={n.c}
-            transparent
-            opacity={0.18}
-            depthWrite={false}
-            blending={THREE.AdditiveBlending}
-            toneMapped={false}
-          />
-        </mesh>
-      ))}
-
-      <points ref={stars1} geometry={near.geo} material={near.mat} />
-      <points ref={stars2} geometry={far.geo} material={far.mat} />
-    </group>
-  );
-}

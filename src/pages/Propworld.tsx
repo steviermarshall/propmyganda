@@ -1,5 +1,6 @@
 import { Suspense, lazy, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import CosmicHUD from "@/components/propworld/CosmicHUD";
 
 const PropworldScene = lazy(() => import("@/components/propworld/PropworldScene"));
 
@@ -20,6 +21,8 @@ const Propworld = () => {
       {/* Subtle vignette overlay for legibility */}
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/60" />
 
+      {/* Cosmic HUD overlay (reticle + scanlines) — only in theater */}
+      {mode === "theater" && <CosmicHUD />}
       {/* Forest UI */}
       <AnimatePresence>
         {mode === "forest" && (
