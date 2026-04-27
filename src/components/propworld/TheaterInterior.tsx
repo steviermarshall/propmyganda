@@ -721,81 +721,9 @@ export default function TheaterInterior({ isMobile = false }: TheaterProps) {
 
   return (
     <group>
-      {/* ---------- Floor ---------- */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.5, 0]} receiveShadow>
-        <planeGeometry args={[ROOM_SIZE, ROOM_SIZE]} />
-        <meshStandardMaterial map={floorTex} roughness={0.95} metalness={0.05} />
-      </mesh>
+      {/* ---------- Endless bright universe background ---------- */}
+      <BrightUniverse />
 
-      {/* ---------- Four concrete walls (textured) ---------- */}
-      {/* North (+Z) */}
-      <mesh position={[0, ROOM_HEIGHT / 2 - 0.5, HALF]} rotation={[0, Math.PI, 0]} receiveShadow>
-        <planeGeometry args={[ROOM_SIZE, ROOM_HEIGHT]} />
-        <meshStandardMaterial map={wallTex} roughness={1} />
-      </mesh>
-      {/* South (-Z) */}
-      <mesh position={[0, ROOM_HEIGHT / 2 - 0.5, -HALF]} receiveShadow>
-        <planeGeometry args={[ROOM_SIZE, ROOM_HEIGHT]} />
-        <meshStandardMaterial map={wallTex} roughness={1} />
-      </mesh>
-      {/* East (+X) */}
-      <mesh position={[HALF, ROOM_HEIGHT / 2 - 0.5, 0]} rotation={[0, -Math.PI / 2, 0]} receiveShadow>
-        <planeGeometry args={[ROOM_SIZE, ROOM_HEIGHT]} />
-        <meshStandardMaterial map={wallTex} roughness={1} />
-      </mesh>
-      {/* West (-X) */}
-      <mesh position={[-HALF, ROOM_HEIGHT / 2 - 0.5, 0]} rotation={[0, Math.PI / 2, 0]} receiveShadow>
-        <planeGeometry args={[ROOM_SIZE, ROOM_HEIGHT]} />
-        <meshStandardMaterial map={wallTex} roughness={1} />
-      </mesh>
-
-      {/* ---------- NYC Graffiti decals on walls (randomized each load) ---------- */}
-      <GraffitiDecals
-        textures={[gBronx, gBrooklyn, gNyc, gQueens]}
-        roomHalf={HALF}
-      />
-
-      {/* ---------- Ceiling (dark wood planks) ---------- */}
-      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, ROOM_HEIGHT - 0.5, 0]}>
-        <planeGeometry args={[ROOM_SIZE, ROOM_SIZE]} />
-        <meshStandardMaterial map={ceilingTex} roughness={0.95} />
-      </mesh>
-
-      {/* ---------- Single fluorescent ceiling tube (Max Payne style) ---------- */}
-      <group position={[0, ROOM_HEIGHT - 0.55, 0]}>
-        {/* Fixture housing */}
-        <mesh>
-          <boxGeometry args={[2.4, 0.1, 0.5]} />
-          <meshStandardMaterial color="#1d1d1d" roughness={0.7} />
-        </mesh>
-        {/* Glowing tube */}
-        <mesh position={[0, -0.06, 0]}>
-          <boxGeometry args={[2.1, 0.06, 0.28]} />
-          <meshBasicMaterial
-            ref={tubeMatRef}
-            color="#fbf6e6"
-            toneMapped={false}
-            transparent
-            opacity={1}
-          />
-        </mesh>
-        <pointLight
-          ref={flickerLightRef}
-          position={[0, -0.4, 0]}
-          color="#f4ecd0"
-          intensity={1.4}
-          distance={20}
-          decay={1.4}
-          castShadow
-        />
-      </group>
-
-      {/* ---------- Vertical pipes in two corners (matches reference) ---------- */}
-      <Pipe position={[HALF - 0.6, ROOM_HEIGHT / 2 - 0.5, HALF - 0.6]} />
-      <Pipe position={[HALF - 0.6, ROOM_HEIGHT / 2 - 0.5, -HALF + 0.6]} />
-
-      {/* ---------- Environmental props ---------- */}
-      <Ladder position={[-3.2, -0.5, HALF - 0.9]} rotation={-0.2} />
 
       {/* Kickable barrels — placed all around the room */}
       <KickableProp id="barrel-1" initialPosition={[HALF - 1.6, 0.65, 2.5]} radius={0.6} mass={1.4} groundY={0.65}>
