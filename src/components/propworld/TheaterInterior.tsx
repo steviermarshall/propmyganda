@@ -297,6 +297,7 @@ type Platform = {
   label: string;
   src: string | null;
   color: string;
+  cta?: { label: string; url: string };
 };
 
 const PLATFORMS: Platform[] = [
@@ -305,21 +306,47 @@ const PLATFORMS: Platform[] = [
     label: "DISCORD",
     src: "https://discord.com/widget?id=1011591077406572574&theme=dark",
     color: "#5865F2",
+    cta: { label: "JOIN SERVER", url: "https://discord.gg/RADeWseEq" },
   },
   {
     id: "spotify",
     label: "SPOTIFY",
     src: "https://open.spotify.com/embed/album/1QpBtjtvqnhKEBy4xcjn44?utm_source=generator&theme=0",
     color: "#1DB954",
+    cta: {
+      label: "OPEN IN SPOTIFY",
+      url: "https://open.spotify.com/album/1QpBtjtvqnhKEBy4xcjn44",
+    },
   },
   {
     id: "youtube",
     label: "YOUTUBE",
     src: "https://www.youtube.com/embed/xq6BOsXTWSI",
     color: "#FF0033",
+    cta: {
+      label: "SUBSCRIBE",
+      url: "https://youtube.com/@propmyganda?sub_confirmation=1",
+    },
   },
-  { id: "tiktok", label: "TIKTOK", src: null, color: "#FF2D55" },
-  { id: "instagram", label: "INSTAGRAM", src: null, color: "#E1306C" },
+  {
+    id: "tiktok",
+    label: "TIKTOK",
+    // Instagram/TikTok profile pages block iframe embedding, so render a
+    // styled CTA card (handled by the `src: null` branch) instead.
+    src: null,
+    color: "#FF2D55",
+    cta: { label: "FOLLOW ON TIKTOK", url: "https://www.tiktok.com/@propmyganda" },
+  },
+  {
+    id: "instagram",
+    label: "INSTAGRAM",
+    src: null,
+    color: "#E1306C",
+    cta: {
+      label: "FOLLOW @PROPMYGANDA_",
+      url: "https://www.instagram.com/propmyganda_/",
+    },
+  },
   { id: "more", label: "+ MORE SOON", src: null, color: "#ffc870" },
 ];
 
@@ -878,6 +905,50 @@ export default function TheaterInterior({ isMobile = false }: TheaterProps) {
             >
               {panel.label}
             </Text>
+
+            {/* Follow / Subscribe CTA — sits just below the plaque, in 3D */}
+            {panel.cta && (
+              <Html
+                position={[0, -PANEL_H / 2 - 0.78, 0.05]}
+                transform
+                occlude={false}
+                distanceFactor={10}
+                scale={htmlScale * 0.55}
+                style={{
+                  width: `${IFRAME_BASE_W}px`,
+                  display: "flex",
+                  justifyContent: "center",
+                  pointerEvents: "auto",
+                }}
+              >
+                <a
+                  href={panel.cta.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    padding: "14px 28px",
+                    background: panel.color,
+                    color: "#0a0a0a",
+                    fontFamily: "system-ui, sans-serif",
+                    fontSize: "26px",
+                    fontWeight: 800,
+                    letterSpacing: "0.18em",
+                    textDecoration: "none",
+                    borderRadius: "6px",
+                    border: "2px solid rgba(0,0,0,0.6)",
+                    boxShadow:
+                      "0 6px 18px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.25)",
+                    textTransform: "uppercase",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {panel.cta.label}
+                </a>
+              </Html>
+            )}
 
             {panel.src ? (
               <>
