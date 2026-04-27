@@ -721,165 +721,10 @@ export default function TheaterInterior({ isMobile = false }: TheaterProps) {
 
   return (
     <group>
-      {/* ---------- Floor ---------- */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.5, 0]} receiveShadow>
-        <planeGeometry args={[ROOM_SIZE, ROOM_SIZE]} />
-        <meshStandardMaterial map={floorTex} roughness={0.95} metalness={0.05} />
-      </mesh>
+      {/* ---------- Endless bright universe background ---------- */}
+      <BrightUniverse />
 
-      {/* ---------- Four concrete walls (textured) ---------- */}
-      {/* North (+Z) */}
-      <mesh position={[0, ROOM_HEIGHT / 2 - 0.5, HALF]} rotation={[0, Math.PI, 0]} receiveShadow>
-        <planeGeometry args={[ROOM_SIZE, ROOM_HEIGHT]} />
-        <meshStandardMaterial map={wallTex} roughness={1} />
-      </mesh>
-      {/* South (-Z) */}
-      <mesh position={[0, ROOM_HEIGHT / 2 - 0.5, -HALF]} receiveShadow>
-        <planeGeometry args={[ROOM_SIZE, ROOM_HEIGHT]} />
-        <meshStandardMaterial map={wallTex} roughness={1} />
-      </mesh>
-      {/* East (+X) */}
-      <mesh position={[HALF, ROOM_HEIGHT / 2 - 0.5, 0]} rotation={[0, -Math.PI / 2, 0]} receiveShadow>
-        <planeGeometry args={[ROOM_SIZE, ROOM_HEIGHT]} />
-        <meshStandardMaterial map={wallTex} roughness={1} />
-      </mesh>
-      {/* West (-X) */}
-      <mesh position={[-HALF, ROOM_HEIGHT / 2 - 0.5, 0]} rotation={[0, Math.PI / 2, 0]} receiveShadow>
-        <planeGeometry args={[ROOM_SIZE, ROOM_HEIGHT]} />
-        <meshStandardMaterial map={wallTex} roughness={1} />
-      </mesh>
 
-      {/* ---------- NYC Graffiti decals on walls (randomized each load) ---------- */}
-      <GraffitiDecals
-        textures={[gBronx, gBrooklyn, gNyc, gQueens]}
-        roomHalf={HALF}
-      />
-
-      {/* ---------- Ceiling (dark wood planks) ---------- */}
-      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, ROOM_HEIGHT - 0.5, 0]}>
-        <planeGeometry args={[ROOM_SIZE, ROOM_SIZE]} />
-        <meshStandardMaterial map={ceilingTex} roughness={0.95} />
-      </mesh>
-
-      {/* ---------- Single fluorescent ceiling tube (Max Payne style) ---------- */}
-      <group position={[0, ROOM_HEIGHT - 0.55, 0]}>
-        {/* Fixture housing */}
-        <mesh>
-          <boxGeometry args={[2.4, 0.1, 0.5]} />
-          <meshStandardMaterial color="#1d1d1d" roughness={0.7} />
-        </mesh>
-        {/* Glowing tube */}
-        <mesh position={[0, -0.06, 0]}>
-          <boxGeometry args={[2.1, 0.06, 0.28]} />
-          <meshBasicMaterial
-            ref={tubeMatRef}
-            color="#fbf6e6"
-            toneMapped={false}
-            transparent
-            opacity={1}
-          />
-        </mesh>
-        <pointLight
-          ref={flickerLightRef}
-          position={[0, -0.4, 0]}
-          color="#f4ecd0"
-          intensity={1.4}
-          distance={20}
-          decay={1.4}
-          castShadow
-        />
-      </group>
-
-      {/* ---------- Vertical pipes in two corners (matches reference) ---------- */}
-      <Pipe position={[HALF - 0.6, ROOM_HEIGHT / 2 - 0.5, HALF - 0.6]} />
-      <Pipe position={[HALF - 0.6, ROOM_HEIGHT / 2 - 0.5, -HALF + 0.6]} />
-
-      {/* ---------- Environmental props ---------- */}
-      <Ladder position={[-3.2, -0.5, HALF - 0.9]} rotation={-0.2} />
-
-      {/* Kickable barrels — placed all around the room */}
-      <KickableProp id="barrel-1" initialPosition={[HALF - 1.6, 0.65, 2.5]} radius={0.6} mass={1.4} groundY={0.65}>
-        <Barrel color="#3a5d4a" />
-      </KickableProp>
-      <KickableProp id="barrel-2" initialPosition={[HALF - 1.6, 0.65, 4]} radius={0.6} mass={1.4} groundY={0.65}>
-        <Barrel color="#4a3a2a" />
-      </KickableProp>
-      <KickableProp id="barrel-3" initialPosition={[HALF - 2.8, 0.65, 3.2]} radius={0.6} mass={1.4} groundY={0.65}>
-        <Barrel color="#3a5d4a" />
-      </KickableProp>
-      <KickableProp id="barrel-4" initialPosition={[-3, 0.65, -4]} radius={0.6} mass={1.4} groundY={0.65}>
-        <Barrel color="#5a4a2a" />
-      </KickableProp>
-      <KickableProp id="barrel-5" initialPosition={[-1.5, 0.65, -4.5]} radius={0.6} mass={1.4} groundY={0.65}>
-        <Barrel color="#3a5d4a" />
-      </KickableProp>
-      <KickableProp id="barrel-6" initialPosition={[3, 0.65, -1.5]} radius={0.6} mass={1.2} groundY={0.65}>
-        <Barrel color="#4a3a2a" />
-      </KickableProp>
-
-      {/* Kickable boxes — scattered everywhere */}
-      <KickableProp id="box-1" initialPosition={[HALF - 1.8, 0.5, -3]} initialRotationY={0.3} radius={0.6} mass={0.7} groundY={0.5}>
-        <Box size={[1.1, 1, 1.1]} />
-      </KickableProp>
-      <KickableProp id="box-2" initialPosition={[HALF - 2.9, 0.4, -3.4]} initialRotationY={-0.2} radius={0.45} mass={0.5} groundY={0.4}>
-        <Box size={[0.8, 0.8, 0.8]} />
-      </KickableProp>
-      <KickableProp id="box-3" initialPosition={[HALF - 2.1, 1.55, -3.2]} initialRotationY={0.5} radius={0.4} mass={0.4} groundY={0.35}>
-        <Box size={[0.7, 0.7, 0.7]} />
-      </KickableProp>
-      <KickableProp id="box-4" initialPosition={[-HALF + 1.6, 0.5, -1.5]} initialRotationY={-0.4} radius={0.55} mass={0.6} groundY={0.5}>
-        <Box size={[0.95, 0.95, 0.95]} />
-      </KickableProp>
-      <KickableProp id="box-5" initialPosition={[-HALF + 1.4, 0.45, 3]} initialRotationY={0.2} radius={0.6} mass={0.65} groundY={0.45}>
-        <Box size={[1.1, 0.9, 1.0]} />
-      </KickableProp>
-      <KickableProp id="box-6" initialPosition={[2.5, 0.45, 3.8]} initialRotationY={0.7} radius={0.5} mass={0.55} groundY={0.45}>
-        <Box size={[0.9, 0.9, 0.9]} />
-      </KickableProp>
-      <KickableProp id="box-7" initialPosition={[1, 0.4, -2.5]} initialRotationY={-0.6} radius={0.45} mass={0.5} groundY={0.4}>
-        <Box size={[0.8, 0.8, 0.8]} />
-      </KickableProp>
-      <KickableProp id="box-8" initialPosition={[-2, 0.5, 2]} initialRotationY={0.1} radius={0.55} mass={0.6} groundY={0.5}>
-        <Box size={[1.0, 1.0, 1.0]} />
-      </KickableProp>
-      <KickableProp id="box-9" initialPosition={[-3.5, 0.35, 1.5]} initialRotationY={1.1} radius={0.4} mass={0.4} groundY={0.35}>
-        <Box size={[0.7, 0.7, 0.7]} />
-      </KickableProp>
-
-      {/* Kickable chairs */}
-      <KickableProp id="chair-1" initialPosition={[2, 0, 1.5]} initialRotationY={-0.4} radius={0.4} mass={0.6} groundY={0}>
-        <Chair />
-      </KickableProp>
-      <KickableProp id="chair-2" initialPosition={[-1.8, 0, -2.5]} initialRotationY={1.2} radius={0.4} mass={0.6} groundY={0}>
-        <Chair />
-      </KickableProp>
-      <KickableProp id="chair-3" initialPosition={[3.5, 0, 0]} initialRotationY={-1.5} radius={0.4} mass={0.6} groundY={0}>
-        <Chair />
-      </KickableProp>
-      <KickableProp id="chair-4" initialPosition={[-3.2, 0, 4]} initialRotationY={0.3} radius={0.4} mass={0.6} groundY={0}>
-        <Chair />
-      </KickableProp>
-      <KickableProp id="chair-5" initialPosition={[0, 0, 4]} initialRotationY={Math.PI} radius={0.4} mass={0.6} groundY={0}>
-        <Chair />
-      </KickableProp>
-
-      {/* Kickable debris (lightweight) */}
-      {debris.map((d, i) => (
-        <KickableProp
-          key={`debris-${i}`}
-          id={`debris-${i}`}
-          initialPosition={d.pos}
-          initialRotationY={d.rot}
-          radius={d.scale * 0.7}
-          mass={0.25}
-          groundY={-0.42}
-        >
-          <mesh castShadow>
-            <boxGeometry args={[d.scale, d.scale * 0.5, d.scale]} />
-            <meshStandardMaterial color="#2e2c28" roughness={1} />
-          </mesh>
-        </KickableProp>
-      ))}
 
       {/* ---------- Slanted picture-framed embeds on each wall ---------- */}
       {panels.map((panel, i) => (
@@ -1030,13 +875,108 @@ export default function TheaterInterior({ isMobile = false }: TheaterProps) {
         </group>
       ))}
 
-      {/* ---------- Ambient fill — brightened for better visibility ---------- */}
-      <ambientLight intensity={0.9} color="#bdb3a3" />
-      <hemisphereLight args={["#e8e0cd", "#3a3530", 0.85]} />
-      {/* Soft fill so far walls don't fall to black */}
-      <pointLight position={[0, 3, 0]} intensity={1.2} color="#f0e2bb" distance={28} decay={1.4} />
-      <pointLight position={[0, 2, 6]} intensity={0.7} color="#f0e2bb" distance={20} decay={1.6} />
-      <pointLight position={[0, 2, -6]} intensity={0.7} color="#f0e2bb" distance={20} decay={1.6} />
+      {/* ---------- Bright universe ambient lighting ---------- */}
+      <ambientLight intensity={1.4} color="#ffffff" />
+      <hemisphereLight args={["#ffffff", "#a8c4ff", 1.1]} />
+      <directionalLight position={[6, 8, 4]} intensity={1.6} color="#ffffff" />
+      <directionalLight position={[-6, -4, -3]} intensity={0.8} color="#cfe1ff" />
+    </group>
+  );
+}
+
+/* ---------- Endless bright universe (starfield + nebulae) ---------- */
+function BrightUniverse() {
+  const stars1 = useRef<THREE.Points>(null);
+  const stars2 = useRef<THREE.Points>(null);
+
+  const make = (count: number, radius: number, color: string, size: number) => {
+    const positions = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+      const u = Math.random();
+      const v = Math.random();
+      const theta = 2 * Math.PI * u;
+      const phi = Math.acos(2 * v - 1);
+      const r = radius * (0.6 + Math.random() * 0.4);
+      positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+      positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+      positions[i * 3 + 2] = r * Math.cos(phi);
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    const mat = new THREE.PointsMaterial({
+      color,
+      size,
+      sizeAttenuation: true,
+      transparent: true,
+      opacity: 0.95,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      toneMapped: false,
+    });
+    return { geo, mat };
+  };
+
+  const near = useMemo(() => make(2200, 60, "#ffffff", 0.18), []);
+  const far = useMemo(() => make(3500, 140, "#dceaff", 0.35), []);
+
+  useFrame((_, dt) => {
+    if (stars1.current) stars1.current.rotation.y += dt * 0.01;
+    if (stars2.current) stars2.current.rotation.y -= dt * 0.005;
+  });
+
+  const nebulae: { p: [number, number, number]; c: string; s: number }[] = [
+    { p: [40, 10, -30], c: "#ffd4f0", s: 22 },
+    { p: [-50, -15, -20], c: "#bcd6ff", s: 28 },
+    { p: [10, 30, -60], c: "#fff2c8", s: 32 },
+    { p: [-30, 20, 40], c: "#d6c4ff", s: 24 },
+    { p: [60, -10, 20], c: "#c6f0ff", s: 26 },
+  ];
+
+  return (
+    <group>
+      {/* Bright sky dome (inside-out sphere with soft gradient) */}
+      <mesh scale={[-1, 1, 1]}>
+        <sphereGeometry args={[200, 32, 32]} />
+        <shaderMaterial
+          side={THREE.BackSide}
+          vertexShader={`
+            varying vec3 vPos;
+            void main() {
+              vPos = normalize(position);
+              gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+            }
+          `}
+          fragmentShader={`
+            varying vec3 vPos;
+            void main() {
+              float t = vPos.y * 0.5 + 0.5;
+              vec3 top = vec3(0.78, 0.86, 1.00);
+              vec3 mid = vec3(0.95, 0.92, 1.00);
+              vec3 bot = vec3(1.00, 0.88, 0.95);
+              vec3 col = mix(bot, mid, smoothstep(0.0, 0.5, t));
+              col = mix(col, top, smoothstep(0.5, 1.0, t));
+              gl_FragColor = vec4(col, 1.0);
+            }
+          `}
+        />
+      </mesh>
+
+      {nebulae.map((n, i) => (
+        <mesh key={i} position={n.p}>
+          <sphereGeometry args={[n.s, 24, 24]} />
+          <meshBasicMaterial
+            color={n.c}
+            transparent
+            opacity={0.18}
+            depthWrite={false}
+            blending={THREE.AdditiveBlending}
+            toneMapped={false}
+          />
+        </mesh>
+      ))}
+
+      <points ref={stars1} geometry={near.geo} material={near.mat} />
+      <points ref={stars2} geometry={far.geo} material={far.mat} />
     </group>
   );
 }

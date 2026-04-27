@@ -44,8 +44,8 @@ export default function PropworldScene({ onModeChange }: Props) {
         powerPreference: "high-performance",
       }}
     >
-      <color attach="background" args={["#04141a"]} />
-      <fog attach="fog" args={["#0a2530", 6, 32]} />
+      <color attach="background" args={[mode === "theater" ? "#eaf0ff" : "#04141a"]} />
+      {mode !== "theater" && <fog attach="fog" args={["#0a2530", 6, 32]} />}
 
       {/* Cool moonlit teal/cyan key + warm amber accent */}
       <ambientLight intensity={0.22} color="#3a7a8a" />
