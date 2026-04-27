@@ -3,7 +3,14 @@ import { useFrame, useLoader } from "@react-three/fiber";
 import { Html, Text } from "@react-three/drei";
 import * as THREE from "three";
 
+import concreteWallUrl from "@/assets/concrete-wall.jpg";
+import concreteFloorUrl from "@/assets/concrete-floor.jpg";
 import ceilingWoodUrl from "@/assets/ceiling-wood.jpg";
+import graffitiBronxUrl from "@/assets/graffiti-bronx.png";
+import graffitiQueensUrl from "@/assets/graffiti-queens.png";
+import graffitiNycUrl from "@/assets/graffiti-nyc.png";
+import graffitiBrooklynUrl from "@/assets/graffiti-brooklyn.png";
+import { kickables, type Kickable } from "./useKickables";
 import CosmicEnvironment, { ImpactBursts } from "./CosmicEnvironment";
 
 const ROOM_BOUND = 7.5; // wall half-size used by KickableProp collisions (room is 16 wide)
