@@ -5,6 +5,7 @@ import { BlendFunction } from "postprocessing";
 import * as THREE from "three";
 import { useIsMobile } from "@/hooks/use-mobile";
 
+import { getComposerKey } from "./composerKey";
 import Ground from "./Ground";
 import Forest from "./Forest";
 import Fireflies from "./Fireflies";
@@ -86,7 +87,7 @@ export default function PropworldScene({ onModeChange }: Props) {
         onTransitionComplete={() => setModeAndNotify("theater")}
       />
 
-      <EffectComposer key={`${mode}-${isMobile ? "m" : "d"}`}>
+      <EffectComposer key={getComposerKey(mode, isMobile)}>
         {[
           <Bloom
             key="bloom"
