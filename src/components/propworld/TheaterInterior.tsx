@@ -342,7 +342,7 @@ const PLATFORMS: Platform[] = [
     label: "INSTAGRAM",
     // PLACEHOLDER: replace with your LightWidget URL after creating one for
     // @propmyganda_ (https://lightwidget.com → Create widget → copy URL)
-    src: "https://cdn.lightwidget.com/widgets/27e225bb06fd5ed0b2a659ed28bf7c70.html",
+    src: "https://lightwidget.com/widgets/27e225bb06fd5ed0b2a659ed28bf7c70.html",
     color: "#E1306C",
     cta: {
       label: "FOLLOW @PROPMYGANDA_",
