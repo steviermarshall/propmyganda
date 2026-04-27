@@ -309,7 +309,7 @@ const PLATFORMS: Platform[] = [
   {
     id: "spotify",
     label: "SPOTIFY",
-    src: "https://open.spotify.com/embed/track/08DiJvNsj3UlgTKhSZP1iO?utm_source=generator&theme=0",
+    src: "https://open.spotify.com/embed/album/1QpBtjtvqnhKEBy4xcjn44?utm_source=generator&theme=0",
     color: "#1DB954",
   },
   {
