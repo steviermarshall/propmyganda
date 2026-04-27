@@ -96,7 +96,7 @@ export default function PropworldScene({ onModeChange }: Props) {
         {mode === "theater" && !isMobile ? (
           <ChromaticAberration
             blendFunction={BlendFunction.NORMAL}
-            offset={[0.0012, 0.0012] as unknown as [number, number]}
+            offset={new THREE.Vector2(0.0012, 0.0012)}
             radialModulation={false}
             modulationOffset={0}
           />
