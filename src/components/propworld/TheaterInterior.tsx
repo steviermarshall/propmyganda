@@ -722,8 +722,11 @@ export default function TheaterInterior({ isMobile = false }: TheaterProps) {
 
   return (
     <group>
-      {/* ---------- Endless bright universe background ---------- */}
-      <BrightUniverse />
+      {/* ---------- Endless cosmic environment ---------- */}
+      <CosmicEnvironment isMobile={isMobile} onHittableHover={(h) => {
+        window.dispatchEvent(new CustomEvent("cosmic:hover", { detail: h }));
+      }} />
+      <ImpactBursts />
 
 
 
