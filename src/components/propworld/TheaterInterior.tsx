@@ -331,16 +331,18 @@ const PLATFORMS: Platform[] = [
   {
     id: "tiktok",
     label: "TIKTOK",
-    // Instagram/TikTok profile pages block iframe embedding, so render a
-    // styled CTA card (handled by the `src: null` branch) instead.
-    src: null,
+    // PLACEHOLDER: replace with your rss.app TikTok feed iframe URL
+    // (e.g. https://rss.app/embed/v1/wall/XXXXXXX)
+    src: "https://rss.app/embed/v1/wall/tQ8x5vYK1cR9ZpAo",
     color: "#FF2D55",
     cta: { label: "FOLLOW ON TIKTOK", url: "https://www.tiktok.com/@propmyganda" },
   },
   {
     id: "instagram",
     label: "INSTAGRAM",
-    src: null,
+    // PLACEHOLDER: replace with your LightWidget URL after creating one for
+    // @propmyganda_ (https://lightwidget.com → Create widget → copy URL)
+    src: "https://cdn.lightwidget.com/widgets/cb1a3e8e0b0c1234567890abcdef1234.html",
     color: "#E1306C",
     cta: {
       label: "FOLLOW @PROPMYGANDA_",
