@@ -34,14 +34,18 @@ import SponsorsDashboard from "./pages/dashboard/SponsorsDashboard";
 
 const queryClient = new QueryClient();
 
-const PublicLayout = ({ children }: { children: React.ReactNode }) => (
-  <>
-    <Navbar />
-    {children}
-    <SocialDock />
-    <Footer />
-  </>
-);
+const PublicLayout = ({ children }: { children: React.ReactNode }) => {
+  const location = useLocation();
+  const isPropworld = location.pathname === "/propworld";
+  return (
+    <>
+      <Navbar />
+      {children}
+      {!isPropworld && <SocialDock />}
+      <Footer />
+    </>
+  );
+};
 
 const AppRoutes = () => {
   const location = useLocation();
