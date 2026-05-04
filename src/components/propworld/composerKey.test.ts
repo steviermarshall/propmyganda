@@ -7,35 +7,19 @@ import {
 
 describe("EffectComposer regression: rapid mode switching", () => {
   it("produces a stable key per (mode, device) pair", () => {
-    expect(getComposerKey("forest", false)).toBe("forest-d");
-    expect(getComposerKey("forest", false)).toBe("forest-d");
-    expect(getComposerKey("theater", true)).toBe("theater-m");
+    expect(getComposerKey("forest", false)).toBe("light-d");
+    expect(getComposerKey("forest", false)).toBe("light-d");
+    expect(getComposerKey("transitioning", false)).toBe("light-d");
+    expect(getComposerKey("theater", true)).toBe("light-m");
+    expect(getComposerKey("game", false)).toBe("heavy-d");
   });
 
-  it("does not remount when toggling forest <-> theater on the same device repeatedly", () => {
-    // We only care that each (mode, device) maps to a single key — i.e.
-    // round-tripping never produces a new identity for the same state.
-    const seen = new Map<string, string>();
-    const sequence: CosmicMode[] = [
-      "forest",
-      "transitioning",
-      "theater",
-      "forest",
-      "theater",
-      "transitioning",
-      "forest",
-      "theater",
-    ];
-    for (const m of sequence) {
-      const id = `${m}-d`;
-      const key = getComposerKey(m, false);
-      if (seen.has(id)) {
-        expect(key).toBe(seen.get(id));
-      } else {
-        seen.set(id, key);
-      }
-    }
-    expect(seen.size).toBe(3); // forest, transitioning, theater
+  it("does not remount when toggling forest <-> transitioning on the same device", () => {
+    // forest and transitioning share the same effect set → same key → no remount
+    expect(getComposerKey("forest", false)).toBe(getComposerKey("transitioning", false));
+    expect(getComposerKey("theater", false)).toBe(getComposerKey("game", false));
+    // mobile: no heavy effects, so all modes are light
+    expect(getComposerKey("theater", true)).toBe(getComposerKey("forest", true));
   });
 
   it("only changes key when the set of active effects changes", () => {
@@ -81,7 +65,8 @@ describe("EffectComposer regression: rapid mode switching", () => {
       if (key !== lastKey) transitions++;
       lastKey = key;
     }
-    // Exactly one remount per real mode change — no spurious re-inits.
-    expect(transitions).toBe(49);
+    // forest↔transitioning share a key (no remount); only transitioning→theater
+    // and theater→forest cause remounts — 32 instead of 49.
+    expect(transitions).toBe(32);
   });
 });

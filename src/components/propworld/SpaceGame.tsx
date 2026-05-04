@@ -152,7 +152,7 @@ function spawnWave(
         pos: pos.clone(), state: "formation",
         deathT: 0, divePts: null, diveT: 0,
         returnT: 0, returnStart: pos.clone(),
-        lastShot: Math.random() * cfg.shotInt,
+        lastShot: Math.random() * cfg.diveShotInt,
         shotInterval: cfg.diveShotInt * (1 - Math.min(wave - 1, 4) * 0.08),
       };
       const g3 = eGroups[slot];

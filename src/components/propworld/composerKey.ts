@@ -9,7 +9,8 @@
 export type CosmicMode = "forest" | "transitioning" | "theater" | "game";
 
 export function getComposerKey(mode: CosmicMode, isMobile: boolean): string {
-  return `${mode}-${isMobile ? "m" : "d"}`;
+  const isHeavy = (mode === "theater" || mode === "game") && !isMobile;
+  return `${isHeavy ? "heavy" : "light"}-${isMobile ? "m" : "d"}`;
 }
 
 /**
