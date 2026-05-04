@@ -19,10 +19,9 @@ type Mode = "forest" | "transitioning" | "theater" | "game";
 interface Props {
   onModeChange?: (mode: Mode) => void;
   externalHoverSide?: "room" | "game" | null;
-  requestEnter?: "theater" | "game" | null;
 }
 
-export default function PropworldScene({ onModeChange, externalHoverSide, requestEnter }: Props) {
+export default function PropworldScene({ onModeChange, externalHoverSide }: Props) {
   const [mode, setMode] = useState<Mode>("forest");
   const [hovered, setHovered] = useState(false);
   const [gameHovered, setGameHovered] = useState(false);
@@ -35,14 +34,6 @@ export default function PropworldScene({ onModeChange, externalHoverSide, reques
     onModeChange?.(next);
   }
 
-  // External enter trigger (from pill-choice UI)
-  useEffect(() => {
-    if (requestEnter && mode === "forest") {
-      enterTargetRef.current = requestEnter;
-      setModeAndNotify("transitioning");
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [requestEnter]);
 
   // Pull camera farther back on mobile so the tall tree fits portrait viewports.
   const initialCamZ = isMobile ? 22 : 16;
