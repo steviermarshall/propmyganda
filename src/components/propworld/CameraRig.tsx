@@ -64,6 +64,13 @@ export default function CameraRig({ mode, hovered, hoverSide, isMobile, onTransi
   const pressTimeRef = useRef(0);
   const movedRef = useRef(false);
 
+  // Hold-to-shoot (game mode)
+  const isHoldingRef = useRef(false);
+  const lastAutoShootRef = useRef(0);
+  const onShootRef = useRef(onShoot);
+
+  useEffect(() => { onShootRef.current = onShoot; }, [onShoot]);
+
   // Pointer + pinch + wheel handlers
   useEffect(() => {
     const dom = gl.domElement;
@@ -106,6 +113,10 @@ export default function CameraRig({ mode, hovered, hoverSide, isMobile, onTransi
       pitchVelRef.current = 0;
       userAngleVelRef.current = 0;
       userInteractRef.current = performance.now();
+      if (mode === "game") {
+        isHoldingRef.current = true;
+        lastAutoShootRef.current = 0; // fire on next frame immediately
+      }
       try {
         dom.setPointerCapture(e.pointerId);
       } catch {
@@ -140,16 +151,20 @@ export default function CameraRig({ mode, hovered, hoverSide, isMobile, onTransi
       if (Math.hypot(totalDx, totalDy) > 6) movedRef.current = true;
 
       if (mode === "theater" || mode === "game") {
-        const sens =
-          (Math.PI / Math.max(window.innerWidth, 1)) * (isMobile ? 1.0 : 0.7);
+        const baseSens = (Math.PI / Math.max(window.innerWidth, 1));
+        const sens = baseSens * (mode === "game"
+          ? (isMobile ? 1.8 : 1.5)
+          : (isMobile ? 1.0 : 0.7));
+        const pitchMult = mode === "game" ? 0.85 : 0.55;
+        const pitchClamp = mode === "game" ? 1.3 : 0.45;
         theaterYawTargetRef.current -= dx * sens;
         theaterPitchTargetRef.current = THREE.MathUtils.clamp(
-          theaterPitchTargetRef.current - dy * sens * 0.55,
-          -0.45,
-          0.45
+          theaterPitchTargetRef.current - dy * sens * pitchMult,
+          -pitchClamp,
+          pitchClamp
         );
         yawVelRef.current = -dx * sens * 60;
-        pitchVelRef.current = -dy * sens * 0.55 * 60;
+        pitchVelRef.current = -dy * sens * pitchMult * 60;
       } else {
         const sensitivity = (Math.PI / window.innerWidth) * 1.2;
         const delta = -dx * sensitivity;
@@ -174,6 +189,7 @@ export default function CameraRig({ mode, hovered, hoverSide, isMobile, onTransi
         return;
       }
       draggingRef.current = false;
+      isHoldingRef.current = false;
       const elapsed = performance.now() - pressTimeRef.current;
       const isTap = !movedRef.current && elapsed < 300;
 
@@ -327,11 +343,12 @@ export default function CameraRig({ mode, hovered, hoverSide, isMobile, onTransi
     // Apply fling momentum after release (decay quickly)
     if (!draggingRef.current) {
       if (Math.abs(yawVelRef.current) > 0.001 || Math.abs(pitchVelRef.current) > 0.001) {
+        const pitchClamp = mode === "game" ? 1.3 : 0.45;
         theaterYawTargetRef.current += yawVelRef.current * delta;
         theaterPitchTargetRef.current = THREE.MathUtils.clamp(
           theaterPitchTargetRef.current + pitchVelRef.current * delta,
-          -0.45,
-          0.45
+          -pitchClamp,
+          pitchClamp
         );
         // Exponential decay (~halves every ~0.3s)
         const decay = Math.pow(0.06, delta);
@@ -340,13 +357,13 @@ export default function CameraRig({ mode, hovered, hoverSide, isMobile, onTransi
       }
     }
 
-    // Gentle auto-rotate only after long idle (5s) and very slow
-    if (idleMs > 5000 && !draggingRef.current) {
+    // Gentle auto-rotate only in theater after long idle — never in game mode
+    if (mode !== "game" && idleMs > 5000 && !draggingRef.current) {
       theaterYawTargetRef.current += delta * 0.06;
     }
 
-    // Critically-damped lerp toward target — frame-rate independent
-    const smooth = 1 - Math.exp(-delta * 12); // ~80ms time constant, very responsive
+    // Critically-damped lerp toward target — game mode is snappier
+    const smooth = 1 - Math.exp(-delta * (mode === "game" ? 22 : 12));
     theaterYawRef.current = THREE.MathUtils.lerp(
       theaterYawRef.current,
       theaterYawTargetRef.current,
@@ -381,7 +398,7 @@ export default function CameraRig({ mode, hovered, hoverSide, isMobile, onTransi
     targetPos.z = THREE.MathUtils.clamp(targetPos.z, -wallClamp, wallClamp);
     camera.position.lerp(targetPos, 0.12);
 
-    const targetFov = isMobile ? 75 : 70;
+    const targetFov = mode === "game" ? (isMobile ? 95 : 85) : (isMobile ? 75 : 70);
     persp.fov = THREE.MathUtils.lerp(persp.fov, targetFov, 0.05);
     persp.updateProjectionMatrix();
 
@@ -393,6 +410,14 @@ export default function CameraRig({ mode, hovered, hoverSide, isMobile, onTransi
       camera.position.z + Math.cos(yaw) * Math.cos(pitch) * 5
     );
     camera.lookAt(lookTarget);
+
+    // Hold-to-fire: shoot continuously while pointer is held (not dragging) in game mode
+    if (mode === "game" && isHoldingRef.current && !movedRef.current) {
+      if (t - lastAutoShootRef.current > 0.18) {
+        lastAutoShootRef.current = t;
+        onShootRef.current?.();
+      }
+    }
   });
 
   return null;

@@ -13,7 +13,7 @@ interface HudState {
 }
 
 function GameHUD() {
-  const [hud, setHud] = useState<HudState>({ score: 0, hp: 5, wave: 1, gameOver: false, waveComplete: false });
+  const [hud, setHud] = useState<HudState>({ score: 0, hp: 10, wave: 1, gameOver: false, waveComplete: false });
   const wcTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -31,7 +31,7 @@ function GameHUD() {
     return () => window.removeEventListener("game:hud", handler);
   }, []);
 
-  const maxHp = 5;
+  const maxHp = 10;
   const segments = Array.from({ length: maxHp }, (_, i) => i < hud.hp);
 
   return (
@@ -57,9 +57,9 @@ function GameHUD() {
           {segments.map((alive, i) => (
             <div
               key={i}
-              className={`h-4 w-4 rounded-sm border transition-all duration-300 ${
+              className={`h-3 w-3 rounded-sm border transition-all duration-300 ${
                 alive
-                  ? "bg-cyan-400 border-cyan-300 shadow-[0_0_6px_rgba(0,255,238,0.8)]"
+                  ? "bg-cyan-400 border-cyan-300 shadow-[0_0_5px_rgba(0,255,238,0.8)]"
                   : "bg-transparent border-cyan-800/50"
               }`}
             />
@@ -112,13 +112,33 @@ type Mode = "forest" | "transitioning" | "theater" | "game";
 
 const Propworld = () => {
   const [mode, setMode] = useState<Mode>("forest");
+  const [selectedSide, setSelectedSide] = useState<"room" | "game" | null>(null);
+  const [requestEnter, setRequestEnter] = useState<"theater" | "game" | null>(null);
+
+  const handleModeChange = (m: Mode) => {
+    setMode(m);
+    if (m === "transitioning") setRequestEnter(null);
+  };
+
+  const selectSide = (side: "room" | "game") => {
+    setSelectedSide((prev) => (prev === side ? null : side));
+  };
+
+  const enter = () => {
+    if (!selectedSide) return;
+    setRequestEnter(selectedSide === "room" ? "theater" : "game");
+  };
 
   return (
     <main className="relative h-screen w-screen overflow-hidden bg-[#02060a] text-white">
       {/* Full-screen 3D scene */}
       <div className="absolute inset-0">
         <Suspense fallback={<div className="w-full h-full bg-[#02060a]" />}>
-          <PropworldScene onModeChange={setMode} />
+          <PropworldScene
+            onModeChange={handleModeChange}
+            externalHoverSide={mode === "forest" ? selectedSide : null}
+            requestEnter={requestEnter}
+          />
         </Suspense>
       </div>
 
@@ -131,33 +151,120 @@ const Propworld = () => {
       {/* Game HUD — score, HP, wave */}
       {mode === "game" && <GameHUD />}
 
-      {/* Forest UI */}
+      {/* ── Forest pill-choice UI ───────────────────────────── */}
       <AnimatePresence>
         {mode === "forest" && (
           <motion.div
             key="forest-ui"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-            className="pointer-events-none absolute inset-x-0 top-24 md:top-28 flex flex-col items-center text-center px-6"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.6 }}
+            className="absolute inset-0 pointer-events-none"
           >
-            <p className="text-[10px] md:text-xs tracking-[0.4em] uppercase text-amber-200/80 mb-4">
-              Propworld
-            </p>
-            <h1 className="text-4xl md:text-6xl font-bold uppercase tracking-tight">
-              Two Ancient Trees
-            </h1>
-            <p className="mt-4 max-w-md text-sm md:text-base text-white/60">
-              Tap the{" "}
-              <span className="text-amber-300/90">amber tree</span> to enter The Room.
-              <br />
-              Tap the{" "}
-              <span className="text-cyan-300/90">blue tree</span> to enter The Game.
-            </p>
-            <p className="mt-2 max-w-md text-[10px] md:text-xs tracking-[0.25em] uppercase text-white/40">
-              Drag to look around
-            </p>
+            {/* Left half — THE GAME (blue pill) */}
+            <motion.button
+              animate={{ opacity: selectedSide === "room" ? 0.35 : 1 }}
+              transition={{ duration: 0.4 }}
+              className="pointer-events-auto absolute left-0 top-0 h-full w-1/2 flex flex-col items-start justify-end pb-16 pl-8 md:pl-12 text-left"
+              style={{ background: selectedSide === "game" ? "linear-gradient(to right, rgba(0,180,255,0.07), transparent)" : "transparent" }}
+              onClick={() => selectSide("game")}
+            >
+              <p className="text-[9px] tracking-[0.45em] uppercase text-cyan-400/60 mb-2">
+                Blue Tree
+              </p>
+              <h2 className={`text-3xl md:text-4xl font-bold uppercase tracking-tight transition-colors duration-300 ${selectedSide === "game" ? "text-cyan-200" : "text-cyan-100/70"}`}>
+                The Game
+              </h2>
+              <p className="mt-1 text-[11px] md:text-xs text-cyan-300/50 tracking-wide">
+                Space combat · Wave survival
+              </p>
+              {selectedSide === "game" && (
+                <motion.div
+                  initial={{ scaleX: 0 }}
+                  animate={{ scaleX: 1 }}
+                  transition={{ duration: 0.3 }}
+                  className="mt-3 h-px w-24 bg-cyan-400/60 origin-left"
+                />
+              )}
+            </motion.button>
+
+            {/* Right half — THE ROOM (amber pill) */}
+            <motion.button
+              animate={{ opacity: selectedSide === "game" ? 0.35 : 1 }}
+              transition={{ duration: 0.4 }}
+              className="pointer-events-auto absolute right-0 top-0 h-full w-1/2 flex flex-col items-end justify-end pb-16 pr-8 md:pr-12 text-right"
+              style={{ background: selectedSide === "room" ? "linear-gradient(to left, rgba(255,180,30,0.07), transparent)" : "transparent" }}
+              onClick={() => selectSide("room")}
+            >
+              <p className="text-[9px] tracking-[0.45em] uppercase text-amber-400/60 mb-2">
+                Amber Tree
+              </p>
+              <h2 className={`text-3xl md:text-4xl font-bold uppercase tracking-tight transition-colors duration-300 ${selectedSide === "room" ? "text-amber-200" : "text-amber-100/70"}`}>
+                The Room
+              </h2>
+              <p className="mt-1 text-[11px] md:text-xs text-amber-300/50 tracking-wide">
+                Social hub · Media wall
+              </p>
+              {selectedSide === "room" && (
+                <motion.div
+                  initial={{ scaleX: 0 }}
+                  animate={{ scaleX: 1 }}
+                  transition={{ duration: 0.3 }}
+                  className="mt-3 h-px w-24 bg-amber-400/60 origin-right"
+                />
+              )}
+            </motion.button>
+
+            {/* Center divider + title */}
+            <div className="pointer-events-none absolute inset-x-0 top-0 flex flex-col items-center pt-10">
+              <p className="text-[9px] tracking-[0.5em] uppercase text-white/30 mb-2">Propworld</p>
+              <div className="h-px w-8 bg-white/15" />
+            </div>
+
+            {/* Center enter button — appears when a side is chosen */}
+            <AnimatePresence>
+              {selectedSide && (
+                <motion.div
+                  key="enter-btn"
+                  initial={{ opacity: 0, y: 12, scale: 0.9 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 8, scale: 0.92 }}
+                  transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                  className="pointer-events-auto absolute left-1/2 bottom-10 -translate-x-1/2 flex flex-col items-center gap-3"
+                >
+                  <button
+                    onClick={enter}
+                    className={`px-10 py-3 text-[11px] tracking-[0.4em] uppercase font-medium border transition-all duration-200 ${
+                      selectedSide === "game"
+                        ? "border-cyan-400/60 text-cyan-100 hover:bg-cyan-400/15 hover:border-cyan-300"
+                        : "border-amber-400/60 text-amber-100 hover:bg-amber-400/15 hover:border-amber-300"
+                    }`}
+                  >
+                    Enter →
+                  </button>
+                  <p className="text-[9px] tracking-[0.3em] uppercase text-white/25">
+                    Tap the other side to switch
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Initial hint — fades when a side is selected */}
+            <AnimatePresence>
+              {!selectedSide && (
+                <motion.p
+                  key="hint"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.4 }}
+                  className="pointer-events-none absolute inset-x-0 bottom-8 text-center text-[9px] tracking-[0.35em] uppercase text-white/30"
+                >
+                  Choose a side · Drag to look around
+                </motion.p>
+              )}
+            </AnimatePresence>
           </motion.div>
         )}
       </AnimatePresence>
@@ -224,7 +331,7 @@ const Propworld = () => {
             className="absolute inset-x-0 bottom-8 flex flex-col items-center px-6"
           >
             <p className="text-[10px] tracking-[0.4em] uppercase text-cyan-200/70 mb-3">
-              The Game · Drag to look around
+              Drag to aim · Tap / Space / Hold to fire
             </p>
             <button
               onClick={() => window.location.reload()}

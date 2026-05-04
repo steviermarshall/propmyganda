@@ -45,21 +45,21 @@ interface WorldState {
 // ─── Config ───────────────────────────────────────────────────────────────────
 
 const CFG = {
-  scout:       { hp: 1, radius: 1.0, speed: 9,  shotInterval: 3.5, score: 100, hpBarY: 1.8  },
-  fighter:     { hp: 3, radius: 1.6, speed: 5,  shotInterval: 2.2, score: 300, hpBarY: 2.4  },
-  dreadnought: { hp: 8, radius: 3.0, speed: 1.8,shotInterval: 1.4, score: 800, hpBarY: 3.8  },
+  scout:       { hp: 2,  radius: 1.0, speed: 14, shotInterval: 2.0, score: 150,  hpBarY: 1.8  },
+  fighter:     { hp: 4,  radius: 1.6, speed: 8,  shotInterval: 1.5, score: 500,  hpBarY: 2.4  },
+  dreadnought: { hp: 10, radius: 3.0, speed: 4,  shotInterval: 1.0, score: 1500, hpBarY: 3.8  },
 } as const;
 
 const MAX_ENEMIES        = 15;
-const MAX_PLAYER_LASERS  = 24;
-const MAX_ENEMY_LASERS   = 36;
-const PLAYER_LASER_SPEED = 85;
-const PLAYER_LASER_TTL   = 3.5;
-const ENEMY_LASER_SPEED  = 22;
-const ENEMY_LASER_TTL    = 7;
+const MAX_PLAYER_LASERS  = 40;
+const MAX_ENEMY_LASERS   = 50;
+const PLAYER_LASER_SPEED = 140;
+const PLAYER_LASER_TTL   = 2.5;
+const ENEMY_LASER_SPEED  = 32;
+const ENEMY_LASER_TTL    = 6;
 const PLAYER_HIT_RADIUS  = 1.2;
-const SPAWN_RADIUS       = 75;
-const WAVE_GAP           = 3.5;
+const SPAWN_RADIUS       = 30;
+const WAVE_GAP           = 5;
 
 // ─── Wave definition ─────────────────────────────────────────────────────────
 
@@ -240,7 +240,9 @@ function spawnWave(
     if (slot >= MAX_ENEMIES) break;
 
     const cfg = CFG[type];
-    const pos = randomOnSphere(SPAWN_RADIUS + Math.random() * 20);
+    // Scouts spawn closer; heavies spawn a bit farther out
+    const extraDist = type === "scout" ? Math.random() * 10 : type === "fighter" ? 10 + Math.random() * 15 : 20 + Math.random() * 20;
+    const pos = randomOnSphere(SPAWN_RADIUS + extraDist);
 
     w.enemies[slot] = {
       type, pos, vel: new THREE.Vector3(),
@@ -333,7 +335,7 @@ export default function SpaceGame({ isMobile = false, onRegisterShoot }: Props) 
     enemies:      new Array(MAX_ENEMIES).fill(null),
     playerLasers: new Array(MAX_PLAYER_LASERS).fill(null),
     enemyLasers:  new Array(MAX_ENEMY_LASERS).fill(null),
-    aliveCount: 0, score: 0, playerHp: 5,
+    aliveCount: 0, score: 0, playerHp: 10,
     wave: 1, waitingNextWave: false, waveTimer: 0,
     gameOver: false, lastHudDispatch: 0,
   });
@@ -367,6 +369,13 @@ export default function SpaceGame({ isMobile = false, onRegisterShoot }: Props) 
   }, [camera]);
 
   useEffect(() => { onRegisterShoot(shoot); }, [onRegisterShoot, shoot]);
+
+  // Spacebar fires
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.code === "Space" && !e.repeat) shoot(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [shoot]);
 
   useFrame((state, delta) => {
     const t = state.clock.getElapsedTime();
@@ -426,7 +435,7 @@ export default function SpaceGame({ isMobile = false, onRegisterShoot }: Props) 
       const orbitT = t * 0.6 + e.strafeSeed;
       targetVel.x += Math.sin(orbitT)       * cfg.speed * 0.3;
       targetVel.y += Math.cos(orbitT * 0.7) * cfg.speed * 0.2;
-      e.vel.lerp(targetVel, 0.015);
+      e.vel.lerp(targetVel, 0.05);
       e.pos.addScaledVector(e.vel, delta);
 
       g.position.copy(e.pos);
