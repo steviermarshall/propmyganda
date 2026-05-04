@@ -15,10 +15,11 @@ import * as THREE from "three";
 
 interface Props {
   isMobile?: boolean;
+  noSway?: boolean;
   onHittableHover?: (hovering: boolean) => void;
 }
 
-export default function CosmicEnvironment({ isMobile = false, onHittableHover }: Props) {
+export default function CosmicEnvironment({ isMobile = false, noSway = false, onHittableHover }: Props) {
   return (
     <group>
       <Skybox />
@@ -29,7 +30,7 @@ export default function CosmicEnvironment({ isMobile = false, onHittableHover }:
       <CinematicLights />
       <Planets isMobile={isMobile} onHittableHover={onHittableHover} />
       <Meteoroids count={isMobile ? 18 : 45} onHittableHover={onHittableHover} />
-      <CameraSway />
+      {!noSway && <CameraSway />}
     </group>
   );
 }

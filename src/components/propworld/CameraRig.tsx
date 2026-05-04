@@ -6,8 +6,10 @@ import { kickables } from "./useKickables";
 interface Props {
   mode: "forest" | "transitioning" | "theater" | "game";
   hovered?: boolean;
+  hoverSide?: "room" | "game" | null;
   isMobile?: boolean;
   onTransitionComplete: () => void;
+  onShoot?: () => void;
 }
 
 /**
@@ -20,7 +22,7 @@ interface Props {
  *  - Drag (mouse or touch) to rotate around the tree manually.
  *  - Releases back to auto-orbit after a short idle.
  */
-export default function CameraRig({ mode, hovered, isMobile, onTransitionComplete }: Props) {
+export default function CameraRig({ mode, hovered, hoverSide, isMobile, onTransitionComplete, onShoot }: Props) {
   const { camera, gl } = useThree();
   const startTimeRef = useRef<number | null>(null);
   const startPosRef = useRef(new THREE.Vector3());
@@ -175,10 +177,12 @@ export default function CameraRig({ mode, hovered, isMobile, onTransitionComplet
       const elapsed = performance.now() - pressTimeRef.current;
       const isTap = !movedRef.current && elapsed < 300;
 
-      if (isTap && (mode === "theater" || mode === "game")) {
+      if (isTap && mode === "theater") {
         const dir = new THREE.Vector3();
         camera.getWorldDirection(dir);
         kickables.kickFromCamera(camera.position.clone(), dir);
+      } else if (isTap && mode === "game") {
+        onShoot?.();
       }
 
       try {
@@ -265,6 +269,9 @@ export default function CameraRig({ mode, hovered, isMobile, onTransitionComplet
       persp.fov = THREE.MathUtils.lerp(persp.fov, targetFov, 0.04);
       persp.updateProjectionMatrix();
 
+      // Pan look target toward hovered tree side
+      const panTarget = hoverSide === "room" ? 6 : hoverSide === "game" ? -6 : 0;
+      forestTarget.current.x = THREE.MathUtils.lerp(forestTarget.current.x, panTarget, 0.03);
       camera.lookAt(forestTarget.current);
       return;
     }

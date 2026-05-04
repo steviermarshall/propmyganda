@@ -1,6 +1,110 @@
-import { Suspense, lazy, useState } from "react";
+import { Suspense, lazy, useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import CosmicHUD from "@/components/propworld/CosmicHUD";
+
+// ─── Game HUD ────────────────────────────────────────────────────────────────
+
+interface HudState {
+  score: number;
+  hp: number;
+  wave: number;
+  gameOver: boolean;
+  waveComplete: boolean;
+}
+
+function GameHUD() {
+  const [hud, setHud] = useState<HudState>({ score: 0, hp: 5, wave: 1, gameOver: false, waveComplete: false });
+  const wcTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const d = (e as CustomEvent).detail as HudState;
+      setHud((prev) => ({ ...prev, ...d }));
+      if (d.waveComplete) {
+        if (wcTimerRef.current) clearTimeout(wcTimerRef.current);
+        wcTimerRef.current = setTimeout(() => {
+          setHud((prev) => ({ ...prev, waveComplete: false }));
+        }, 2500);
+      }
+    };
+    window.addEventListener("game:hud", handler);
+    return () => window.removeEventListener("game:hud", handler);
+  }, []);
+
+  const maxHp = 5;
+  const segments = Array.from({ length: maxHp }, (_, i) => i < hud.hp);
+
+  return (
+    <div className="pointer-events-none absolute inset-0">
+      {/* Score — top right */}
+      <div className="absolute top-5 right-6 text-right">
+        <p className="text-[9px] tracking-[0.4em] uppercase text-cyan-300/60 mb-0.5">Score</p>
+        <p className="text-2xl font-bold tabular-nums text-cyan-200 drop-shadow-[0_0_8px_rgba(0,255,238,0.6)]">
+          {hud.score.toLocaleString()}
+        </p>
+      </div>
+
+      {/* Wave — top center */}
+      <div className="absolute top-5 left-1/2 -translate-x-1/2 text-center">
+        <p className="text-[9px] tracking-[0.4em] uppercase text-cyan-300/60 mb-0.5">Wave</p>
+        <p className="text-xl font-bold text-cyan-100">{hud.wave}</p>
+      </div>
+
+      {/* HP — top left */}
+      <div className="absolute top-5 left-6">
+        <p className="text-[9px] tracking-[0.4em] uppercase text-cyan-300/60 mb-1">Hull</p>
+        <div className="flex gap-1">
+          {segments.map((alive, i) => (
+            <div
+              key={i}
+              className={`h-4 w-4 rounded-sm border transition-all duration-300 ${
+                alive
+                  ? "bg-cyan-400 border-cyan-300 shadow-[0_0_6px_rgba(0,255,238,0.8)]"
+                  : "bg-transparent border-cyan-800/50"
+              }`}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Wave complete */}
+      <AnimatePresence>
+        {hud.waveComplete && (
+          <motion.div
+            key="wc"
+            initial={{ opacity: 0, scale: 0.85 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.1 }}
+            transition={{ duration: 0.4 }}
+            className="absolute inset-0 flex items-center justify-center"
+          >
+            <p className="text-3xl font-bold tracking-[0.2em] uppercase text-cyan-200 drop-shadow-[0_0_24px_rgba(0,255,238,0.8)]">
+              Wave {hud.wave} Clear
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Game over */}
+      {hud.gameOver && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60">
+          <p className="text-5xl font-bold tracking-[0.15em] uppercase text-red-400 mb-3 drop-shadow-[0_0_24px_rgba(255,60,0,0.9)]">
+            Game Over
+          </p>
+          <p className="text-lg text-white/70 mb-6">
+            Score: <span className="text-cyan-300 font-bold">{hud.score.toLocaleString()}</span>
+          </p>
+          <button
+            className="pointer-events-auto text-[11px] tracking-[0.3em] uppercase border border-cyan-400/50 px-6 py-3 text-cyan-100 hover:bg-cyan-400/10 transition-colors"
+            onClick={() => window.location.reload()}
+          >
+            Play Again
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 const PropworldScene = lazy(() => import("@/components/propworld/PropworldScene"));
 
@@ -23,6 +127,9 @@ const Propworld = () => {
 
       {/* Cosmic HUD overlay — theater and game */}
       {(mode === "theater" || mode === "game") && <CosmicHUD />}
+
+      {/* Game HUD — score, HP, wave */}
+      {mode === "game" && <GameHUD />}
 
       {/* Forest UI */}
       <AnimatePresence>

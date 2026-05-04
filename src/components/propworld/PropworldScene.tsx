@@ -11,7 +11,7 @@ import Forest from "./Forest";
 import Fireflies from "./Fireflies";
 import AncientTree from "./AncientTree";
 import TheaterInterior from "./TheaterInterior";
-import GameScene from "./GameScene";
+import SpaceGame from "./SpaceGame";
 import CameraRig from "./CameraRig";
 
 type Mode = "forest" | "transitioning" | "theater" | "game";
@@ -25,6 +25,7 @@ export default function PropworldScene({ onModeChange }: Props) {
   const [hovered, setHovered] = useState(false);
   const [gameHovered, setGameHovered] = useState(false);
   const enterTargetRef = useRef<"theater" | "game">("theater");
+  const shootFnRef = useRef<(() => void) | null>(null);
   const isMobile = useIsMobile();
 
   function setModeAndNotify(next: Mode) {
@@ -71,16 +72,18 @@ export default function PropworldScene({ onModeChange }: Props) {
           <>
             <Ground />
             <Forest />
-            <AncientTree
-              onEnter={() => {
-                enterTargetRef.current = "theater";
-                setModeAndNotify("transitioning");
-              }}
-              onHoverChange={setHovered}
-              isMobile={isMobile}
-              variant="room"
-            />
-            <group position={[-8, 0, 0]}>
+            <group position={[13, 0, 0]}>
+              <AncientTree
+                onEnter={() => {
+                  enterTargetRef.current = "theater";
+                  setModeAndNotify("transitioning");
+                }}
+                onHoverChange={setHovered}
+                isMobile={isMobile}
+                variant="room"
+              />
+            </group>
+            <group position={[-13, 0, 0]}>
               <AncientTree
                 onEnter={() => {
                   enterTargetRef.current = "game";
@@ -96,14 +99,21 @@ export default function PropworldScene({ onModeChange }: Props) {
         )}
 
         {mode === "theater" && <TheaterInterior isMobile={isMobile} />}
-        {mode === "game" && <GameScene isMobile={isMobile} />}
+        {mode === "game" && (
+          <SpaceGame
+            isMobile={isMobile}
+            onRegisterShoot={(fn) => { shootFnRef.current = fn; }}
+          />
+        )}
       </Suspense>
 
       <CameraRig
         mode={mode}
         hovered={(hovered || gameHovered) && mode === "forest"}
+        hoverSide={mode === "forest" ? (hovered ? "room" : gameHovered ? "game" : null) : null}
         isMobile={isMobile}
         onTransitionComplete={() => setModeAndNotify(enterTargetRef.current)}
+        onShoot={() => shootFnRef.current?.()}
       />
 
       <EffectComposer key={getComposerKey(mode, isMobile)}>
