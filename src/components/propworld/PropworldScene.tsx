@@ -45,7 +45,7 @@ export default function PropworldScene({ onModeChange, externalHoverSide, reques
   }, [requestEnter]);
 
   // Pull camera farther back on mobile so the tall tree fits portrait viewports.
-  const initialCamZ = isMobile ? 20 : 14;
+  const initialCamZ = isMobile ? 22 : 16;
   const initialCamY = isMobile ? 7 : 5;
   const initialFov = isMobile ? 62 : 55;
 
@@ -83,7 +83,7 @@ export default function PropworldScene({ onModeChange, externalHoverSide, reques
           <>
             <Ground />
             <Forest />
-            <group position={[13, 0, 0]}>
+            <group position={[6, 0, 0]}>
               <AncientTree
                 onEnter={() => {
                   enterTargetRef.current = "theater";
@@ -94,7 +94,7 @@ export default function PropworldScene({ onModeChange, externalHoverSide, reques
                 variant="room"
               />
             </group>
-            <group position={[-13, 0, 0]}>
+            <group position={[-6, 0, 0]}>
               <AncientTree
                 onEnter={() => {
                   enterTargetRef.current = "game";

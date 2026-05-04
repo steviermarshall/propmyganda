@@ -267,7 +267,7 @@ export default function CameraRig({ mode, hovered, hoverSide, isMobile, onTransi
         angleRef.current += delta * 0.08;
       }
 
-      const baseRadius = isMobile ? 20 : 14;
+      const baseRadius = isMobile ? 22 : 16;
 
       // Hover/touch-near: lerp drift toward the tree
       const targetDrift = hovered ? (isMobile ? 6 : 4.5) : 0;
