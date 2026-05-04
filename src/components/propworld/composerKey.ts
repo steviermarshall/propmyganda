@@ -6,7 +6,7 @@
  * threshold, etc.) is tweened in-place and must NOT change this key —
  * otherwise the composer re-initializes every frame and the scene flickers.
  */
-export type CosmicMode = "forest" | "transitioning" | "theater";
+export type CosmicMode = "forest" | "transitioning" | "theater" | "game";
 
 export function getComposerKey(mode: CosmicMode, isMobile: boolean): string {
   return `${mode}-${isMobile ? "m" : "d"}`;
@@ -18,7 +18,7 @@ export function getComposerKey(mode: CosmicMode, isMobile: boolean): string {
  */
 export function getActiveEffects(mode: CosmicMode, isMobile: boolean): string[] {
   const effects = ["bloom"];
-  if (mode === "theater" && !isMobile) {
+  if ((mode === "theater" || mode === "game") && !isMobile) {
     effects.push("ca", "noise");
   }
   effects.push("vignette");

@@ -6,6 +6,7 @@ interface Props {
   onEnter: () => void;
   onHoverChange?: (hovered: boolean) => void;
   isMobile?: boolean;
+  variant?: "room" | "game";
 }
 
 /**
@@ -16,7 +17,7 @@ interface Props {
  * - Layered leafy crown
  * - Glowing amber ORB portal at the base (no beams)
  */
-export default function AncientTree({ onEnter, onHoverChange, isMobile }: Props) {
+export default function AncientTree({ onEnter, onHoverChange, isMobile, variant = "room" }: Props) {
   const orbCoreRef = useRef<THREE.Mesh>(null);
   const orbGlowRef = useRef<THREE.MeshBasicMaterial>(null);
   const orbHaloRef = useRef<THREE.Mesh>(null);
@@ -491,23 +492,19 @@ export default function AncientTree({ onEnter, onHoverChange, isMobile }: Props)
               />
             </mesh>
 
-            {/* THE DOORWAY IS THE ORB.
-                A single arch-shaped emissive surface that follows the
-                trunk's curvature. No frame, no protruding planes —
-                it reads as a glowing portal carved INTO the bark. */}
+            {/* THE DOORWAY IS THE ORB. */}
             <mesh ref={orbCoreRef as unknown as React.Ref<THREE.Mesh>} geometry={archGeom}>
               <meshBasicMaterial
-                color="#fff2c2"
+                color={variant === "game" ? "#c0f4ff" : "#fff2c2"}
                 toneMapped={false}
                 side={THREE.DoubleSide}
               />
             </mesh>
 
-            {/* Soft warm bloom-catcher just outside the arch surface */}
             <mesh geometry={archGeom} scale={[1.04, 1.04, 1.04]}>
               <meshBasicMaterial
                 ref={orbGlowRef}
-                color="#ffb96a"
+                color={variant === "game" ? "#40b8ff" : "#ffb96a"}
                 transparent
                 opacity={0.55}
                 blending={THREE.AdditiveBlending}
@@ -517,10 +514,9 @@ export default function AncientTree({ onEnter, onHoverChange, isMobile }: Props)
               />
             </mesh>
 
-            {/* Outer soft halo bleeding onto surrounding bark */}
             <mesh ref={orbHaloRef} geometry={archGeom} scale={[1.18, 1.12, 1.18]}>
               <meshBasicMaterial
-                color="#ff9a3a"
+                color={variant === "game" ? "#2060ff" : "#ff9a3a"}
                 transparent
                 opacity={0.22}
                 blending={THREE.AdditiveBlending}
@@ -530,12 +526,11 @@ export default function AncientTree({ onEnter, onHoverChange, isMobile }: Props)
               />
             </mesh>
 
-            {/* Warm fill light bleeding from the portal onto bark */}
             <pointLight
               ref={orbLightRef}
               position={[0, DOORWAY_Y_CENTER, trunkR + 0.5]}
               intensity={2.6}
-              color="#ffa040"
+              color={variant === "game" ? "#40a0ff" : "#ffa040"}
               distance={10}
               decay={2}
             />

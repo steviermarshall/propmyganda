@@ -4,7 +4,7 @@ import * as THREE from "three";
 import { kickables } from "./useKickables";
 
 interface Props {
-  mode: "forest" | "transitioning" | "theater";
+  mode: "forest" | "transitioning" | "theater" | "game";
   hovered?: boolean;
   isMobile?: boolean;
   onTransitionComplete: () => void;
@@ -71,10 +71,11 @@ export default function CameraRig({ mode, hovered, isMobile, onTransitionComplet
     let pinchStartDolly = 0;
     let isPinching = false;
 
-    const dollyClamp = (v: number) => THREE.MathUtils.clamp(v, -6, 3.5);
+    const maxBack = mode === "game" ? -20 : -4;
+    const dollyClamp = (v: number) => THREE.MathUtils.clamp(v, maxBack, 3.5);
 
     const onDown = (e: PointerEvent) => {
-      if (mode !== "forest" && mode !== "theater") return;
+      if (mode !== "forest" && mode !== "theater" && mode !== "game") return;
       if (e.pointerType === "mouse" && e.button !== 0) return;
       const target = e.target as HTMLElement | null;
       if (target && target.tagName !== "CANVAS") return;
@@ -82,7 +83,7 @@ export default function CameraRig({ mode, hovered, isMobile, onTransitionComplet
       activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
       // If two fingers down, start pinch
-      if (activePointers.size === 2 && mode === "theater") {
+      if (activePointers.size === 2 && (mode === "theater" || mode === "game")) {
         const pts = Array.from(activePointers.values());
         pinchStartDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
         pinchStartDolly = theaterDollyTargetRef.current;
@@ -115,7 +116,7 @@ export default function CameraRig({ mode, hovered, isMobile, onTransitionComplet
       }
 
       // Pinch (two pointers): adjust dolly distance based on pinch ratio
-      if (isPinching && activePointers.size >= 2 && mode === "theater") {
+      if (isPinching && activePointers.size >= 2 && (mode === "theater" || mode === "game")) {
         const pts = Array.from(activePointers.values()).slice(0, 2);
         const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
         if (pinchStartDist > 0) {
@@ -136,7 +137,7 @@ export default function CameraRig({ mode, hovered, isMobile, onTransitionComplet
       const totalDy = e.clientY - pressYRef.current;
       if (Math.hypot(totalDx, totalDy) > 6) movedRef.current = true;
 
-      if (mode === "theater") {
+      if (mode === "theater" || mode === "game") {
         const sens =
           (Math.PI / Math.max(window.innerWidth, 1)) * (isMobile ? 1.0 : 0.7);
         theaterYawTargetRef.current -= dx * sens;
@@ -174,7 +175,7 @@ export default function CameraRig({ mode, hovered, isMobile, onTransitionComplet
       const elapsed = performance.now() - pressTimeRef.current;
       const isTap = !movedRef.current && elapsed < 300;
 
-      if (isTap && mode === "theater") {
+      if (isTap && (mode === "theater" || mode === "game")) {
         const dir = new THREE.Vector3();
         camera.getWorldDirection(dir);
         kickables.kickFromCamera(camera.position.clone(), dir);
@@ -187,9 +188,9 @@ export default function CameraRig({ mode, hovered, isMobile, onTransitionComplet
       }
     };
 
-    // Mouse wheel = dolly back/forward in theater
+    // Mouse wheel = dolly back/forward in theater/game
     const onWheel = (e: WheelEvent) => {
-      if (mode !== "theater") return;
+      if (mode !== "theater" && mode !== "game") return;
       e.preventDefault();
       const delta = e.deltaY * 0.004; // wheel down (positive) = back up
       theaterDollyTargetRef.current = dollyClamp(theaterDollyTargetRef.current - delta);
@@ -367,9 +368,10 @@ export default function CameraRig({ mode, hovered, isMobile, onTransitionComplet
       2.6 + bob,
       Math.cos(yawNow) * dolly
     );
-    // Keep inside the room (walls at ±7.5; leave margin)
-    targetPos.x = THREE.MathUtils.clamp(targetPos.x, -6.5, 6.5);
-    targetPos.z = THREE.MathUtils.clamp(targetPos.z, -6.5, 6.5);
+    // Keep inside the room (walls at ±6; leave margin). Game mode has no walls so clamp is wider.
+    const wallClamp = mode === "game" ? 20 : 4.8;
+    targetPos.x = THREE.MathUtils.clamp(targetPos.x, -wallClamp, wallClamp);
+    targetPos.z = THREE.MathUtils.clamp(targetPos.z, -wallClamp, wallClamp);
     camera.position.lerp(targetPos, 0.12);
 
     const targetFov = isMobile ? 75 : 70;

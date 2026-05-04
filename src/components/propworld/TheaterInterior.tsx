@@ -13,7 +13,7 @@ import graffitiBrooklynUrl from "@/assets/graffiti-brooklyn.png";
 import { kickables, type Kickable } from "./useKickables";
 import CosmicEnvironment, { ImpactBursts } from "./CosmicEnvironment";
 
-const ROOM_BOUND = 7.5; // wall half-size used by KickableProp collisions (room is 16 wide)
+const ROOM_BOUND = 5.6; // wall half-size used by KickableProp collisions (room is 12 wide)
 const ROOM_HEIGHT_PIPE = 7;
 
 // ---- Reusable prop components (module scope so each instance is independent) ----
@@ -351,7 +351,7 @@ const PLATFORMS: Platform[] = [
   { id: "more", label: "+ MORE SOON", src: null, color: "#ffc870" },
 ];
 
-const ROOM_SIZE = 16;
+const ROOM_SIZE = 12;
 const HALF = ROOM_SIZE / 2;
 const ROOM_HEIGHT = 7;
 
@@ -410,7 +410,7 @@ export default function TheaterInterior({ isMobile = false }: TheaterProps) {
 
     return PLATFORMS.map((p, i) => {
       const { wall, slot, of } = layout[i];
-      const span = ROOM_SIZE - 4;
+      const span = ROOM_SIZE - 1;
       const x = of === 1 ? 0 : -span / 2 + (slot + 0.5) * (span / of);
       const y = 2.6;
       const inset = 0.18;
