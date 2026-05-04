@@ -84,7 +84,7 @@ export default function CameraRig({ mode, hovered, hoverSide, isMobile, onTransi
     const dollyClamp = (v: number) => THREE.MathUtils.clamp(v, maxBack, 3.5);
 
     const onDown = (e: PointerEvent) => {
-      if (mode !== "forest" && mode !== "theater" && mode !== "game") return;
+      if (mode !== "forest" && mode !== "theater") return; // game mode handled by SpaceGame
       if (e.pointerType === "mouse" && e.button !== 0) return;
       const target = e.target as HTMLElement | null;
       if (target && target.tagName !== "CANVAS") return;
@@ -92,7 +92,7 @@ export default function CameraRig({ mode, hovered, hoverSide, isMobile, onTransi
       activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
       // If two fingers down, start pinch
-      if (activePointers.size === 2 && (mode === "theater" || mode === "game")) {
+      if (activePointers.size === 2 && mode === "theater") {
         const pts = Array.from(activePointers.values());
         pinchStartDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
         pinchStartDolly = theaterDollyTargetRef.current;
@@ -129,7 +129,7 @@ export default function CameraRig({ mode, hovered, hoverSide, isMobile, onTransi
       }
 
       // Pinch (two pointers): adjust dolly distance based on pinch ratio
-      if (isPinching && activePointers.size >= 2 && (mode === "theater" || mode === "game")) {
+      if (isPinching && activePointers.size >= 2 && mode === "theater") {
         const pts = Array.from(activePointers.values()).slice(0, 2);
         const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
         if (pinchStartDist > 0) {
@@ -208,9 +208,9 @@ export default function CameraRig({ mode, hovered, hoverSide, isMobile, onTransi
       }
     };
 
-    // Mouse wheel = dolly back/forward in theater/game
+    // Mouse wheel = dolly back/forward in theater
     const onWheel = (e: WheelEvent) => {
-      if (mode !== "theater" && mode !== "game") return;
+      if (mode !== "theater") return;
       e.preventDefault();
       const delta = e.deltaY * 0.004; // wheel down (positive) = back up
       theaterDollyTargetRef.current = dollyClamp(theaterDollyTargetRef.current - delta);
@@ -337,6 +337,9 @@ export default function CameraRig({ mode, hovered, hoverSide, isMobile, onTransi
       return;
     }
 
+    // Game mode: SpaceGame owns camera and input — CameraRig does nothing here
+    if (mode === "game") return;
+
     // theater — smoothed look-around with momentum
     const idleMs = performance.now() - userInteractRef.current;
 
@@ -410,14 +413,6 @@ export default function CameraRig({ mode, hovered, hoverSide, isMobile, onTransi
       camera.position.z + Math.cos(yaw) * Math.cos(pitch) * 5
     );
     camera.lookAt(lookTarget);
-
-    // Hold-to-fire: shoot continuously while pointer is held (not dragging) in game mode
-    if (mode === "game" && isHoldingRef.current && !movedRef.current) {
-      if (t - lastAutoShootRef.current > 0.18) {
-        lastAutoShootRef.current = t;
-        onShootRef.current?.();
-      }
-    }
   });
 
   return null;

@@ -6,107 +6,216 @@ import CosmicEnvironment, { ImpactBursts, triggerImpact } from "./CosmicEnvironm
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type EnemyType = "scout" | "fighter" | "dreadnought";
+type EState = "formation" | "diving" | "returning" | "dying";
 
-interface EnemySlot {
+interface ESlot {
+  row: number; col: number; colCount: number;
   type: EnemyType;
+  hp: number; maxHp: number;
   pos: THREE.Vector3;
-  vel: THREE.Vector3;
-  hp: number;
-  maxHp: number;
-  radius: number;
+  state: EState;
+  deathT: number;
+  // Dive bezier
+  divePts: [THREE.Vector3, THREE.Vector3, THREE.Vector3, THREE.Vector3] | null;
+  diveT: number;
+  returnT: number;
+  returnStart: THREE.Vector3;
   lastShot: number;
   shotInterval: number;
-  dying: boolean;
-  deathT: number;
-  strafeSeed: number;
 }
 
-interface LaserSlot {
+interface LSlot {
   pos: THREE.Vector3;
   vel: THREE.Vector3;
   born: number;
-  dir: THREE.Vector3;
 }
 
-interface WorldState {
-  enemies: (EnemySlot | null)[];
-  playerLasers: (LaserSlot | null)[];
-  enemyLasers: (LaserSlot | null)[];
+interface GS {
+  slots: (ESlot | null)[];
   aliveCount: number;
-  score: number;
-  playerHp: number;
-  wave: number;
-  waitingNextWave: boolean;
+  pLasers: (LSlot | null)[];
+  eLasers: (LSlot | null)[];
+  playerX: number; playerY: number;
+  playerHp: number; score: number; wave: number;
+  waveState: "active" | "cleared";
   waveTimer: number;
-  gameOver: boolean;
-  lastHudDispatch: number;
+  nextDiveT: number;
+  formOffX: number; marchDir: number;
+  stepOffset: number;
+  gameOver: boolean; lastHud: number;
 }
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
+const ROWS = 4;
+const COL_SPACING  = 2.6;
+const ROW_SPACING  = 2.2;
+const FORMATION_Z  = -24;
+const BASE_Y       = 0.6;  // y of bottom row
+
+// Bottom row = scouts (row 0), top row = dreadnoughts (row 3)
+const ROW_TYPES:  EnemyType[] = ["scout", "scout", "fighter", "dreadnought"];
+const ROW_COUNTS: number[]    = [8,       8,       6,         4            ];
+
 const CFG = {
-  scout:       { hp: 2,  radius: 1.0, speed: 14, shotInterval: 2.0, score: 150,  hpBarY: 1.8  },
-  fighter:     { hp: 4,  radius: 1.6, speed: 8,  shotInterval: 1.5, score: 500,  hpBarY: 2.4  },
-  dreadnought: { hp: 10, radius: 3.0, speed: 4,  shotInterval: 1.0, score: 1500, hpBarY: 3.8  },
+  scout:       { hp: 1, radius: 0.85, score: 100,  shotInt: 3.5,  hpBarY: 1.2 },
+  fighter:     { hp: 2, radius: 1.2,  score: 300,  shotInt: 2.2,  hpBarY: 1.8 },
+  dreadnought: { hp: 5, radius: 2.0,  score: 1000, shotInt: 1.8,  hpBarY: 2.8 },
 } as const;
 
-const MAX_ENEMIES        = 15;
-const MAX_PLAYER_LASERS  = 40;
-const MAX_ENEMY_LASERS   = 50;
-const PLAYER_LASER_SPEED = 140;
-const PLAYER_LASER_TTL   = 2.5;
-const ENEMY_LASER_SPEED  = 32;
-const ENEMY_LASER_TTL    = 6;
-const PLAYER_HIT_RADIUS  = 1.2;
-const SPAWN_RADIUS       = 30;
-const WAVE_GAP           = 5;
+const MAX_ENEMIES       = 32;
+const MAX_P_LASERS      = 24;
+const MAX_E_LASERS      = 32;
+const P_LASER_SPEED     = 55;
+const P_LASER_TTL       = 1.8;
+const E_LASER_SPEED     = 18;
+const E_LASER_TTL       = 4.0;
+const PLAYER_Z          = 0.0;
+const PLAYER_X_MAX      = 9.5;
+const PLAYER_Y_MAX      = 1.4;
+const PLAYER_HIT_R      = 0.9;
+const MARCH_SPEED       = 1.6;
+const MARCH_LIMIT       = 7.5;
+const STEP_DOWN         = 0.9;
+const MAX_STEPS         = 9;
+const DIVE_DURATION     = 3.0;
+const RETURN_DURATION   = 2.2;
+const DIVE_INT_MIN      = 1.6;
+const DIVE_INT_MAX      = 3.5;
+const WAVE_GAP          = 4.5;
+const MOVE_SENS         = 0.018;
+const CAM_POS           = new THREE.Vector3(0, 5.5, 14);
+const CAM_LOOK          = new THREE.Vector3(0, 1.0, -8);
 
-// ─── Wave definition ─────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function waveEnemies(wave: number): EnemyType[] {
-  const list: EnemyType[] = [];
-  const scouts       = Math.min(2 + wave, 7);
-  const fighters     = Math.max(0, wave - 1);
-  const dreadnoughts = Math.max(0, wave - 3);
-  for (let i = 0; i < scouts; i++)                    list.push("scout");
-  for (let i = 0; i < Math.min(fighters, 5); i++)     list.push("fighter");
-  for (let i = 0; i < Math.min(dreadnoughts, 2); i++) list.push("dreadnought");
-  return list;
+function slotPos(row: number, col: number, colCount: number, offX: number, stepOff: number): THREE.Vector3 {
+  const w = (colCount - 1) * COL_SPACING;
+  return new THREE.Vector3(
+    -w / 2 + col * COL_SPACING + offX,
+    BASE_Y + row * ROW_SPACING - stepOff,
+    FORMATION_Z,
+  );
 }
 
-// ─── HUD dispatch ────────────────────────────────────────────────────────────
+function bezier(p0: THREE.Vector3, p1: THREE.Vector3, p2: THREE.Vector3, p3: THREE.Vector3, t: number): THREE.Vector3 {
+  const u = 1 - t;
+  return new THREE.Vector3(
+    u*u*u*p0.x + 3*u*u*t*p1.x + 3*u*t*t*p2.x + t*t*t*p3.x,
+    u*u*u*p0.y + 3*u*u*t*p1.y + 3*u*t*t*p2.y + t*t*t*p3.y,
+    u*u*u*p0.z + 3*u*u*t*p1.z + 3*u*t*t*p2.z + t*t*t*p3.z,
+  );
+}
 
-function dispatchHud(w: WorldState, waveComplete = false) {
+function divePath(
+  start: THREE.Vector3,
+  px: number, py: number,
+  wave: number,
+): [THREE.Vector3, THREE.Vector3, THREE.Vector3, THREE.Vector3] {
+  const side = start.x >= 0 ? 1 : -1;
+  const arc  = 7 + Math.min(wave, 5) * 0.6;
+  return [
+    start.clone(),
+    new THREE.Vector3(start.x + side * arc, start.y + 4, start.z * 0.5),
+    new THREE.Vector3(px - side * 2,        py + 4,       FORMATION_Z * 0.2),
+    new THREE.Vector3(px + (Math.random() - 0.5) * 3, py - 3, PLAYER_Z + 8),
+  ];
+}
+
+function dispatchHud(g: GS, waveComplete = false) {
   window.dispatchEvent(new CustomEvent("game:hud", {
-    detail: { score: w.score, hp: w.playerHp, wave: w.wave, gameOver: w.gameOver, waveComplete },
+    detail: { score: g.score, hp: g.playerHp, wave: g.wave, gameOver: g.gameOver, waveComplete },
   }));
 }
 
-// ─── Ship geometry ────────────────────────────────────────────────────────────
+function spawnWave(
+  wave: number, g: GS,
+  eGroups: (THREE.Group | null)[],
+  hpFg:    (THREE.Mesh  | null)[],
+) {
+  g.formOffX = 0; g.marchDir = 1; g.stepOffset = 0;
+  g.aliveCount = 0;
+  g.nextDiveT = 2.2;
+
+  let slot = 0;
+  for (let row = 0; row < ROWS; row++) {
+    const cnt  = ROW_COUNTS[row];
+    const type = ROW_TYPES[row];
+    const cfg  = CFG[type];
+    for (let col = 0; col < cnt; col++) {
+      if (slot >= MAX_ENEMIES) break;
+      const pos = slotPos(row, col, cnt, 0, 0);
+      g.slots[slot] = {
+        row, col, colCount: cnt, type,
+        hp: cfg.hp, maxHp: cfg.hp,
+        pos: pos.clone(), state: "formation",
+        deathT: 0, divePts: null, diveT: 0,
+        returnT: 0, returnStart: pos.clone(),
+        lastShot: Math.random() * cfg.shotInt,
+        shotInterval: cfg.shotInt * (1 - Math.min(wave - 1, 4) * 0.08),
+      };
+      const g3 = eGroups[slot];
+      if (g3) {
+        g3.position.copy(pos); g3.visible = true; g3.scale.setScalar(1);
+        g3.children.forEach((c) => {
+          c.visible = c.name === "hpbar" ? true : c.name === type;
+        });
+      }
+      const fg = hpFg[slot];
+      if (fg) { fg.scale.x = 1; fg.position.x = 0; }
+      g.aliveCount++;
+      slot++;
+    }
+  }
+  for (let i = slot; i < MAX_ENEMIES; i++) {
+    g.slots[i] = null;
+    const g3 = eGroups[i]; if (g3) g3.visible = false;
+  }
+  dispatchHud(g);
+}
+
+// ─── Ship meshes ──────────────────────────────────────────────────────────────
+
+function PlayerShip() {
+  return (
+    <group>
+      {/* Hull */}
+      <mesh>
+        <boxGeometry args={[0.45, 0.18, 1.5]} />
+        <meshStandardMaterial color="#1a3a5a" roughness={0.4} metalness={0.8} emissive="#0a2040" emissiveIntensity={0.4} />
+      </mesh>
+      {/* Left wing */}
+      <mesh position={[-1.1, 0, 0.35]} rotation={[0, 0, -0.18]}>
+        <boxGeometry args={[1.5, 0.07, 0.9]} />
+        <meshStandardMaterial color="#122a44" roughness={0.5} metalness={0.7} />
+      </mesh>
+      {/* Right wing */}
+      <mesh position={[1.1, 0, 0.35]} rotation={[0, 0, 0.18]}>
+        <boxGeometry args={[1.5, 0.07, 0.9]} />
+        <meshStandardMaterial color="#122a44" roughness={0.5} metalness={0.7} />
+      </mesh>
+      {/* Gun */}
+      <mesh position={[0, 0, -0.9]}>
+        <cylinderGeometry args={[0.055, 0.075, 0.55, 8]} rotation={[Math.PI / 2, 0, 0]} />
+        <meshStandardMaterial color="#88ccff" roughness={0.2} metalness={1} emissive="#44aaff" emissiveIntensity={0.8} />
+      </mesh>
+      {/* Engine */}
+      <mesh position={[0, 0, 0.82]}>
+        <cylinderGeometry args={[0.12, 0.17, 0.3, 10]} />
+        <meshBasicMaterial color="#00eeff" toneMapped={false} />
+      </mesh>
+      <pointLight position={[0, 0, 1.1]} intensity={2.5} distance={5} color="#00eeff" decay={2} />
+    </group>
+  );
+}
 
 function ScoutMesh() {
   return (
     <group name="scout">
-      {/* Wedge fuselage */}
-      <mesh>
-        <boxGeometry args={[0.5, 0.22, 1.4]} />
-        <meshStandardMaterial color="#1e2a1e" roughness={0.7} metalness={0.5} emissive="#0a2a0a" emissiveIntensity={0.2} />
-      </mesh>
-      {/* Left wing */}
-      <mesh position={[-0.75, 0, 0.2]} rotation={[0, 0, 0.25]}>
-        <boxGeometry args={[1.0, 0.06, 0.7]} />
-        <meshStandardMaterial color="#162816" roughness={0.8} metalness={0.4} />
-      </mesh>
-      {/* Right wing */}
-      <mesh position={[0.75, 0, 0.2]} rotation={[0, 0, -0.25]}>
-        <boxGeometry args={[1.0, 0.06, 0.7]} />
-        <meshStandardMaterial color="#162816" roughness={0.8} metalness={0.4} />
-      </mesh>
-      {/* Engine */}
-      <mesh position={[0, 0, 0.72]}>
-        <cylinderGeometry args={[0.13, 0.18, 0.28, 10]} />
-        <meshBasicMaterial color="#ff2200" toneMapped={false} />
-      </mesh>
+      <mesh><boxGeometry args={[0.5, 0.2, 1.4]} /><meshStandardMaterial color="#1e2a1e" roughness={0.7} metalness={0.5} emissive="#0a2a0a" emissiveIntensity={0.3} /></mesh>
+      <mesh position={[-0.75, 0, 0.2]} rotation={[0, 0, 0.25]}><boxGeometry args={[1.0, 0.06, 0.7]} /><meshStandardMaterial color="#162816" roughness={0.8} metalness={0.4} /></mesh>
+      <mesh position={[0.75, 0, 0.2]} rotation={[0, 0, -0.25]}><boxGeometry args={[1.0, 0.06, 0.7]} /><meshStandardMaterial color="#162816" roughness={0.8} metalness={0.4} /></mesh>
+      <mesh position={[0, 0, 0.72]}><cylinderGeometry args={[0.13, 0.18, 0.28, 10]} /><meshBasicMaterial color="#ff2200" toneMapped={false} /></mesh>
       <pointLight position={[0, 0, 0.9]} intensity={1.4} distance={4} color="#ff3300" decay={2} />
     </group>
   );
@@ -115,43 +224,12 @@ function ScoutMesh() {
 function FighterMesh() {
   return (
     <group name="fighter">
-      {/* Fuselage */}
-      <mesh>
-        <boxGeometry args={[0.7, 0.5, 2.0]} />
-        <meshStandardMaterial color="#1a1a2e" roughness={0.6} metalness={0.6} emissive="#0a0a20" emissiveIntensity={0.15} />
-      </mesh>
-      {/* Upper fin */}
-      <mesh position={[0, 0.55, 0.3]} rotation={[0, 0, 0]}>
-        <boxGeometry args={[0.08, 0.8, 1.2]} />
-        <meshStandardMaterial color="#12122a" roughness={0.8} />
-      </mesh>
-      {/* Wide wings */}
-      <mesh position={[-1.3, 0, 0.3]} rotation={[0, -0.15, 0.15]}>
-        <boxGeometry args={[1.6, 0.09, 1.1]} />
-        <meshStandardMaterial color="#141428" roughness={0.75} metalness={0.5} />
-      </mesh>
-      <mesh position={[1.3, 0, 0.3]} rotation={[0, 0.15, -0.15]}>
-        <boxGeometry args={[1.6, 0.09, 1.1]} />
-        <meshStandardMaterial color="#141428" roughness={0.75} metalness={0.5} />
-      </mesh>
-      {/* Gun barrels */}
-      <mesh position={[-0.6, -0.22, -0.9]}>
-        <cylinderGeometry args={[0.05, 0.05, 0.9, 8]} />
-        <meshStandardMaterial color="#2a2a3a" roughness={0.5} metalness={0.8} />
-      </mesh>
-      <mesh position={[0.6, -0.22, -0.9]}>
-        <cylinderGeometry args={[0.05, 0.05, 0.9, 8]} />
-        <meshStandardMaterial color="#2a2a3a" roughness={0.5} metalness={0.8} />
-      </mesh>
-      {/* Twin engines */}
-      <mesh position={[-0.3, 0, 1.05]}>
-        <cylinderGeometry args={[0.14, 0.2, 0.35, 10]} />
-        <meshBasicMaterial color="#ff8800" toneMapped={false} />
-      </mesh>
-      <mesh position={[0.3, 0, 1.05]}>
-        <cylinderGeometry args={[0.14, 0.2, 0.35, 10]} />
-        <meshBasicMaterial color="#ff8800" toneMapped={false} />
-      </mesh>
+      <mesh><boxGeometry args={[0.7, 0.5, 2.0]} /><meshStandardMaterial color="#1a1a2e" roughness={0.6} metalness={0.6} emissive="#0a0a20" emissiveIntensity={0.2} /></mesh>
+      <mesh position={[0, 0.55, 0.3]}><boxGeometry args={[0.08, 0.8, 1.2]} /><meshStandardMaterial color="#12122a" roughness={0.8} /></mesh>
+      <mesh position={[-1.3, 0, 0.3]} rotation={[0, -0.15, 0.15]}><boxGeometry args={[1.6, 0.09, 1.1]} /><meshStandardMaterial color="#141428" roughness={0.75} metalness={0.5} /></mesh>
+      <mesh position={[1.3, 0, 0.3]} rotation={[0, 0.15, -0.15]}><boxGeometry args={[1.6, 0.09, 1.1]} /><meshStandardMaterial color="#141428" roughness={0.75} metalness={0.5} /></mesh>
+      <mesh position={[-0.3, 0, 1.05]}><cylinderGeometry args={[0.14, 0.2, 0.35, 10]} /><meshBasicMaterial color="#ff8800" toneMapped={false} /></mesh>
+      <mesh position={[0.3, 0, 1.05]}><cylinderGeometry args={[0.14, 0.2, 0.35, 10]} /><meshBasicMaterial color="#ff8800" toneMapped={false} /></mesh>
       <pointLight position={[0, 0, 1.3]} intensity={2} distance={5} color="#ff6600" decay={2} />
     </group>
   );
@@ -160,161 +238,35 @@ function FighterMesh() {
 function DreadnoughtMesh() {
   return (
     <group name="dreadnought">
-      {/* Main hull */}
-      <mesh>
-        <boxGeometry args={[2.0, 1.0, 4.5]} />
-        <meshStandardMaterial color="#12081e" roughness={0.55} metalness={0.7} emissive="#18003a" emissiveIntensity={0.2} />
-      </mesh>
-      {/* Superstructure */}
-      <mesh position={[0, 0.75, 0]}>
-        <boxGeometry args={[1.0, 0.6, 2.5]} />
-        <meshStandardMaterial color="#1a0a2e" roughness={0.6} metalness={0.6} />
-      </mesh>
-      {/* Side sponsons */}
-      <mesh position={[-1.6, 0, 0.3]}>
-        <boxGeometry args={[1.0, 0.6, 2.0]} />
-        <meshStandardMaterial color="#0e0618" roughness={0.7} metalness={0.6} />
-      </mesh>
-      <mesh position={[1.6, 0, 0.3]}>
-        <boxGeometry args={[1.0, 0.6, 2.0]} />
-        <meshStandardMaterial color="#0e0618" roughness={0.7} metalness={0.6} />
-      </mesh>
-      {/* Heavy gun */}
-      <mesh position={[0, 0.5, -2.4]}>
-        <cylinderGeometry args={[0.18, 0.22, 1.4, 10]} />
-        <meshStandardMaterial color="#1a0a1a" roughness={0.5} metalness={0.8} />
-      </mesh>
-      {/* Triple engines */}
+      <mesh><boxGeometry args={[2.0, 1.0, 4.5]} /><meshStandardMaterial color="#12081e" roughness={0.55} metalness={0.7} emissive="#18003a" emissiveIntensity={0.25} /></mesh>
+      <mesh position={[0, 0.75, 0]}><boxGeometry args={[1.0, 0.6, 2.5]} /><meshStandardMaterial color="#1a0a2e" roughness={0.6} metalness={0.6} /></mesh>
+      <mesh position={[-1.6, 0, 0.3]}><boxGeometry args={[1.0, 0.6, 2.0]} /><meshStandardMaterial color="#0e0618" roughness={0.7} metalness={0.6} /></mesh>
+      <mesh position={[1.6, 0, 0.3]}><boxGeometry args={[1.0, 0.6, 2.0]} /><meshStandardMaterial color="#0e0618" roughness={0.7} metalness={0.6} /></mesh>
+      <mesh position={[0, 0.5, -2.4]}><cylinderGeometry args={[0.18, 0.22, 1.4, 10]} /><meshStandardMaterial color="#1a0a1a" roughness={0.5} metalness={0.8} /></mesh>
       {[-0.7, 0, 0.7].map((x, i) => (
-        <group key={i}>
-          <mesh position={[x, 0, 2.3]}>
-            <cylinderGeometry args={[0.22, 0.30, 0.5, 12]} />
-            <meshBasicMaterial color="#4040ff" toneMapped={false} />
-          </mesh>
-        </group>
+        <mesh key={i} position={[x, 0, 2.3]}><cylinderGeometry args={[0.22, 0.30, 0.5, 12]} /><meshBasicMaterial color="#4040ff" toneMapped={false} /></mesh>
       ))}
       <pointLight position={[0, 0, 2.8]} intensity={3} distance={8} color="#4040ff" decay={2} />
     </group>
   );
 }
 
-// ─── HP bar geometry ──────────────────────────────────────────────────────────
-
 function HpBar({ onRef }: { onRef: (m: THREE.Mesh | null) => void }) {
   return (
     <group>
       <mesh renderOrder={10}>
-        <planeGeometry args={[2, 0.14]} />
+        <planeGeometry args={[2, 0.12]} />
         <meshBasicMaterial color="#222" transparent opacity={0.75} side={THREE.DoubleSide} depthWrite={false} />
       </mesh>
       <mesh ref={onRef} position={[0, 0, 0.01]} renderOrder={11}>
-        <planeGeometry args={[2, 0.14]} />
+        <planeGeometry args={[2, 0.12]} />
         <meshBasicMaterial color="#22ff44" transparent opacity={0.9} side={THREE.DoubleSide} depthWrite={false} />
       </mesh>
     </group>
   );
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function randomOnSphere(r: number): THREE.Vector3 {
-  const theta = Math.random() * Math.PI * 2;
-  const phi = Math.acos(2 * Math.random() - 1);
-  return new THREE.Vector3(
-    r * Math.sin(phi) * Math.cos(theta),
-    (Math.random() - 0.5) * r * 0.5,
-    r * Math.cos(phi),
-  );
-}
-
-function spawnWave(
-  wave: number,
-  w: WorldState,
-  eGroups: (THREE.Group | null)[],
-  hpFgMeshes: (THREE.Mesh | null)[],
-) {
-  const types = waveEnemies(wave);
-  let slot = 0;
-  for (const type of types) {
-    while (slot < MAX_ENEMIES && w.enemies[slot] !== null) slot++;
-    if (slot >= MAX_ENEMIES) break;
-
-    const cfg = CFG[type];
-    // Scouts spawn closer; heavies spawn a bit farther out
-    const extraDist = type === "scout" ? Math.random() * 10 : type === "fighter" ? 10 + Math.random() * 15 : 20 + Math.random() * 20;
-    const pos = randomOnSphere(SPAWN_RADIUS + extraDist);
-
-    w.enemies[slot] = {
-      type, pos, vel: new THREE.Vector3(),
-      hp: cfg.hp, maxHp: cfg.hp, radius: cfg.radius,
-      lastShot: Math.random() * cfg.shotInterval,
-      shotInterval: cfg.shotInterval + (Math.random() - 0.5) * 0.5,
-      dying: false, deathT: 0, strafeSeed: Math.random() * 100,
-    };
-
-    const g = eGroups[slot];
-    if (g) {
-      g.position.copy(pos);
-      g.visible = true;
-      g.scale.setScalar(1);
-      g.children.forEach((child) => {
-        if (child.name === "hpbar") {
-          child.visible = true;
-        } else {
-          child.visible = child.name === type;
-        }
-      });
-    }
-
-    // Reset HP bar
-    const fg = hpFgMeshes[slot];
-    if (fg) {
-      fg.scale.x = 1;
-      fg.position.x = 0;
-    }
-
-    w.aliveCount++;
-    slot++;
-  }
-  dispatchHud(w);
-}
-
-function fireEnemyLaser(
-  e: EnemySlot,
-  camPos: THREE.Vector3,
-  t: number,
-  w: WorldState,
-  eLaserMeshes: (THREE.Mesh | null)[],
-) {
-  const idx = w.enemyLasers.findIndex((l) => l === null);
-  if (idx === -1) return;
-
-  // Aim at player with accuracy falloff by distance
-  const dist = e.pos.distanceTo(camPos);
-  const spread = Math.min(0.4, 0.05 + dist * 0.003);
-  const dir = camPos.clone().sub(e.pos).normalize();
-  dir.x += (Math.random() - 0.5) * spread;
-  dir.y += (Math.random() - 0.5) * spread;
-  dir.z += (Math.random() - 0.5) * spread;
-  dir.normalize();
-
-  const laser: LaserSlot = {
-    pos: e.pos.clone().addScaledVector(dir, e.radius + 0.3),
-    vel: dir.clone().multiplyScalar(ENEMY_LASER_SPEED),
-    born: t,
-    dir: dir.clone(),
-  };
-  w.enemyLasers[idx] = laser;
-
-  const m = eLaserMeshes[idx];
-  if (m) {
-    m.position.copy(laser.pos);
-    m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
-    m.visible = true;
-  }
-}
-
-// ─── Main game component ──────────────────────────────────────────────────────
+// ─── Main component ───────────────────────────────────────────────────────────
 
 interface Props {
   isMobile?: boolean;
@@ -322,216 +274,306 @@ interface Props {
 }
 
 export default function SpaceGame({ isMobile = false, onRegisterShoot }: Props) {
-  const { camera } = useThree();
+  const { camera, gl } = useThree();
 
-  // Pools of refs for Three.js objects
-  const eGroupRefs  = useRef<(THREE.Group | null)[]>(new Array(MAX_ENEMIES).fill(null));
-  const hpFgRefs    = useRef<(THREE.Mesh  | null)[]>(new Array(MAX_ENEMIES).fill(null));
-  const pLaserRefs  = useRef<(THREE.Mesh  | null)[]>(new Array(MAX_PLAYER_LASERS).fill(null));
-  const eLaserRefs  = useRef<(THREE.Mesh  | null)[]>(new Array(MAX_ENEMY_LASERS).fill(null));
+  const eGroupRefs = useRef<(THREE.Group | null)[]>(new Array(MAX_ENEMIES).fill(null));
+  const hpFgRefs   = useRef<(THREE.Mesh  | null)[]>(new Array(MAX_ENEMIES).fill(null));
+  const pLaserRefs = useRef<(THREE.Mesh  | null)[]>(new Array(MAX_P_LASERS).fill(null));
+  const eLaserRefs = useRef<(THREE.Mesh  | null)[]>(new Array(MAX_E_LASERS).fill(null));
+  const shipRef    = useRef<THREE.Group  | null>(null);
 
-  // Mutable game state (not React state → no re-renders)
-  const w = useRef<WorldState>({
-    enemies:      new Array(MAX_ENEMIES).fill(null),
-    playerLasers: new Array(MAX_PLAYER_LASERS).fill(null),
-    enemyLasers:  new Array(MAX_ENEMY_LASERS).fill(null),
-    aliveCount: 0, score: 0, playerHp: 10,
-    wave: 1, waitingNextWave: false, waveTimer: 0,
-    gameOver: false, lastHudDispatch: 0,
+  const gs = useRef<GS>({
+    slots: new Array(MAX_ENEMIES).fill(null),
+    aliveCount: 0,
+    pLasers:  new Array(MAX_P_LASERS).fill(null),
+    eLasers:  new Array(MAX_E_LASERS).fill(null),
+    playerX: 0, playerY: 0,
+    playerHp: 10, score: 0, wave: 1,
+    waveState: "cleared", waveTimer: 0,
+    nextDiveT: 999,
+    formOffX: 0, marchDir: 1, stepOffset: 0,
+    gameOver: false, lastHud: 0,
   });
 
-  const clockRef   = useRef(0);
-  const spawnedRef = useRef(false);
+  const clockRef       = useRef(0);
+  const spawnedRef     = useRef(false);
+  const lastHoldRef    = useRef(0);
 
-  // Player shoot
-  const shoot = useCallback(() => {
-    if (w.current.gameOver) return;
-    const idx = w.current.playerLasers.findIndex((l) => l === null);
+  // ── Player fire ─────────────────────────────────────────────────────────────
+
+  const firePLaser = useCallback(() => {
+    const g = gs.current;
+    if (g.gameOver) return;
+    const idx = g.pLasers.findIndex((l) => l === null);
     if (idx === -1) return;
-
-    const dir = new THREE.Vector3();
-    camera.getWorldDirection(dir);
-
-    const laser: LaserSlot = {
-      pos: camera.position.clone().addScaledVector(dir, 1.0),
-      vel: dir.clone().multiplyScalar(PLAYER_LASER_SPEED),
+    const laser: LSlot = {
+      pos: new THREE.Vector3(g.playerX, g.playerY + 0.3, PLAYER_Z - 0.5),
+      vel: new THREE.Vector3(0, 0, -P_LASER_SPEED),
       born: clockRef.current,
-      dir: dir.clone(),
     };
-    w.current.playerLasers[idx] = laser;
-
+    g.pLasers[idx] = laser;
     const m = pLaserRefs.current[idx];
-    if (m) {
-      m.position.copy(laser.pos);
-      m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
-      m.visible = true;
-    }
-  }, [camera]);
+    if (m) { m.position.copy(laser.pos); m.rotation.set(Math.PI / 2, 0, 0); m.visible = true; }
+  }, []);
 
-  useEffect(() => { onRegisterShoot(shoot); }, [onRegisterShoot, shoot]);
+  useEffect(() => { onRegisterShoot(firePLaser); }, [onRegisterShoot, firePLaser]);
 
-  // Spacebar fires
+  // Spacebar
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.code === "Space" && !e.repeat) shoot(); };
+    const onKey = (e: KeyboardEvent) => { if (e.code === "Space" && !e.repeat) firePLaser(); };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [shoot]);
+  }, [firePLaser]);
+
+  // ── Pointer: ship movement + tap-to-fire ─────────────────────────────────────
+
+  const ptrRef = useRef({ down: false, moved: false, lastX: 0, lastY: 0, t0: 0 });
+
+  useEffect(() => {
+    const dom = gl.domElement;
+    const pr = ptrRef.current;
+
+    const onDown = (e: PointerEvent) => {
+      if (e.pointerType === "mouse" && e.button !== 0) return;
+      pr.down = true; pr.moved = false;
+      pr.lastX = e.clientX; pr.lastY = e.clientY; pr.t0 = performance.now();
+      try { dom.setPointerCapture(e.pointerId); } catch { /* */ }
+    };
+    const onMove = (e: PointerEvent) => {
+      if (!pr.down) return;
+      const dx = e.clientX - pr.lastX;
+      const dy = e.clientY - pr.lastY;
+      pr.lastX = e.clientX; pr.lastY = e.clientY;
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) pr.moved = true;
+      const g = gs.current;
+      g.playerX = THREE.MathUtils.clamp(g.playerX + dx * MOVE_SENS, -PLAYER_X_MAX, PLAYER_X_MAX);
+      g.playerY = THREE.MathUtils.clamp(g.playerY - dy * MOVE_SENS * 0.5, -PLAYER_Y_MAX, PLAYER_Y_MAX);
+    };
+    const onUp = (e: PointerEvent) => {
+      if (!pr.down) return;
+      pr.down = false;
+      if (!pr.moved && performance.now() - pr.t0 < 320) firePLaser();
+      try { dom.releasePointerCapture(e.pointerId); } catch { /* */ }
+    };
+
+    dom.addEventListener("pointerdown", onDown);
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+    dom.style.touchAction = "none";
+    return () => {
+      dom.removeEventListener("pointerdown", onDown);
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+    };
+  }, [gl, firePLaser]);
+
+  // ── Game loop ─────────────────────────────────────────────────────────────────
 
   useFrame((state, delta) => {
     const t = state.clock.getElapsedTime();
     clockRef.current = t;
-    const ws = w.current;
-    const camPos = camera.position;
+    const g = gs.current;
+    const persp = camera as THREE.PerspectiveCamera;
 
-    // ── First frame: spawn wave 1 ─────────────────────────────────────────
+    // Fixed Galaxiga camera
+    camera.position.lerp(CAM_POS, 0.08);
+    camera.lookAt(CAM_LOOK);
+    const fovTarget = isMobile ? 62 : 55;
+    persp.fov = THREE.MathUtils.lerp(persp.fov, fovTarget, 0.04);
+    persp.updateProjectionMatrix();
+
+    // Hold-to-fire (pointer held without drag)
+    if (ptrRef.current.down && !ptrRef.current.moved && t - lastHoldRef.current > 0.18) {
+      lastHoldRef.current = t;
+      firePLaser();
+    }
+
+    // Update player ship mesh position
+    if (shipRef.current) {
+      shipRef.current.position.x = THREE.MathUtils.lerp(shipRef.current.position.x, g.playerX, 0.22);
+      shipRef.current.position.y = THREE.MathUtils.lerp(shipRef.current.position.y, g.playerY, 0.22);
+    }
+
+    // ── Wave management ────────────────────────────────────────────────────────
     if (!spawnedRef.current) {
       spawnedRef.current = true;
-      spawnWave(1, ws, eGroupRefs.current, hpFgRefs.current);
+      g.waveState = "active";
+      spawnWave(g.wave, g, eGroupRefs.current, hpFgRefs.current);
       return;
     }
+    if (g.gameOver) return;
 
-    if (ws.gameOver) return;
-
-    // ── Wave management ───────────────────────────────────────────────────
-    if (ws.aliveCount === 0 && !ws.waitingNextWave) {
-      ws.waitingNextWave = true;
-      ws.waveTimer = 0;
-      dispatchHud(ws, true);
+    if (g.aliveCount === 0 && g.waveState === "active") {
+      g.waveState = "cleared"; g.waveTimer = 0; dispatchHud(g, true);
     }
-    if (ws.waitingNextWave) {
-      ws.waveTimer += delta;
-      if (ws.waveTimer >= WAVE_GAP) {
-        ws.waitingNextWave = false;
-        ws.wave++;
-        spawnWave(ws.wave, ws, eGroupRefs.current, hpFgRefs.current);
+    if (g.waveState === "cleared") {
+      g.waveTimer += delta;
+      if (g.waveTimer >= WAVE_GAP) {
+        g.wave++; g.waveState = "active";
+        spawnWave(g.wave, g, eGroupRefs.current, hpFgRefs.current);
       }
       return;
     }
 
-    // ── Enemy update ──────────────────────────────────────────────────────
-    for (let i = 0; i < MAX_ENEMIES; i++) {
-      const e = ws.enemies[i];
-      const g = eGroupRefs.current[i];
-      if (!e || !g) continue;
+    // ── Formation march ────────────────────────────────────────────────────────
+    g.formOffX += delta * MARCH_SPEED * g.marchDir;
+    if (Math.abs(g.formOffX) >= MARCH_LIMIT) {
+      g.marchDir *= -1;
+      g.stepOffset += STEP_DOWN;
+      if (g.stepOffset > MAX_STEPS * STEP_DOWN) { g.gameOver = true; dispatchHud(g); }
+    }
 
-      if (e.dying) {
+    // ── Dive scheduler ─────────────────────────────────────────────────────────
+    g.nextDiveT -= delta;
+    if (g.nextDiveT <= 0) {
+      const pool: number[] = [];
+      for (let i = 0; i < MAX_ENEMIES; i++) {
+        const e = g.slots[i];
+        if (e && e.state === "formation") pool.push(i);
+      }
+      if (pool.length > 0) {
+        const idx = pool[Math.floor(Math.random() * pool.length)];
+        const e = g.slots[idx]!;
+        e.state = "diving"; e.diveT = 0;
+        e.divePts = divePath(e.pos.clone(), g.playerX, g.playerY, g.wave);
+      }
+      const range = Math.max(DIVE_INT_MIN, DIVE_INT_MAX - (g.wave - 1) * 0.25);
+      g.nextDiveT = DIVE_INT_MIN + Math.random() * (range - DIVE_INT_MIN);
+    }
+
+    // ── Enemy update ───────────────────────────────────────────────────────────
+    for (let i = 0; i < MAX_ENEMIES; i++) {
+      const e = g.slots[i];
+      const grp = eGroupRefs.current[i];
+      if (!e || !grp) continue;
+
+      if (e.state === "dying") {
         e.deathT += delta;
-        const s = Math.max(0, 1 - e.deathT * 2.5);
-        g.scale.setScalar(s);
-        if (e.deathT > 0.45) {
-          ws.enemies[i] = null;
-          ws.aliveCount--;
-          g.visible = false;
-          g.scale.setScalar(1);
+        grp.scale.setScalar(Math.max(0, 1 - e.deathT * 3));
+        if (e.deathT > 0.38) {
+          g.slots[i] = null; g.aliveCount--;
+          grp.visible = false; grp.scale.setScalar(1);
         }
         continue;
       }
 
-      // Move toward player with strafing wiggle
-      const toPlayer = camPos.clone().sub(e.pos).normalize();
-      const cfg = CFG[e.type];
-      const targetVel = toPlayer.clone().multiplyScalar(cfg.speed);
-      // Strafing orbit around player
-      const orbitT = t * 0.6 + e.strafeSeed;
-      targetVel.x += Math.sin(orbitT)       * cfg.speed * 0.3;
-      targetVel.y += Math.cos(orbitT * 0.7) * cfg.speed * 0.2;
-      e.vel.lerp(targetVel, 0.05);
-      e.pos.addScaledVector(e.vel, delta);
+      const hpBar = grp.children.find((c) => c.name === "hpbar");
 
-      g.position.copy(e.pos);
-      g.lookAt(camPos);
+      if (e.state === "formation") {
+        const fp = slotPos(e.row, e.col, e.colCount, g.formOffX, g.stepOffset);
+        e.pos.copy(fp); grp.position.copy(fp);
+        // Face toward player (+Z direction since player is in front)
+        grp.lookAt(new THREE.Vector3(fp.x, fp.y, 10));
+        if (hpBar) hpBar.lookAt(camera.position);
 
-      // Rotate HP bar to face camera
-      const hpBarGroup = g.children.find((c) => c.name === "hpbar");
-      if (hpBarGroup) hpBarGroup.lookAt(camPos);
-
-      // Enemy shoot
-      if (t - e.lastShot > e.shotInterval) {
-        e.lastShot = t;
-        fireEnemyLaser(e, camPos, t, ws, eLaserRefs.current);
+        // Shoot
+        if (t - e.lastShot > e.shotInterval) {
+          e.lastShot = t;
+          fireELaser(e.pos, g, t, eLaserRefs.current);
+        }
       }
 
-      // Ram player
-      if (e.pos.distanceTo(camPos) < cfg.radius + 0.8) {
-        e.dying = true; e.deathT = 0;
-        ws.playerHp = Math.max(0, ws.playerHp - 2);
-        triggerImpact(e.pos.clone());
-        if (ws.playerHp <= 0) ws.gameOver = true;
-        dispatchHud(ws);
+      else if (e.state === "diving") {
+        e.diveT += delta / DIVE_DURATION;
+        if (e.diveT >= 1) {
+          e.state = "returning"; e.returnT = 0; e.returnStart = e.pos.clone();
+        } else {
+          if (e.divePts) e.pos.copy(bezier(...e.divePts, e.diveT));
+          grp.position.copy(e.pos);
+          // Face movement direction
+          if (e.divePts) {
+            const next = bezier(...e.divePts, Math.min(e.diveT + 0.04, 1));
+            grp.lookAt(next);
+          }
+          if (hpBar) hpBar.lookAt(camera.position);
+
+          // Shoot while diving (more aggressive)
+          if (t - e.lastShot > e.shotInterval * 0.5) {
+            e.lastShot = t;
+            fireELaser(e.pos, g, t, eLaserRefs.current);
+          }
+
+          // Ram player
+          const dx = e.pos.x - g.playerX, dy = e.pos.y - g.playerY, dz = e.pos.z - PLAYER_Z;
+          if (Math.sqrt(dx*dx + dy*dy + dz*dz) < CFG[e.type].radius + 0.8) {
+            e.state = "dying"; e.deathT = 0;
+            g.playerHp = Math.max(0, g.playerHp - 2);
+            triggerImpact(e.pos.clone());
+            if (g.playerHp <= 0) g.gameOver = true;
+            dispatchHud(g);
+          }
+        }
+      }
+
+      else if (e.state === "returning") {
+        e.returnT += delta / RETURN_DURATION;
+        if (e.returnT >= 1) {
+          e.state = "formation"; e.returnT = 0;
+        } else {
+          const target = slotPos(e.row, e.col, e.colCount, g.formOffX, g.stepOffset);
+          e.pos.lerpVectors(e.returnStart, target, e.returnT * e.returnT);
+          grp.position.copy(e.pos);
+          grp.lookAt(new THREE.Vector3(e.pos.x, e.pos.y, 10));
+          if (hpBar) hpBar.lookAt(camera.position);
+        }
       }
     }
 
-    // ── Player lasers ─────────────────────────────────────────────────────
-    for (let i = 0; i < MAX_PLAYER_LASERS; i++) {
-      const l = ws.playerLasers[i];
+    // ── Player lasers ──────────────────────────────────────────────────────────
+    for (let i = 0; i < MAX_P_LASERS; i++) {
+      const l = g.pLasers[i];
       const m = pLaserRefs.current[i];
       if (!l || !m) continue;
-
-      if (t - l.born > PLAYER_LASER_TTL) {
-        ws.playerLasers[i] = null;
-        m.visible = false;
-        continue;
+      if (t - l.born > P_LASER_TTL || l.pos.z < -40) {
+        g.pLasers[i] = null; m.visible = false; continue;
       }
-
       l.pos.addScaledVector(l.vel, delta);
       m.position.copy(l.pos);
 
-      // Hit enemy
-      let hit = false;
       for (let j = 0; j < MAX_ENEMIES; j++) {
-        const e = ws.enemies[j];
-        if (!e || e.dying) continue;
-        if (l.pos.distanceTo(e.pos) < CFG[e.type].radius) {
-          ws.playerLasers[i] = null;
-          m.visible = false;
+        const e = g.slots[j];
+        if (!e || e.state === "dying") continue;
+        const cfg = CFG[e.type];
+        const dx = l.pos.x - e.pos.x, dy = l.pos.y - e.pos.y, dz = l.pos.z - e.pos.z;
+        if (Math.sqrt(dx*dx + dy*dy + dz*dz) < cfg.radius) {
+          g.pLasers[i] = null; m.visible = false;
           triggerImpact(l.pos.clone());
           e.hp--;
-          if (e.hp <= 0) {
-            e.dying = true; e.deathT = 0;
-            ws.score += CFG[e.type].score;
-          }
-          // Update HP bar
+          const mult = e.state === "diving" ? 2 : 1;
+          if (e.hp <= 0) { e.state = "dying"; e.deathT = 0; g.score += cfg.score * mult; }
           const fg = hpFgRefs.current[j];
           const ratio = Math.max(0, e.hp / e.maxHp);
           if (fg) { fg.scale.x = ratio; fg.position.x = ratio - 1; }
-          hit = true;
           break;
         }
       }
-      if (hit) continue;
     }
 
-    // ── Enemy lasers ──────────────────────────────────────────────────────
-    for (let i = 0; i < MAX_ENEMY_LASERS; i++) {
-      const l = ws.enemyLasers[i];
+    // ── Enemy lasers ───────────────────────────────────────────────────────────
+    for (let i = 0; i < MAX_E_LASERS; i++) {
+      const l = g.eLasers[i];
       const m = eLaserRefs.current[i];
       if (!l || !m) continue;
-
-      if (t - l.born > ENEMY_LASER_TTL) {
-        ws.enemyLasers[i] = null;
-        m.visible = false;
-        continue;
+      if (t - l.born > E_LASER_TTL || l.pos.z > PLAYER_Z + 9) {
+        g.eLasers[i] = null; m.visible = false; continue;
       }
-
       l.pos.addScaledVector(l.vel, delta);
       m.position.copy(l.pos);
 
-      // Hit player
-      if (l.pos.distanceTo(camPos) < PLAYER_HIT_RADIUS) {
-        ws.enemyLasers[i] = null;
-        m.visible = false;
-        ws.playerHp = Math.max(0, ws.playerHp - 1);
+      const dx = l.pos.x - g.playerX, dy = l.pos.y - g.playerY, dz = l.pos.z - PLAYER_Z;
+      if (Math.sqrt(dx*dx + dy*dy + dz*dz) < PLAYER_HIT_R) {
+        g.eLasers[i] = null; m.visible = false;
+        g.playerHp = Math.max(0, g.playerHp - 1);
         triggerImpact(l.pos.clone());
-        if (ws.playerHp <= 0) ws.gameOver = true;
-        dispatchHud(ws);
+        if (g.playerHp <= 0) g.gameOver = true;
+        dispatchHud(g);
       }
     }
 
-    // ── Throttled HUD sync ────────────────────────────────────────────────
-    if (t - ws.lastHudDispatch > 0.4) {
-      ws.lastHudDispatch = t;
-      dispatchHud(ws);
-    }
+    // Throttled HUD
+    if (t - g.lastHud > 0.4) { g.lastHud = t; dispatchHud(g); }
   });
 
   return (
@@ -539,34 +581,68 @@ export default function SpaceGame({ isMobile = false, onRegisterShoot }: Props) 
       <CosmicEnvironment isMobile={isMobile} noSway />
       <ImpactBursts />
 
+      {/* Player ship — sits at z=PLAYER_Z, moves on XY */}
+      <group ref={(el) => { shipRef.current = el as THREE.Group | null; }} position={[0, 0, PLAYER_Z]}>
+        <PlayerShip />
+      </group>
+
       {/* Enemy pool */}
       {Array.from({ length: MAX_ENEMIES }, (_, i) => (
         <group key={`e${i}`} ref={(el) => { eGroupRefs.current[i] = el as THREE.Group | null; }} visible={false}>
           <ScoutMesh />
           <FighterMesh />
           <DreadnoughtMesh />
-          {/* HP bar – positioned above ship, billboard handled in useFrame */}
           <group name="hpbar" position={[0, CFG.scout.hpBarY, 0]}>
             <HpBar onRef={(el) => { hpFgRefs.current[i] = el; }} />
           </group>
         </group>
       ))}
 
-      {/* Player laser pool (cyan) */}
-      {Array.from({ length: MAX_PLAYER_LASERS }, (_, i) => (
+      {/* Player lasers — cyan */}
+      {Array.from({ length: MAX_P_LASERS }, (_, i) => (
         <mesh key={`pl${i}`} ref={(el) => { pLaserRefs.current[i] = el as THREE.Mesh | null; }} visible={false}>
-          <capsuleGeometry args={[0.045, 1.4, 4, 8]} />
+          <capsuleGeometry args={[0.04, 1.4, 4, 8]} />
           <meshBasicMaterial color="#00ffee" toneMapped={false} />
         </mesh>
       ))}
 
-      {/* Enemy laser pool (orange-red) */}
-      {Array.from({ length: MAX_ENEMY_LASERS }, (_, i) => (
+      {/* Enemy lasers — orange */}
+      {Array.from({ length: MAX_E_LASERS }, (_, i) => (
         <mesh key={`el${i}`} ref={(el) => { eLaserRefs.current[i] = el as THREE.Mesh | null; }} visible={false}>
-          <capsuleGeometry args={[0.065, 1.1, 4, 8]} />
-          <meshBasicMaterial color="#ff4400" toneMapped={false} />
+          <capsuleGeometry args={[0.055, 1.0, 4, 8]} />
+          <meshBasicMaterial color="#ff5500" toneMapped={false} />
         </mesh>
       ))}
     </group>
   );
+}
+
+// ── Enemy laser helper (extracted to avoid repetition) ─────────────────────────
+
+function fireELaser(
+  ePos: THREE.Vector3,
+  g: GS,
+  t: number,
+  eLaserMeshes: (THREE.Mesh | null)[],
+) {
+  const idx = g.eLasers.findIndex((l) => l === null);
+  if (idx === -1) return;
+  const spread = 0.08;
+  const toPlayer = new THREE.Vector3(
+    g.playerX - ePos.x + (Math.random() - 0.5) * spread,
+    g.playerY - ePos.y + (Math.random() - 0.5) * spread,
+    PLAYER_Z - ePos.z,
+  ).normalize();
+  const laser: LSlot = {
+    pos: ePos.clone().addScaledVector(toPlayer, 1.5),
+    vel: toPlayer.clone().multiplyScalar(E_LASER_SPEED),
+    born: t,
+  };
+  g.eLasers[idx] = laser;
+  const m = eLaserMeshes[idx];
+  if (m) {
+    m.position.copy(laser.pos);
+    m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), toPlayer);
+    m.visible = true;
+  }
 }
