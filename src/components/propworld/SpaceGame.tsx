@@ -58,9 +58,9 @@ const ROW_TYPES:  EnemyType[] = ["scout", "scout", "fighter", "dreadnought"];
 const ROW_COUNTS: number[]    = [8,       8,       6,         4            ];
 
 const CFG = {
-  scout:       { hp: 1, radius: 0.85, score: 100,  shotInt: 3.5,  hpBarY: 1.2 },
-  fighter:     { hp: 2, radius: 1.2,  score: 300,  shotInt: 2.2,  hpBarY: 1.8 },
-  dreadnought: { hp: 5, radius: 2.0,  score: 1000, shotInt: 1.8,  hpBarY: 2.8 },
+  scout:       { hp: 1, radius: 0.85, score: 100,  formShotInt: 999, diveShotInt: 2.8,  hpBarY: 1.2 },
+  fighter:     { hp: 2, radius: 1.2,  score: 300,  formShotInt: 999, diveShotInt: 2.2,  hpBarY: 1.8 },
+  dreadnought: { hp: 5, radius: 2.0,  score: 1000, formShotInt: 7.0, diveShotInt: 1.8,  hpBarY: 2.8 },
 } as const;
 
 const MAX_ENEMIES       = 32;
@@ -68,7 +68,7 @@ const MAX_P_LASERS      = 24;
 const MAX_E_LASERS      = 32;
 const P_LASER_SPEED     = 55;
 const P_LASER_TTL       = 1.8;
-const E_LASER_SPEED     = 18;
+const E_LASER_SPEED     = 11;
 const E_LASER_TTL       = 4.0;
 const PLAYER_Z          = 0.0;
 const PLAYER_X_MAX      = 9.5;
@@ -123,6 +123,7 @@ function divePath(
 }
 
 function dispatchHud(g: GS, waveComplete = false) {
+  if (g.gameOver) localStorage.setItem('pmg_score', String(g.score));
   window.dispatchEvent(new CustomEvent("game:hud", {
     detail: { score: g.score, hp: g.playerHp, wave: g.wave, gameOver: g.gameOver, waveComplete },
   }));
@@ -152,7 +153,7 @@ function spawnWave(
         deathT: 0, divePts: null, diveT: 0,
         returnT: 0, returnStart: pos.clone(),
         lastShot: Math.random() * cfg.shotInt,
-        shotInterval: cfg.shotInt * (1 - Math.min(wave - 1, 4) * 0.08),
+        shotInterval: cfg.diveShotInt * (1 - Math.min(wave - 1, 4) * 0.08),
       };
       const g3 = eGroups[slot];
       if (g3) {
@@ -288,7 +289,7 @@ export default function SpaceGame({ isMobile = false, onRegisterShoot }: Props) 
     pLasers:  new Array(MAX_P_LASERS).fill(null),
     eLasers:  new Array(MAX_E_LASERS).fill(null),
     playerX: 0, playerY: 0,
-    playerHp: 10, score: 0, wave: 1,
+    playerHp: 10, score: Number(localStorage.getItem('pmg_score') || 0), wave: 1,
     waveState: "cleared", waveTimer: 0,
     nextDiveT: 999,
     formOffX: 0, marchDir: 1, stepOffset: 0,
@@ -337,6 +338,8 @@ export default function SpaceGame({ isMobile = false, onRegisterShoot }: Props) 
       if (e.pointerType === "mouse" && e.button !== 0) return;
       pr.down = true; pr.moved = false;
       pr.lastX = e.clientX; pr.lastY = e.clientY; pr.t0 = performance.now();
+      firePLaser();
+      lastHoldRef.current = -999;
       try { dom.setPointerCapture(e.pointerId); } catch { /* */ }
     };
     const onMove = (e: PointerEvent) => {
@@ -356,16 +359,21 @@ export default function SpaceGame({ isMobile = false, onRegisterShoot }: Props) 
       try { dom.releasePointerCapture(e.pointerId); } catch { /* */ }
     };
 
+    const onCtx = (e: Event) => e.preventDefault();
     dom.addEventListener("pointerdown", onDown);
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
     window.addEventListener("pointercancel", onUp);
+    dom.addEventListener("contextmenu", onCtx);
     dom.style.touchAction = "none";
+    (dom.style as unknown as Record<string, string>).webkitUserSelect = "none";
+    dom.style.userSelect = "none";
     return () => {
       dom.removeEventListener("pointerdown", onDown);
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointercancel", onUp);
+      dom.removeEventListener("contextmenu", onCtx);
     };
   }, [gl, firePLaser]);
 
@@ -418,7 +426,8 @@ export default function SpaceGame({ isMobile = false, onRegisterShoot }: Props) 
     }
 
     // ── Formation march ────────────────────────────────────────────────────────
-    g.formOffX += delta * MARCH_SPEED * g.marchDir;
+    const effectiveMarchSpeed = Math.min(MARCH_SPEED * (1 + (g.wave - 1) * 0.1), MARCH_SPEED * 2.5);
+    g.formOffX += delta * effectiveMarchSpeed * g.marchDir;
     if (Math.abs(g.formOffX) >= MARCH_LIMIT) {
       g.marchDir *= -1;
       g.stepOffset += STEP_DOWN;
@@ -428,19 +437,23 @@ export default function SpaceGame({ isMobile = false, onRegisterShoot }: Props) 
     // ── Dive scheduler ─────────────────────────────────────────────────────────
     g.nextDiveT -= delta;
     if (g.nextDiveT <= 0) {
+      let divingCount = 0;
       const pool: number[] = [];
       for (let i = 0; i < MAX_ENEMIES; i++) {
         const e = g.slots[i];
-        if (e && e.state === "formation") pool.push(i);
+        if (!e) continue;
+        if (e.state === "formation") pool.push(i);
+        if (e.state === "diving" || e.state === "returning") divingCount++;
       }
-      if (pool.length > 0) {
+      const maxDivers = Math.min(1 + Math.floor((g.wave - 1) / 2), 3);
+      if (pool.length > 0 && divingCount < maxDivers) {
         const idx = pool[Math.floor(Math.random() * pool.length)];
         const e = g.slots[idx]!;
         e.state = "diving"; e.diveT = 0;
         e.divePts = divePath(e.pos.clone(), g.playerX, g.playerY, g.wave);
       }
-      const range = Math.max(DIVE_INT_MIN, DIVE_INT_MAX - (g.wave - 1) * 0.25);
-      g.nextDiveT = DIVE_INT_MIN + Math.random() * (range - DIVE_INT_MIN);
+      const baseInterval = Math.max(DIVE_INT_MIN, DIVE_INT_MAX - (g.wave - 1) * 0.2);
+      g.nextDiveT = DIVE_INT_MIN + Math.random() * (baseInterval - DIVE_INT_MIN);
     }
 
     // ── Enemy update ───────────────────────────────────────────────────────────
@@ -468,10 +481,11 @@ export default function SpaceGame({ isMobile = false, onRegisterShoot }: Props) 
         grp.lookAt(new THREE.Vector3(fp.x, fp.y, 10));
         if (hpBar) hpBar.lookAt(camera.position);
 
-        // Shoot
-        if (t - e.lastShot > e.shotInterval) {
-          e.lastShot = t;
-          fireELaser(e.pos, g, t, eLaserRefs.current);
+        // Formation shooting: dreadnoughts only, very rare
+        const formShotInt = CFG[e.type].formShotInt;
+        if (t - e.lastShot > formShotInt) {
+          e.lastShot = t + (Math.random() - 0.5) * formShotInt * 0.4;
+          fireELaser(e.pos, g, t, eLaserRefs.current, 4.5);
         }
       }
 
@@ -489,10 +503,11 @@ export default function SpaceGame({ isMobile = false, onRegisterShoot }: Props) 
           }
           if (hpBar) hpBar.lookAt(camera.position);
 
-          // Shoot while diving (more aggressive)
-          if (t - e.lastShot > e.shotInterval * 0.5) {
-            e.lastShot = t;
-            fireELaser(e.pos, g, t, eLaserRefs.current);
+          // Shoot while diving — accuracy increases with wave
+          const diveSpread = Math.max(0.8, 4.5 - (g.wave - 1) * 0.35);
+          if (t - e.lastShot > e.shotInterval) {
+            e.lastShot = t + (Math.random() - 0.5) * 0.6;
+            fireELaser(e.pos, g, t, eLaserRefs.current, diveSpread);
           }
 
           // Ram player
@@ -624,13 +639,13 @@ function fireELaser(
   g: GS,
   t: number,
   eLaserMeshes: (THREE.Mesh | null)[],
+  spread = 4.0,
 ) {
   const idx = g.eLasers.findIndex((l) => l === null);
   if (idx === -1) return;
-  const spread = 0.08;
   const toPlayer = new THREE.Vector3(
     g.playerX - ePos.x + (Math.random() - 0.5) * spread,
-    g.playerY - ePos.y + (Math.random() - 0.5) * spread,
+    g.playerY - ePos.y + (Math.random() - 0.5) * spread * 0.4,
     PLAYER_Z - ePos.z,
   ).normalize();
   const laser: LSlot = {

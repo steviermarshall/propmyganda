@@ -13,7 +13,7 @@ interface HudState {
 }
 
 function GameHUD() {
-  const [hud, setHud] = useState<HudState>({ score: 0, hp: 10, wave: 1, gameOver: false, waveComplete: false });
+  const [hud, setHud] = useState<HudState>({ score: Number(localStorage.getItem('pmg_score') || 0), hp: 10, wave: 1, gameOver: false, waveComplete: false });
   const wcTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -36,8 +36,8 @@ function GameHUD() {
 
   return (
     <div className="pointer-events-none absolute inset-0">
-      {/* Score — top right */}
-      <div className="absolute top-5 right-6 text-right">
+      {/* Score — top left */}
+      <div className="absolute top-5 left-6">
         <p className="text-[9px] tracking-[0.4em] uppercase text-cyan-300/60 mb-0.5">Score</p>
         <p className="text-2xl font-bold tabular-nums text-cyan-200 drop-shadow-[0_0_8px_rgba(0,255,238,0.6)]">
           {hud.score.toLocaleString()}
@@ -50,8 +50,8 @@ function GameHUD() {
         <p className="text-xl font-bold text-cyan-100">{hud.wave}</p>
       </div>
 
-      {/* HP — top left */}
-      <div className="absolute top-5 left-6">
+      {/* HP — top right */}
+      <div className="absolute top-5 right-6 flex flex-col items-end">
         <p className="text-[9px] tracking-[0.4em] uppercase text-cyan-300/60 mb-1">Hull</p>
         <div className="flex gap-1">
           {segments.map((alive, i) => (
@@ -118,7 +118,7 @@ const Propworld = () => {
   };
 
   return (
-    <main className="relative h-screen w-screen overflow-hidden bg-[#02060a] text-white">
+    <main className="relative h-screen w-screen overflow-hidden bg-[#02060a] text-white select-none" style={{ WebkitUserSelect: 'none', WebkitTouchCallout: 'none' } as React.CSSProperties}>
       {/* Full-screen 3D scene */}
       <div className="absolute inset-0">
         <Suspense fallback={<div className="w-full h-full bg-[#02060a]" />}>
