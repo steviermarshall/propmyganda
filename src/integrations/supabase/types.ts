@@ -117,6 +117,32 @@ export type Database = {
         Insert: Omit<Database["public"]["Tables"]["publications"]["Row"], "id" | "created_at" | "updated_at">;
         Update: Partial<Database["public"]["Tables"]["publications"]["Insert"]>;
       };
+      bookings: {
+        Row: {
+          id: string;
+          service: "security" | "dj" | "venue" | "promoter";
+          name: string;
+          email: string;
+          phone: string | null;
+          event_date: string | null;
+          location: string | null;
+          notes: string | null;
+          set_length: string | null;
+          genre: string | null;
+          equipment: string | null;
+          staff_count: string | null;
+          capacity: string | null;
+          event_type: string | null;
+          amenities: string | null;
+          budget_range: string | null;
+          marketing_goals: string | null;
+          indoor_outdoor: string | null;
+          expected_attendance: string | null;
+          created_at: string;
+        };
+        Insert: Omit<Database["public"]["Tables"]["bookings"]["Row"], "id" | "created_at">;
+        Update: Partial<Database["public"]["Tables"]["bookings"]["Insert"]>;
+      };
       distribution_applications: {
         Row: {
           id: string;
