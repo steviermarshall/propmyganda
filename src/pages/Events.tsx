@@ -197,16 +197,8 @@ export default function Events() {
       {/* Hero */}
       {!loading && hero && <HeroEvent ev={hero} />}
 
-      {/* No upcoming fallback header */}
-      {!loading && !hero && (
-        <div className="bg-primary text-primary-foreground pt-32 pb-16">
-          <div className="container-content">
-            <ScrollReveal>
-              <h1 className="text-5xl md:text-8xl text-heading">Events</h1>
-            </ScrollReveal>
-          </div>
-        </div>
-      )}
+      {/* Spacer for fixed navbar when no hero */}
+      {!loading && !hero && <div className="pt-24" />}
 
       {/* Upcoming events */}
       {!loading && upcoming.length > 0 && (
@@ -225,8 +217,8 @@ export default function Events() {
       )}
 
       {/* Gram + Book/Hire combined — fits one desktop viewport */}
-      <section className="py-12 lg:py-16">
-        <div className="container-content grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-12 items-start">
+      <section className="py-10 lg:py-12">
+        <div className="container-content grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-8 lg:gap-10 items-start">
           {/* From the Gram */}
           <div>
             <div className="flex items-center gap-4 mb-5">
@@ -243,16 +235,16 @@ export default function Events() {
             <InstagramFeed posts={igPosts} loading={igLoading} />
           </div>
 
-          {/* Book / Hire */}
-          <div className="bg-primary text-primary-foreground p-8 lg:p-10">
-            <p className="text-[9px] tracking-[0.5em] uppercase text-primary-foreground/40 mb-3">Services</p>
-            <h2 className="text-3xl lg:text-5xl font-black uppercase tracking-tight leading-[0.9] mb-4">
+          {/* Book / Hire — condensed sidebar */}
+          <aside className="bg-primary text-primary-foreground p-6 lg:sticky lg:top-24">
+            <p className="text-[9px] tracking-[0.5em] uppercase text-primary-foreground/40 mb-2">Services</p>
+            <h2 className="text-2xl lg:text-3xl font-black uppercase tracking-tight leading-[0.9] mb-3">
               Book or Hire
             </h2>
-            <p className="text-xs text-primary-foreground/60 leading-relaxed mb-6">
-              From the booth to the door — DJ sets, event security, venue connections, and full-scale promotion.
+            <p className="text-[11px] text-primary-foreground/60 leading-relaxed mb-5">
+              Booth to door — DJ, security, venue, promotion.
             </p>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-2">
               {[
                 { label: "DJ", desc: "Underground to main stage" },
                 { label: "Security", desc: "Crowd management" },
@@ -262,7 +254,7 @@ export default function Events() {
                 <button
                   key={label}
                   onClick={() => setBookingOpen(true)}
-                  className="group flex items-center justify-between border border-primary-foreground/20 px-4 py-3 hover:border-primary-foreground hover:bg-primary-foreground/5 transition-colors text-left"
+                  className="group flex items-center justify-between border border-primary-foreground/20 px-3 py-2.5 hover:border-primary-foreground hover:bg-primary-foreground/5 transition-colors text-left"
                 >
                   <div>
                     <p className="font-black uppercase tracking-tight text-xs">{label}</p>
@@ -272,7 +264,7 @@ export default function Events() {
                 </button>
               ))}
             </div>
-          </div>
+          </aside>
         </div>
 
         {/* Past flyer archive */}
