@@ -246,23 +246,15 @@ export default function Events() {
           </div>
         </section>
 
-        {/* BOTTOM RIGHT — split: Hire + Gram + Archive tabs */}
-        <section className="min-h-0 grid gap-3" style={{ gridTemplateRows: "auto 1fr" }}>
-          {/* Hire panel */}
-          <div className="overflow-hidden" style={{ background: GRAY, border: `1px solid ${GRAY_2}` }}>
-            <div className="flex items-center justify-between px-4 py-2.5 border-b" style={{ borderColor: GRAY_2 }}>
-              <span className="text-[10px] tracking-[0.4em] uppercase" style={{ color: YELLOW }}>Hire</span>
-              <span className="text-[9px] tracking-[0.3em] uppercase" style={{ color: GRAY_TXT }}>book us</span>
-            </div>
+        {/* BOTTOM RIGHT — Hire only */}
+        <section className="min-h-0 flex flex-col overflow-hidden" style={{ background: GRAY, border: `1px solid ${GRAY_2}` }}>
+          <div className="shrink-0 flex items-center justify-between px-4 py-2.5 border-b" style={{ borderColor: GRAY_2 }}>
+            <span className="text-[10px] tracking-[0.4em] uppercase" style={{ color: YELLOW }}>Hire</span>
+            <span className="text-[9px] tracking-[0.3em] uppercase" style={{ color: GRAY_TXT }}>book us</span>
+          </div>
+          <div className="flex-1 min-h-0 overflow-y-auto">
             <ServiceList onOpen={() => setBookingOpen(true)} />
           </div>
-
-          {/* Gram + Archive side by side */}
-          <BottomTabs
-            igPosts={igPosts} igLoading={igLoading}
-            past={past} loading={loading}
-            onOpenFlyer={setOpenFlyer}
-          />
         </section>
       </main>
 
