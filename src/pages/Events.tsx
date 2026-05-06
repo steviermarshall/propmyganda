@@ -216,10 +216,10 @@ export default function Events() {
         </section>
       )}
 
-      {/* Gram + Book/Hire combined — fits one desktop viewport */}
+      {/* Gram + Book/Hire — IG grid (2 rows × 3) sits beside sticky sidebar */}
       <section className="py-10 lg:py-12">
-        <div className="container-content grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-8 lg:gap-10 items-start">
-          {/* From the Gram */}
+        <div className="container-content grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-8 lg:gap-10 items-start">
+          {/* From the Gram — 2 rows of 3 full embeds */}
           <div>
             <div className="flex items-center gap-4 mb-5">
               <p className="text-[9px] tracking-[0.4em] uppercase text-muted-foreground">From the Gram</p>
@@ -232,10 +232,15 @@ export default function Events() {
                 @nonstopnewyork ↗
               </a>
             </div>
-            <InstagramFeed posts={igPosts} loading={igLoading} />
+            <InstagramFeed
+              posts={igPosts}
+              loading={igLoading}
+              limit={6}
+              cols="grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+            />
           </div>
 
-          {/* Book / Hire — condensed sidebar */}
+          {/* Book / Hire — vertical sidebar aligned with IG rows */}
           <aside className="bg-primary text-primary-foreground p-6 lg:sticky lg:top-24">
             <p className="text-[9px] tracking-[0.5em] uppercase text-primary-foreground/40 mb-2">Services</p>
             <h2 className="text-2xl lg:text-3xl font-black uppercase tracking-tight leading-[0.9] mb-3">
