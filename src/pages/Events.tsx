@@ -4,7 +4,7 @@ import type { Database } from "@/integrations/supabase/types";
 import BookingSheet from "@/components/BookingSheet";
 
 type Event = Database["public"]["Tables"]["events"]["Row"];
-type IgPost = Database["public"]["Tables"]["instagram_posts"]["Row"];
+
 
 const YELLOW = "hsl(58 100% 50%)";
 const BLACK = "hsl(0 0% 0%)";
@@ -22,27 +22,21 @@ function fmt(dateStr: string) {
   };
 }
 
-function getEmbedUrl(url: string) {
-  const [base, query] = url.split("?");
-  const clean = base.replace(/\/$/, "");
-  return query ? `${clean}/embed/captioned/?${query}` : `${clean}/embed/captioned/`;
-}
-
 // ── Flyer modal ───────────────────────────────────────────────────────────────
 function FlyerModal({ ev, onClose }: { ev: Event | null; onClose: () => void }) {
   if (!ev) return null;
   const d = fmt(ev.event_date);
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-10 backdrop-blur-md animate-fade-up"
-      style={{ background: "hsl(0 0% 0% / 0.85)" }} onClick={onClose}>
-      <div className="relative max-w-3xl w-full grid grid-cols-1 md:grid-cols-[1.1fr_1fr] gap-3 max-h-[90vh]"
+    <div className="fixed inset-0 z-50 flex items-stretch justify-center p-2 sm:p-4 md:p-6 backdrop-blur-md animate-fade-up"
+      style={{ background: "hsl(0 0% 0% / 0.9)" }} onClick={onClose}>
+      <div className="relative w-full h-full grid grid-cols-1 md:grid-cols-[1.4fr_1fr] gap-2 md:gap-3"
         onClick={e => e.stopPropagation()}>
         {ev.flyer_url && (
-          <div className="overflow-hidden max-h-[90vh]" style={{ background: GRAY, border: `1px solid ${YELLOW}` }}>
-            <img src={ev.flyer_url} alt={ev.title} className="w-full h-full object-contain max-h-[90vh]" />
+          <div className="overflow-hidden min-h-0" style={{ background: GRAY, border: `1px solid ${YELLOW}` }}>
+            <img src={ev.flyer_url} alt={ev.title} className="w-full h-full object-contain" />
           </div>
         )}
-        <div className="p-6 overflow-y-auto relative" style={{ background: GRAY, color: "white", border: `1px solid ${YELLOW}` }}>
+        <div className="p-5 md:p-7 overflow-y-auto relative min-h-0" style={{ background: GRAY, color: "white", border: `1px solid ${YELLOW}` }}>
           <button onClick={onClose}
             className="absolute top-3 right-3 z-10 w-8 h-8 flex items-center justify-center text-sm hover:text-background transition-colors"
             style={{ background: "transparent", color: YELLOW, border: `1px solid ${YELLOW}` }}>✕</button>
@@ -92,18 +86,13 @@ function ServiceList({ onOpen }: { onOpen: () => void }) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function Events() {
   const [events, setEvents] = useState<Event[]>([]);
-  const [igPosts, setIgPosts] = useState<IgPost[]>([]);
   const [loading, setLoading] = useState(true);
-  const [igLoading, setIgLoading] = useState(true);
   const [bookingOpen, setBookingOpen] = useState(false);
   const [openFlyer, setOpenFlyer] = useState<Event | null>(null);
 
   useEffect(() => {
     supabase.from("events").select("*").neq("status", "cancelled").order("event_date", { ascending: false })
       .then(({ data }) => { setEvents((data ?? []) as Event[]); setLoading(false); });
-    supabase.from("instagram_posts").select("*").eq("active", true)
-      .order("display_order", { ascending: true }).order("created_at", { ascending: false })
-      .then(({ data }) => { setIgPosts((data ?? []) as IgPost[]); setIgLoading(false); });
   }, []);
 
   const upcoming = events.filter(e => e.status === "upcoming")
@@ -246,113 +235,20 @@ export default function Events() {
           </div>
         </section>
 
-        {/* BOTTOM RIGHT — split: Hire + Gram + Archive tabs */}
-        <section className="min-h-0 grid gap-3" style={{ gridTemplateRows: "auto 1fr" }}>
-          {/* Hire panel */}
-          <div className="overflow-hidden" style={{ background: GRAY, border: `1px solid ${GRAY_2}` }}>
-            <div className="flex items-center justify-between px-4 py-2.5 border-b" style={{ borderColor: GRAY_2 }}>
-              <span className="text-[10px] tracking-[0.4em] uppercase" style={{ color: YELLOW }}>Hire</span>
-              <span className="text-[9px] tracking-[0.3em] uppercase" style={{ color: GRAY_TXT }}>book us</span>
-            </div>
+        {/* BOTTOM RIGHT — Hire only */}
+        <section className="min-h-0 flex flex-col overflow-hidden" style={{ background: GRAY, border: `1px solid ${GRAY_2}` }}>
+          <div className="shrink-0 flex items-center justify-between px-4 py-2.5 border-b" style={{ borderColor: GRAY_2 }}>
+            <span className="text-[10px] tracking-[0.4em] uppercase" style={{ color: YELLOW }}>Hire</span>
+            <span className="text-[9px] tracking-[0.3em] uppercase" style={{ color: GRAY_TXT }}>book us</span>
+          </div>
+          <div className="flex-1 min-h-0 overflow-y-auto">
             <ServiceList onOpen={() => setBookingOpen(true)} />
           </div>
-
-          {/* Gram + Archive side by side */}
-          <BottomTabs
-            igPosts={igPosts} igLoading={igLoading}
-            past={past} loading={loading}
-            onOpenFlyer={setOpenFlyer}
-          />
         </section>
       </main>
 
       <BookingSheet open={bookingOpen} onOpenChange={setBookingOpen} />
       <FlyerModal ev={openFlyer} onClose={() => setOpenFlyer(null)} />
-    </div>
-  );
-}
-
-// ── Bottom tabs (Gram / Archive) ─────────────────────────────────────────────
-function BottomTabs({
-  igPosts, igLoading, past, loading, onOpenFlyer,
-}: {
-  igPosts: IgPost[]; igLoading: boolean;
-  past: Event[]; loading: boolean;
-  onOpenFlyer: (ev: Event) => void;
-}) {
-  const [tab, setTab] = useState<"gram" | "archive">("gram");
-  return (
-    <div className="min-h-0 flex flex-col overflow-hidden" style={{ background: GRAY, border: `1px solid ${GRAY_2}` }}>
-      <div className="shrink-0 flex items-center border-b" style={{ borderColor: GRAY_2 }}>
-        {(["gram", "archive"] as const).map((t) => (
-          <button key={t} onClick={() => setTab(t)}
-            className="flex-1 px-4 py-2.5 text-[10px] tracking-[0.4em] uppercase transition-colors"
-            style={{
-              background: tab === t ? YELLOW : "transparent",
-              color: tab === t ? BLACK : GRAY_TXT,
-              borderRight: t === "gram" ? `1px solid ${GRAY_2}` : "none",
-            }}>
-            {t === "gram" ? "// Gram" : "// Archive"}
-          </button>
-        ))}
-      </div>
-
-      <div className="flex-1 min-h-0 overflow-y-auto p-2">
-        {tab === "gram" ? (
-          igLoading ? (
-            <div className="grid grid-cols-3 gap-2">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="aspect-square animate-pulse" style={{ background: GRAY_2 }} />
-              ))}
-            </div>
-          ) : igPosts.length === 0 ? (
-            <div className="h-full flex items-center justify-center">
-              <p className="text-[10px] tracking-[0.4em] uppercase" style={{ color: GRAY_TXT }}>// no posts</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-3 gap-2">
-              {igPosts.slice(0, 6).map((p) => (
-                <a key={p.id} href={p.instagram_url} target="_blank" rel="noopener noreferrer"
-                  className="relative aspect-square overflow-hidden block group"
-                  style={{ background: BLACK, border: `1px solid ${GRAY_2}` }}>
-                  <iframe src={getEmbedUrl(p.instagram_url)}
-                    className="absolute inset-0 w-full h-full border-0 pointer-events-none"
-                    scrolling="no" loading="lazy" title="Instagram post" />
-                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-                    style={{ background: "hsl(0 0% 0% / 0.6)" }}>
-                    <span className="text-[9px] tracking-[0.4em] uppercase" style={{ color: YELLOW }}>OPEN ↗</span>
-                  </div>
-                </a>
-              ))}
-            </div>
-          )
-        ) : loading ? (
-          <div className="space-y-1">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="h-10 animate-pulse" style={{ background: GRAY_2 }} />
-            ))}
-          </div>
-        ) : past.length === 0 ? (
-          <div className="h-full flex items-center justify-center">
-            <p className="text-[10px] tracking-[0.4em] uppercase" style={{ color: GRAY_TXT }}>// no archive</p>
-          </div>
-        ) : (
-          past.map((ev, i) => {
-            const d = fmt(ev.event_date);
-            return (
-              <button key={ev.id} onClick={() => onOpenFlyer(ev)}
-                className="group w-full flex items-center gap-3 px-2 py-2 text-left transition-colors hover:bg-foreground"
-                style={{ borderTop: i === 0 ? "none" : `1px solid ${GRAY_2}` }}>
-                <span className="text-[9px] tracking-[0.3em] uppercase shrink-0 w-16 group-hover:text-background" style={{ color: YELLOW }}>
-                  {d.month} {d.year}
-                </span>
-                <span className="font-display text-xs uppercase leading-tight line-clamp-1 flex-1 group-hover:text-background">{ev.title}</span>
-                <span className="text-[10px] group-hover:translate-x-1 transition-transform group-hover:text-background" style={{ color: YELLOW }}>↗</span>
-              </button>
-            );
-          })
-        )}
-      </div>
     </div>
   );
 }
