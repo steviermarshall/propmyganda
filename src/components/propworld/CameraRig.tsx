@@ -80,7 +80,7 @@ export default function CameraRig({ mode, hovered, hoverSide, isMobile, onTransi
     let pinchStartDolly = 0;
     let isPinching = false;
 
-    const maxBack = mode === "game" ? -20 : -4;
+    const maxBack = (mode as string) === "game" ? -20 : -4;
     const dollyClamp = (v: number) => THREE.MathUtils.clamp(v, maxBack, 3.5);
 
     const onDown = (e: PointerEvent) => {
@@ -113,7 +113,7 @@ export default function CameraRig({ mode, hovered, hoverSide, isMobile, onTransi
       pitchVelRef.current = 0;
       userAngleVelRef.current = 0;
       userInteractRef.current = performance.now();
-      if (mode === "game") {
+      if ((mode as string) === "game") {
         isHoldingRef.current = true;
         lastAutoShootRef.current = 0; // fire on next frame immediately
       }
@@ -150,13 +150,13 @@ export default function CameraRig({ mode, hovered, hoverSide, isMobile, onTransi
       const totalDy = e.clientY - pressYRef.current;
       if (Math.hypot(totalDx, totalDy) > 6) movedRef.current = true;
 
-      if (mode === "theater" || mode === "game") {
+      if (mode === "theater" || (mode as string) === "game") {
         const baseSens = (Math.PI / Math.max(window.innerWidth, 1));
-        const sens = baseSens * (mode === "game"
+        const sens = baseSens * ((mode as string) === "game"
           ? (isMobile ? 1.8 : 1.5)
           : (isMobile ? 1.0 : 0.7));
-        const pitchMult = mode === "game" ? 0.85 : 0.55;
-        const pitchClamp = mode === "game" ? 1.3 : 0.45;
+        const pitchMult = (mode as string) === "game" ? 0.85 : 0.55;
+        const pitchClamp = (mode as string) === "game" ? 1.3 : 0.45;
         theaterYawTargetRef.current -= dx * sens;
         theaterPitchTargetRef.current = THREE.MathUtils.clamp(
           theaterPitchTargetRef.current - dy * sens * pitchMult,
@@ -197,7 +197,7 @@ export default function CameraRig({ mode, hovered, hoverSide, isMobile, onTransi
         const dir = new THREE.Vector3();
         camera.getWorldDirection(dir);
         kickables.kickFromCamera(camera.position.clone(), dir);
-      } else if (isTap && mode === "game") {
+      } else if (isTap && (mode as string) === "game") {
         onShoot?.();
       }
 
@@ -338,7 +338,7 @@ export default function CameraRig({ mode, hovered, hoverSide, isMobile, onTransi
     }
 
     // Game mode: SpaceGame owns camera and input — CameraRig does nothing here
-    if (mode === "game") return;
+    if ((mode as string) === "game") return;
 
     // theater — smoothed look-around with momentum
     const idleMs = performance.now() - userInteractRef.current;
@@ -346,7 +346,7 @@ export default function CameraRig({ mode, hovered, hoverSide, isMobile, onTransi
     // Apply fling momentum after release (decay quickly)
     if (!draggingRef.current) {
       if (Math.abs(yawVelRef.current) > 0.001 || Math.abs(pitchVelRef.current) > 0.001) {
-        const pitchClamp = mode === "game" ? 1.3 : 0.45;
+        const pitchClamp = (mode as string) === "game" ? 1.3 : 0.45;
         theaterYawTargetRef.current += yawVelRef.current * delta;
         theaterPitchTargetRef.current = THREE.MathUtils.clamp(
           theaterPitchTargetRef.current + pitchVelRef.current * delta,
@@ -361,12 +361,12 @@ export default function CameraRig({ mode, hovered, hoverSide, isMobile, onTransi
     }
 
     // Gentle auto-rotate only in theater after long idle — never in game mode
-    if (mode !== "game" && idleMs > 5000 && !draggingRef.current) {
+    if ((mode as string) !== "game" && idleMs > 5000 && !draggingRef.current) {
       theaterYawTargetRef.current += delta * 0.06;
     }
 
     // Critically-damped lerp toward target — game mode is snappier
-    const smooth = 1 - Math.exp(-delta * (mode === "game" ? 22 : 12));
+    const smooth = 1 - Math.exp(-delta * ((mode as string) === "game" ? 22 : 12));
     theaterYawRef.current = THREE.MathUtils.lerp(
       theaterYawRef.current,
       theaterYawTargetRef.current,
@@ -396,12 +396,12 @@ export default function CameraRig({ mode, hovered, hoverSide, isMobile, onTransi
       Math.cos(yawNow) * dolly
     );
     // Keep inside the room (walls at ±6; leave margin). Game mode has no walls so clamp is wider.
-    const wallClamp = mode === "game" ? 20 : 4.8;
+    const wallClamp = (mode as string) === "game" ? 20 : 4.8;
     targetPos.x = THREE.MathUtils.clamp(targetPos.x, -wallClamp, wallClamp);
     targetPos.z = THREE.MathUtils.clamp(targetPos.z, -wallClamp, wallClamp);
     camera.position.lerp(targetPos, 0.12);
 
-    const targetFov = mode === "game" ? (isMobile ? 95 : 85) : (isMobile ? 75 : 70);
+    const targetFov = (mode as string) === "game" ? (isMobile ? 95 : 85) : (isMobile ? 75 : 70);
     persp.fov = THREE.MathUtils.lerp(persp.fov, targetFov, 0.05);
     persp.updateProjectionMatrix();
 

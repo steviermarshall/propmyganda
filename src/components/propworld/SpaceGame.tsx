@@ -196,8 +196,8 @@ function PlayerShip() {
         <meshStandardMaterial color="#122a44" roughness={0.5} metalness={0.7} />
       </mesh>
       {/* Gun */}
-      <mesh position={[0, 0, -0.9]}>
-        <cylinderGeometry args={[0.055, 0.075, 0.55, 8]} rotation={[Math.PI / 2, 0, 0]} />
+      <mesh position={[0, 0, -0.9]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.055, 0.075, 0.55, 8]} />
         <meshStandardMaterial color="#88ccff" roughness={0.2} metalness={1} emissive="#44aaff" emissiveIntensity={0.8} />
       </mesh>
       {/* Engine */}
