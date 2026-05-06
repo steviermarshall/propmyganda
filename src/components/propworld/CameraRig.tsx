@@ -22,7 +22,8 @@ interface Props {
  *  - Drag (mouse or touch) to rotate around the tree manually.
  *  - Releases back to auto-orbit after a short idle.
  */
-export default function CameraRig({ mode, hovered, hoverSide, isMobile, onTransitionComplete, onShoot }: Props) {
+export default function CameraRig({ mode: modeProp, hovered, hoverSide, isMobile, onTransitionComplete, onShoot }: Props) {
+  const mode: string = modeProp;
   const { camera, gl } = useThree();
   const startTimeRef = useRef<number | null>(null);
   const startPosRef = useRef(new THREE.Vector3());
@@ -113,7 +114,7 @@ export default function CameraRig({ mode, hovered, hoverSide, isMobile, onTransi
       pitchVelRef.current = 0;
       userAngleVelRef.current = 0;
       userInteractRef.current = performance.now();
-      if (mode === "game") {
+      if ((mode as string) === "game") {
         isHoldingRef.current = true;
         lastAutoShootRef.current = 0; // fire on next frame immediately
       }
