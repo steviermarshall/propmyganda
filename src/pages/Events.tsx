@@ -4,8 +4,10 @@ import type { Database } from "@/integrations/supabase/types";
 import Marquee from "@/components/Marquee";
 import ScrollReveal from "@/components/webgl/ScrollReveal";
 import BookingSheet from "@/components/BookingSheet";
+import InstagramFeed from "@/components/InstagramFeed";
 
 type Event = Database["public"]["Tables"]["events"]["Row"];
+type IgPost = Database["public"]["Tables"]["instagram_posts"]["Row"];
 
 function fmt(dateStr: string) {
   const d = new Date(dateStr);
@@ -154,7 +156,9 @@ function PastCard({ ev }: { ev: Event }) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function Events() {
   const [events, setEvents] = useState<Event[]>([]);
+  const [igPosts, setIgPosts] = useState<IgPost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [igLoading, setIgLoading] = useState(true);
   const [bookingOpen, setBookingOpen] = useState(false);
   const [tab, setTab] = useState<"upcoming" | "past">("upcoming");
 
@@ -167,6 +171,17 @@ export default function Events() {
       .then(({ data }) => {
         setEvents((data ?? []) as Event[]);
         setLoading(false);
+      });
+
+    supabase
+      .from("instagram_posts")
+      .select("*")
+      .eq("active", true)
+      .order("display_order", { ascending: true })
+      .order("created_at", { ascending: false })
+      .then(({ data }) => {
+        setIgPosts((data ?? []) as IgPost[]);
+        setIgLoading(false);
       });
   }, []);
 
@@ -234,16 +249,32 @@ export default function Events() {
             </>
           )}
 
-          {/* Past */}
-          {!loading && tab === "past" && (
+          {/* Past — Instagram feed first, flyer cards as fallback */}
+          {tab === "past" && (
             <>
-              {past.length > 0 ? (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {past.map(ev => <PastCard key={ev.id} ev={ev} />)}
+              {/* Instagram posts */}
+              <div className="mb-12">
+                <div className="flex items-center gap-4 mb-8">
+                  <p className="text-[9px] tracking-[0.4em] uppercase text-muted-foreground">From the Gram</p>
+                  <a
+                    href="https://www.instagram.com/nonstopnewyork"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[9px] tracking-[0.3em] uppercase text-muted-foreground/50 hover:text-foreground transition-colors"
+                  >
+                    @nonstopnewyork ↗
+                  </a>
                 </div>
-              ) : (
-                <div className="border border-border p-16 text-center max-w-lg">
-                  <p className="text-muted-foreground text-sm uppercase tracking-widest">No past events</p>
+                <InstagramFeed posts={igPosts} loading={igLoading} />
+              </div>
+
+              {/* Supabase flyer cards (if any) */}
+              {!loading && past.length > 0 && (
+                <div className="mt-12">
+                  <p className="text-[9px] tracking-[0.4em] uppercase text-muted-foreground mb-6">Archive</p>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {past.map(ev => <PastCard key={ev.id} ev={ev} />)}
+                  </div>
                 </div>
               )}
             </>

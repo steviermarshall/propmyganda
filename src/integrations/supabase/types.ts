@@ -117,6 +117,18 @@ export type Database = {
         Insert: Omit<Database["public"]["Tables"]["publications"]["Row"], "id" | "created_at" | "updated_at">;
         Update: Partial<Database["public"]["Tables"]["publications"]["Insert"]>;
       };
+      instagram_posts: {
+        Row: {
+          id: string;
+          instagram_url: string;
+          label: string | null;
+          display_order: number;
+          active: boolean;
+          created_at: string;
+        };
+        Insert: Omit<Database["public"]["Tables"]["instagram_posts"]["Row"], "id" | "created_at">;
+        Update: Partial<Database["public"]["Tables"]["instagram_posts"]["Insert"]>;
+      };
       bookings: {
         Row: {
           id: string;
