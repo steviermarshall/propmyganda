@@ -10,8 +10,9 @@ interface Props {
 }
 
 function getEmbedUrl(url: string) {
-  const clean = url.split("?")[0].replace(/\/$/, "");
-  return `${clean}/embed/captioned/`;
+  const [base, query] = url.split("?");
+  const clean = base.replace(/\/$/, "");
+  return query ? `${clean}/embed/captioned/?${query}` : `${clean}/embed/captioned/`;
 }
 
 function InstagramPost({ url }: { url: string }) {
