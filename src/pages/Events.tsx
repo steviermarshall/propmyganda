@@ -194,11 +194,14 @@ export default function Events() {
 
   return (
     <div className="bg-background">
+      {/* Page header */}
+      <div className="bg-primary text-primary-foreground pt-32 pb-12 px-8 md:px-16">
+        <p className="text-[9px] tracking-[0.5em] uppercase text-primary-foreground/40 mb-3">Nonstop NY</p>
+        <h1 className="text-5xl md:text-7xl font-black uppercase tracking-tight leading-[0.9]">Events</h1>
+      </div>
+
       {/* Hero */}
       {!loading && hero && <HeroEvent ev={hero} />}
-
-      {/* Spacer for fixed navbar when no hero */}
-      {!loading && !hero && <div className="pt-24" />}
 
       {/* Upcoming events */}
       {!loading && upcoming.length > 0 && (
