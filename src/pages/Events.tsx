@@ -92,18 +92,13 @@ function ServiceList({ onOpen }: { onOpen: () => void }) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function Events() {
   const [events, setEvents] = useState<Event[]>([]);
-  const [igPosts, setIgPosts] = useState<IgPost[]>([]);
   const [loading, setLoading] = useState(true);
-  const [igLoading, setIgLoading] = useState(true);
   const [bookingOpen, setBookingOpen] = useState(false);
   const [openFlyer, setOpenFlyer] = useState<Event | null>(null);
 
   useEffect(() => {
     supabase.from("events").select("*").neq("status", "cancelled").order("event_date", { ascending: false })
       .then(({ data }) => { setEvents((data ?? []) as Event[]); setLoading(false); });
-    supabase.from("instagram_posts").select("*").eq("active", true)
-      .order("display_order", { ascending: true }).order("created_at", { ascending: false })
-      .then(({ data }) => { setIgPosts((data ?? []) as IgPost[]); setIgLoading(false); });
   }, []);
 
   const upcoming = events.filter(e => e.status === "upcoming")
