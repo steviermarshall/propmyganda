@@ -7,6 +7,10 @@ interface Post {
 interface Props {
   posts: Post[];
   loading?: boolean;
+  /** Max number of posts to render (default: all). */
+  limit?: number;
+  /** Tailwind grid-cols class — defaults to 3 columns on desktop. */
+  cols?: string;
 }
 
 function getCleanUrl(url: string) {
@@ -14,21 +18,28 @@ function getCleanUrl(url: string) {
 }
 
 function getEmbedUrl(url: string) {
-  return `${getCleanUrl(url)}/embed/`;
+  return `${getCleanUrl(url)}/embed/captioned/`;
 }
 
-export default function InstagramFeed({ posts, loading }: Props) {
+export default function InstagramFeed({
+  posts,
+  loading,
+  limit,
+  cols = "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3",
+}: Props) {
+  const visible = limit ? posts.slice(0, limit) : posts;
+
   if (loading) {
     return (
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="aspect-square bg-secondary animate-pulse" />
+      <div className={`grid ${cols} gap-4`}>
+        {Array.from({ length: limit ?? 6 }).map((_, i) => (
+          <div key={i} className="bg-secondary animate-pulse" style={{ height: 540 }} />
         ))}
       </div>
     );
   }
 
-  if (posts.length === 0) {
+  if (visible.length === 0) {
     return (
       <div className="border border-border p-16 text-center max-w-lg">
         <p className="text-muted-foreground text-sm uppercase tracking-widest">No posts yet</p>
@@ -37,38 +48,18 @@ export default function InstagramFeed({ posts, loading }: Props) {
   }
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-      {posts.map((post) => (
-        <div key={post.id} className="group relative">
-          {/* Square crop window over the embed. Instagram embed renders the photo
-              first, so a square viewport hides the caption/UI below. */}
-          <div className="relative aspect-square overflow-hidden bg-secondary border border-border">
-            <iframe
-              src={getEmbedUrl(post.instagram_url)}
-              title={post.label ?? "Instagram post"}
-              className="absolute left-1/2 -translate-x-1/2 border-0 pointer-events-none"
-              style={{
-                top: -54,           // hide the IG header bar
-                width: "100%",
-                height: "calc(100% + 220px)", // overflow caption section
-              }}
-              scrolling="no"
-              loading="lazy"
-              allowTransparency
-            />
-            <a
-              href={getCleanUrl(post.instagram_url)}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={post.label ?? "Open Instagram post"}
-              className="absolute inset-0 flex items-center justify-center bg-foreground/0 hover:bg-foreground/40 transition-colors"
-            >
-              <span className="opacity-0 group-hover:opacity-100 text-background text-[9px] tracking-[0.3em] uppercase font-bold transition-opacity">
-                View ↗
-              </span>
-            </a>
-          </div>
-        </div>
+    <div className={`grid ${cols} gap-4`}>
+      {visible.map((post) => (
+        <iframe
+          key={post.id}
+          src={getEmbedUrl(post.instagram_url)}
+          title={post.label ?? "Instagram post"}
+          className="w-full border border-border bg-secondary block"
+          style={{ height: 540 }}
+          scrolling="no"
+          loading="lazy"
+          allowTransparency
+        />
       ))}
     </div>
   );
