@@ -160,7 +160,6 @@ export default function Events() {
   const [loading, setLoading] = useState(true);
   const [igLoading, setIgLoading] = useState(true);
   const [bookingOpen, setBookingOpen] = useState(false);
-  const [tab, setTab] = useState<"upcoming" | "past">("upcoming");
 
   useEffect(() => {
     supabase
@@ -209,75 +208,46 @@ export default function Events() {
         </div>
       )}
 
-      {/* Tab nav */}
-      <div className="border-b border-border sticky top-16 bg-background z-20">
-        <div className="container-content flex gap-0">
-          {(["upcoming", "past"] as const).map(t => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`px-8 py-4 text-[10px] tracking-[0.25em] uppercase font-bold border-b-2 transition-colors ${
-                tab === t ? "border-foreground text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {t} {t === "upcoming" ? `(${upcoming.length})` : `(${past.length})`}
-            </button>
-          ))}
-        </div>
-      </div>
+      {/* Upcoming events */}
+      {!loading && upcoming.length > 0 && (
+        <section className="section-padding border-b border-border">
+          <div className="container-content">
+            <p className="text-[9px] tracking-[0.5em] uppercase text-muted-foreground mb-8">Upcoming</p>
+            {rest.length > 0 ? (
+              <div className="space-y-3 max-w-4xl">
+                {rest.map(ev => <UpcomingCard key={ev.id} ev={ev} />)}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground uppercase tracking-widest">More dates coming soon</p>
+            )}
+          </div>
+        </section>
+      )}
 
-      {/* Content */}
+      {/* From the Gram */}
       <section className="section-padding">
         <div className="container-content">
-          {loading && (
-            <div className="flex items-center justify-center h-48 text-muted-foreground text-sm">Loading…</div>
-          )}
+          <div className="flex items-center gap-4 mb-8">
+            <p className="text-[9px] tracking-[0.4em] uppercase text-muted-foreground">From the Gram</p>
+            <a
+              href="https://www.instagram.com/nonstopnewyork"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[9px] tracking-[0.3em] uppercase text-muted-foreground/50 hover:text-foreground transition-colors"
+            >
+              @nonstopnewyork ↗
+            </a>
+          </div>
+          <InstagramFeed posts={igPosts} loading={igLoading} />
 
-          {/* Upcoming */}
-          {!loading && tab === "upcoming" && (
-            <>
-              {rest.length > 0 ? (
-                <div className="space-y-3 max-w-4xl">
-                  {rest.map(ev => <UpcomingCard key={ev.id} ev={ev} />)}
-                </div>
-              ) : (
-                <div className="border border-border p-16 text-center max-w-lg">
-                  <p className="text-muted-foreground text-sm uppercase tracking-widest">No additional events scheduled</p>
-                  <p className="text-xs text-muted-foreground mt-2">Check back soon or follow us on socials</p>
-                </div>
-              )}
-            </>
-          )}
-
-          {/* Past — Instagram feed first, flyer cards as fallback */}
-          {tab === "past" && (
-            <>
-              {/* Instagram posts */}
-              <div className="mb-12">
-                <div className="flex items-center gap-4 mb-8">
-                  <p className="text-[9px] tracking-[0.4em] uppercase text-muted-foreground">From the Gram</p>
-                  <a
-                    href="https://www.instagram.com/nonstopnewyork"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-[9px] tracking-[0.3em] uppercase text-muted-foreground/50 hover:text-foreground transition-colors"
-                  >
-                    @nonstopnewyork ↗
-                  </a>
-                </div>
-                <InstagramFeed posts={igPosts} loading={igLoading} />
+          {/* Past flyer archive */}
+          {!loading && past.length > 0 && (
+            <div className="mt-16">
+              <p className="text-[9px] tracking-[0.4em] uppercase text-muted-foreground mb-6">Archive</p>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {past.map(ev => <PastCard key={ev.id} ev={ev} />)}
               </div>
-
-              {/* Supabase flyer cards (if any) */}
-              {!loading && past.length > 0 && (
-                <div className="mt-12">
-                  <p className="text-[9px] tracking-[0.4em] uppercase text-muted-foreground mb-6">Archive</p>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {past.map(ev => <PastCard key={ev.id} ev={ev} />)}
-                  </div>
-                </div>
-              )}
-            </>
+            </div>
           )}
         </div>
       </section>
