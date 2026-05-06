@@ -33,16 +33,16 @@ function FlyerModal({ ev, onClose }: { ev: Event | null; onClose: () => void }) 
   if (!ev) return null;
   const d = fmt(ev.event_date);
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-10 backdrop-blur-md animate-fade-up"
-      style={{ background: "hsl(0 0% 0% / 0.85)" }} onClick={onClose}>
-      <div className="relative max-w-3xl w-full grid grid-cols-1 md:grid-cols-[1.1fr_1fr] gap-3 max-h-[90vh]"
+    <div className="fixed inset-0 z-50 flex items-stretch justify-center p-2 sm:p-4 md:p-6 backdrop-blur-md animate-fade-up"
+      style={{ background: "hsl(0 0% 0% / 0.9)" }} onClick={onClose}>
+      <div className="relative w-full h-full grid grid-cols-1 md:grid-cols-[1.4fr_1fr] gap-2 md:gap-3"
         onClick={e => e.stopPropagation()}>
         {ev.flyer_url && (
-          <div className="overflow-hidden max-h-[90vh]" style={{ background: GRAY, border: `1px solid ${YELLOW}` }}>
-            <img src={ev.flyer_url} alt={ev.title} className="w-full h-full object-contain max-h-[90vh]" />
+          <div className="overflow-hidden min-h-0" style={{ background: GRAY, border: `1px solid ${YELLOW}` }}>
+            <img src={ev.flyer_url} alt={ev.title} className="w-full h-full object-contain" />
           </div>
         )}
-        <div className="p-6 overflow-y-auto relative" style={{ background: GRAY, color: "white", border: `1px solid ${YELLOW}` }}>
+        <div className="p-5 md:p-7 overflow-y-auto relative min-h-0" style={{ background: GRAY, color: "white", border: `1px solid ${YELLOW}` }}>
           <button onClick={onClose}
             className="absolute top-3 right-3 z-10 w-8 h-8 flex items-center justify-center text-sm hover:text-background transition-colors"
             style={{ background: "transparent", color: YELLOW, border: `1px solid ${YELLOW}` }}>✕</button>
