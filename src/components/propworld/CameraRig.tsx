@@ -114,7 +114,7 @@ export default function CameraRig({ mode: modeProp, hovered, hoverSide, isMobile
       pitchVelRef.current = 0;
       userAngleVelRef.current = 0;
       userInteractRef.current = performance.now();
-      if (mode === "game") {
+      if ((mode as string) === "game") {
         isHoldingRef.current = true;
         lastAutoShootRef.current = 0; // fire on next frame immediately
       }
