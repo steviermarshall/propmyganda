@@ -239,7 +239,7 @@ export default function Events() {
             />
           </div>
 
-          <aside className="bg-primary text-primary-foreground p-6 lg:sticky lg:top-24">
+          <aside className="bg-primary text-primary-foreground p-6 lg:sticky lg:top-24 lg:self-start">
             <p className="text-[9px] tracking-[0.5em] uppercase text-primary-foreground/40 mb-2">Services</p>
             <h2 className="text-2xl lg:text-3xl font-black uppercase tracking-tight leading-[0.9] mb-3">
               Book or Hire
