@@ -216,60 +216,26 @@ export default function Events() {
         </section>
       )}
 
-      {/* Gram + Book/Hire — IG grid (2 rows × 3) sits beside sticky sidebar */}
+      {/* From the Gram — full-width photo grid */}
       <section className="py-10 lg:py-12">
-        <div className="container-content grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-8 lg:gap-10 items-start">
-          {/* From the Gram — 2 rows of 3 full embeds */}
-          <div>
-            <div className="flex items-center gap-4 mb-5">
-              <p className="text-[9px] tracking-[0.4em] uppercase text-muted-foreground">From the Gram</p>
-              <a
-                href="https://www.instagram.com/nonstopnewyork"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[9px] tracking-[0.3em] uppercase text-muted-foreground/50 hover:text-foreground transition-colors"
-              >
-                @nonstopnewyork ↗
-              </a>
-            </div>
-            <InstagramFeed
-              posts={igPosts}
-              loading={igLoading}
-              limit={6}
-              cols="grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
-            />
+        <div className="container-content">
+          <div className="flex items-center gap-4 mb-5">
+            <p className="text-[9px] tracking-[0.4em] uppercase text-muted-foreground">From the Gram</p>
+            <a
+              href="https://www.instagram.com/nonstopnewyork"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[9px] tracking-[0.3em] uppercase text-muted-foreground/50 hover:text-foreground transition-colors"
+            >
+              @nonstopnewyork ↗
+            </a>
           </div>
-
-          {/* Book / Hire — vertical sidebar aligned with IG rows */}
-          <aside className="bg-primary text-primary-foreground p-6 lg:sticky lg:top-24">
-            <p className="text-[9px] tracking-[0.5em] uppercase text-primary-foreground/40 mb-2">Services</p>
-            <h2 className="text-2xl lg:text-3xl font-black uppercase tracking-tight leading-[0.9] mb-3">
-              Book or Hire
-            </h2>
-            <p className="text-[11px] text-primary-foreground/60 leading-relaxed mb-5">
-              Booth to door — DJ, security, venue, promotion.
-            </p>
-            <div className="flex flex-col gap-2">
-              {[
-                { label: "DJ", desc: "Underground to main stage" },
-                { label: "Security", desc: "Crowd management" },
-                { label: "Venue", desc: "Spaces that fit" },
-                { label: "Promoter", desc: "Sell-out strategy" },
-              ].map(({ label, desc }) => (
-                <button
-                  key={label}
-                  onClick={() => setBookingOpen(true)}
-                  className="group flex items-center justify-between border border-primary-foreground/20 px-3 py-2.5 hover:border-primary-foreground hover:bg-primary-foreground/5 transition-colors text-left"
-                >
-                  <div>
-                    <p className="font-black uppercase tracking-tight text-xs">{label}</p>
-                    <p className="text-[9px] text-primary-foreground/40 mt-0.5">{desc}</p>
-                  </div>
-                  <span className="text-primary-foreground/30 group-hover:text-primary-foreground transition-colors">→</span>
-                </button>
-              ))}
-            </div>
-          </aside>
+          <InstagramFeed
+            posts={igPosts}
+            loading={igLoading}
+            limit={6}
+            cols="grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+          />
         </div>
 
         {/* Past flyer archive */}
