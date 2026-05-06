@@ -173,9 +173,9 @@ export default function BookingSheet({ open, onOpenChange }: Props) {
     if (!data.name?.trim() || !data.email?.trim()) return;
     setStatus("loading");
     try {
-      const payload = { ...data, service, name: data.name!, email: data.email! } as BookingInsert;
+      const payload: BookingInsert = { ...data, service, name: data.name!, email: data.email! };
 
-      const { error } = await supabase.from("bookings").insert(payload as never);
+      const { error } = await supabase.from("bookings").insert(payload);
       if (error) throw error;
 
       if (WEBHOOK) {
