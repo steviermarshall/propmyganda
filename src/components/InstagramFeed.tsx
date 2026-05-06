@@ -18,7 +18,7 @@ function getCleanUrl(url: string) {
 }
 
 function getEmbedUrl(url: string) {
-  return `${getCleanUrl(url)}/embed/captioned/`;
+  return `${getCleanUrl(url)}/embed/`;
 }
 
 export default function InstagramFeed({
@@ -33,7 +33,7 @@ export default function InstagramFeed({
     return (
       <div className={`grid ${cols} gap-4`}>
         {Array.from({ length: limit ?? 6 }).map((_, i) => (
-          <div key={i} className="bg-secondary animate-pulse" style={{ height: 540 }} />
+          <div key={i} className="bg-secondary animate-pulse aspect-[1080/1350]" />
         ))}
       </div>
     );
@@ -50,16 +50,20 @@ export default function InstagramFeed({
   return (
     <div className={`grid ${cols} gap-4`}>
       {visible.map((post) => (
-        <iframe
+        <div
           key={post.id}
-          src={getEmbedUrl(post.instagram_url)}
-          title={post.label ?? "Instagram post"}
-          className="w-full border border-border bg-secondary block"
-          style={{ height: 540 }}
-          scrolling="no"
-          loading="lazy"
-          allowTransparency
-        />
+          className="relative w-full aspect-[1080/1350] overflow-hidden bg-secondary border border-border"
+        >
+          <iframe
+            src={getEmbedUrl(post.instagram_url)}
+            title={post.label ?? "Instagram post"}
+            className="absolute left-0 w-full border-0"
+            style={{ top: -54, height: "calc(100% + 160px)" }}
+            scrolling="no"
+            loading="lazy"
+            allowTransparency
+          />
+        </div>
       ))}
     </div>
   );
