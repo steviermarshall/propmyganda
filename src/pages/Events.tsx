@@ -7,16 +7,18 @@ type Event = Database["public"]["Tables"]["events"]["Row"];
 type IgPost = Database["public"]["Tables"]["instagram_posts"]["Row"];
 
 const YELLOW = "hsl(58 100% 50%)";
-const GRAY = "hsl(0 0% 18%)";
-const GRAY_LIGHT = "hsl(0 0% 32%)";
 const BLACK = "hsl(0 0% 0%)";
+const GRAY = "hsl(0 0% 12%)";
+const GRAY_2 = "hsl(0 0% 22%)";
+const GRAY_TXT = "hsl(0 0% 65%)";
 
 function fmt(dateStr: string) {
   const d = new Date(dateStr);
   return {
-    day: d.getDate(),
+    day: String(d.getDate()).padStart(2, "0"),
     month: d.toLocaleString("en-US", { month: "short" }).toUpperCase(),
     year: d.getFullYear(),
+    weekday: d.toLocaleString("en-US", { weekday: "short" }).toUpperCase(),
   };
 }
 
@@ -26,64 +28,39 @@ function getEmbedUrl(url: string) {
   return query ? `${clean}/embed/captioned/?${query}` : `${clean}/embed/captioned/`;
 }
 
-// ── Reusable comic panel box ──────────────────────────────────────────────────
-function Panel({
-  title, accent = YELLOW, children, className = "",
-}: { title: string; accent?: string; children: React.ReactNode; className?: string }) {
-  return (
-    <div className={`relative flex flex-col bg-background border-[3px] border-foreground overflow-hidden ${className}`}
-      style={{ boxShadow: `6px 6px 0 0 ${accent}` }}>
-      <div className="flex items-center justify-between px-3 py-1.5 border-b-[3px] border-foreground"
-        style={{ background: BLACK, color: "white" }}>
-        <span className="font-display text-xs tracking-[0.35em] uppercase">// {title}</span>
-        <span className="font-display text-xs" style={{ color: accent }}>◆</span>
-      </div>
-      <div className="flex-1 min-h-0 overflow-hidden">{children}</div>
-    </div>
-  );
-}
-
-// ── Featured flyer (no internal scroll) ───────────────────────────────────────
-function HeroFlyer({ ev, onOpen }: { ev: Event; onOpen: (ev: Event) => void }) {
+// ── Flyer modal ───────────────────────────────────────────────────────────────
+function FlyerModal({ ev, onClose }: { ev: Event | null; onClose: () => void }) {
+  if (!ev) return null;
   const d = fmt(ev.event_date);
   return (
-    <div className="relative h-full w-full flex flex-col" style={{ background: YELLOW }}>
-      <div className="absolute inset-0 opacity-20 halftone pointer-events-none" />
-      <div className="relative flex-1 min-h-0 grid grid-rows-[auto_1fr_auto] gap-2 p-3">
-        <div className="flex items-center justify-between">
-          <span className="bg-foreground text-background px-2 py-0.5 font-display text-[10px] tracking-[0.4em] uppercase">
-            ▲ Next
-          </span>
-          <span className="bg-background border-[2px] border-foreground px-2 py-0.5 font-display text-[10px] tracking-[0.3em]">
-            {d.month} {d.day} · {d.year}
-          </span>
-        </div>
-
-        <button onClick={() => onOpen(ev)}
-          className="relative bg-background border-[3px] border-foreground overflow-hidden min-h-0 group"
-          style={{ boxShadow: `4px 4px 0 0 ${BLACK}` }}>
-          {ev.flyer_url ? (
-            <img src={ev.flyer_url} alt={ev.title}
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-          ) : (
-            <div className="w-full h-full halftone flex items-center justify-center">
-              <span className="font-display text-[8rem] leading-none">{d.day}</span>
-            </div>
-          )}
-        </button>
-
-        <div className="flex flex-col gap-1.5">
-          <h2 className="font-display text-2xl md:text-3xl uppercase leading-none line-clamp-2">{ev.title}</h2>
-          <div className="flex flex-wrap gap-1">
-            {ev.venue && <span className="bg-foreground text-background px-1.5 py-0.5 text-[9px] font-bold tracking-widest uppercase">⌖ {ev.venue}</span>}
-            {ev.city && <span className="bg-background border border-foreground px-1.5 py-0.5 text-[9px] font-bold tracking-widest uppercase">{ev.city}</span>}
-            {ev.doors_time && <span className="px-1.5 py-0.5 text-[9px] font-bold tracking-widest uppercase" style={{ background: BLACK, color: "white" }}>⏱ {ev.doors_time}</span>}
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-10 backdrop-blur-md animate-fade-up"
+      style={{ background: "hsl(0 0% 0% / 0.85)" }} onClick={onClose}>
+      <div className="relative max-w-3xl w-full grid grid-cols-1 md:grid-cols-[1.1fr_1fr] gap-3 max-h-[90vh]"
+        onClick={e => e.stopPropagation()}>
+        {ev.flyer_url && (
+          <div className="overflow-hidden max-h-[90vh]" style={{ background: GRAY, border: `1px solid ${YELLOW}` }}>
+            <img src={ev.flyer_url} alt={ev.title} className="w-full h-full object-contain max-h-[90vh]" />
           </div>
+        )}
+        <div className="p-6 overflow-y-auto relative" style={{ background: GRAY, color: "white", border: `1px solid ${YELLOW}` }}>
+          <button onClick={onClose}
+            className="absolute top-3 right-3 z-10 w-8 h-8 flex items-center justify-center text-sm hover:text-background transition-colors"
+            style={{ background: "transparent", color: YELLOW, border: `1px solid ${YELLOW}` }}>✕</button>
+          <p className="text-[10px] tracking-[0.5em] uppercase mb-3" style={{ color: YELLOW }}>
+            {d.weekday} · {d.month} {d.day} · {d.year}
+          </p>
+          <h3 className="font-display text-3xl md:text-4xl uppercase leading-[0.9] mb-4">{ev.title}</h3>
+          <div className="flex flex-wrap gap-1.5 mb-4 text-[10px] tracking-widest uppercase">
+            {ev.doors_time && <span className="px-2 py-1" style={{ border: `1px solid ${GRAY_2}`, color: GRAY_TXT }}>⏱ {ev.doors_time}</span>}
+            {ev.venue && <span className="px-2 py-1" style={{ border: `1px solid ${GRAY_2}`, color: GRAY_TXT }}>⌖ {ev.venue}</span>}
+            {ev.city && <span className="px-2 py-1" style={{ background: YELLOW, color: BLACK }}>{ev.city}</span>}
+          </div>
+          {ev.description && <p className="text-sm leading-relaxed mb-5" style={{ color: GRAY_TXT }}>{ev.description}</p>}
           {ev.ticket_url && (
             <a href={ev.ticket_url} target="_blank" rel="noopener noreferrer"
-              className="self-start font-display text-sm tracking-wider uppercase px-3 py-1.5 bg-foreground text-background border-[2px] border-foreground hover:-translate-y-0.5 transition-transform"
-              style={{ boxShadow: `3px 3px 0 0 ${BLACK}` }}>
-              ▶ Tickets →
+              className="inline-block font-display text-base tracking-[0.2em] uppercase px-5 py-2.5 transition-transform hover:-translate-y-0.5"
+              style={{ background: YELLOW, color: BLACK }}>
+              Get Tickets →
             </a>
           )}
         </div>
@@ -92,130 +69,27 @@ function HeroFlyer({ ev, onOpen }: { ev: Event; onOpen: (ev: Event) => void }) {
   );
 }
 
-// ── Empty state hero ──────────────────────────────────────────────────────────
-function EmptyHero() {
+// ── Booking modal ─────────────────────────────────────────────────────────────
+function ServiceList({ onOpen }: { onOpen: () => void }) {
+  const services = ["DJ Booking", "Security", "Venue Rental", "Promoter"];
   return (
-    <div className="relative h-full w-full flex items-center justify-center" style={{ background: YELLOW }}>
-      <div className="absolute inset-0 opacity-25 halftone" />
-      <h2 className="relative font-display text-5xl uppercase text-glitch text-center leading-none">No<br/>Drops<br/>Yet</h2>
-    </div>
-  );
-}
-
-// ── Upcoming polaroid mini ────────────────────────────────────────────────────
-function FlyerMini({ ev, idx, onOpen }: { ev: Event; idx: number; onOpen: (ev: Event) => void }) {
-  const d = fmt(ev.event_date);
-  const tilts = ["-rotate-2", "rotate-1", "-rotate-1", "rotate-2"];
-  const tilt = tilts[idx % tilts.length];
-  return (
-    <button onClick={() => onOpen(ev)}
-      className={`group shrink-0 w-[150px] bg-background border-[3px] border-foreground p-1.5 ${tilt} transition-transform hover:rotate-0 hover:-translate-y-1 hover:scale-105`}
-      style={{ boxShadow: `4px 4px 0 0 ${BLACK}` }}>
-      {ev.flyer_url ? (
-        <div className="relative aspect-[3/4] overflow-hidden bg-secondary">
-          <img src={ev.flyer_url} alt={ev.title} className="w-full h-full object-cover" />
-          <div className="absolute top-1 left-1 bg-foreground text-background px-1.5 py-0.5 font-display text-[10px] tracking-wider">
-            {d.month} {d.day}
-          </div>
-        </div>
-      ) : (
-        <div className="aspect-[3/4] flex items-center justify-center" style={{ background: YELLOW }}>
-          <span className="font-display text-5xl">{d.day}</span>
-        </div>
-      )}
-      <p className="px-1 pt-1.5 font-display text-[11px] uppercase leading-tight line-clamp-2 text-left">{ev.title}</p>
-    </button>
-  );
-}
-
-// ── Past polaroid mini ────────────────────────────────────────────────────────
-function PastMini({ ev, idx }: { ev: Event; idx: number }) {
-  const d = fmt(ev.event_date);
-  const tilt = ["-rotate-1", "rotate-1"][idx % 2];
-  return (
-    <div className={`shrink-0 w-[110px] bg-background border-[2px] border-foreground p-1 ${tilt}`}
-      style={{ boxShadow: `3px 3px 0 0 ${GRAY}` }}>
-      {ev.flyer_url ? (
-        <div className="aspect-[3/4] overflow-hidden">
-          <img src={ev.flyer_url} alt={ev.title} className="w-full h-full object-cover grayscale" />
-        </div>
-      ) : (
-        <div className="aspect-[3/4] halftone flex items-center justify-center">
-          <span className="font-display text-3xl">{d.day}</span>
-        </div>
-      )}
-      <p className="text-[8px] font-black tracking-widest uppercase mt-1 px-0.5">{d.month} · {d.year}</p>
-      <p className="font-display text-[10px] uppercase leading-none px-0.5 pb-0.5 line-clamp-2">{ev.title}</p>
-    </div>
-  );
-}
-
-// ── Services panel content ────────────────────────────────────────────────────
-function ServicesContent({ onOpen }: { onOpen: () => void }) {
-  const services = [
-    { label: "DJ", icon: "♪" },
-    { label: "Security", icon: "✺" },
-    { label: "Venue", icon: "⌖" },
-    { label: "Promoter", icon: "▲" },
-  ];
-  return (
-    <div className="h-full grid grid-cols-2 gap-2 p-2">
-      {services.map((s) => (
-        <button key={s.label} onClick={onOpen}
-          className="flex flex-col items-center justify-center bg-background border-[2px] border-foreground hover:bg-foreground hover:text-background transition-colors"
-          style={{ boxShadow: `3px 3px 0 0 ${YELLOW}` }}>
-          <span className="font-display text-2xl leading-none">{s.icon}</span>
-          <span className="text-[9px] font-black tracking-widest uppercase mt-1">{s.label}</span>
+    <div className="flex flex-col">
+      {services.map((s, i) => (
+        <button key={s} onClick={onOpen}
+          className="group flex items-center justify-between text-left px-3 py-2.5 transition-colors hover:bg-foreground"
+          style={{
+            color: "white",
+            borderTop: i === 0 ? "none" : `1px solid ${GRAY_2}`,
+          }}>
+          <span className="text-[11px] tracking-[0.25em] uppercase group-hover:text-background">{s}</span>
+          <span className="text-xs transition-transform group-hover:translate-x-1" style={{ color: YELLOW }}>→</span>
         </button>
       ))}
     </div>
   );
 }
 
-// ── Flyer modal ───────────────────────────────────────────────────────────────
-function FlyerModal({ ev, onClose }: { ev: Event | null; onClose: () => void }) {
-  if (!ev) return null;
-  const d = fmt(ev.event_date);
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-10 bg-foreground/85 backdrop-blur-sm animate-fade-up"
-      onClick={onClose}>
-      <div className="relative max-w-3xl w-full grid grid-cols-1 md:grid-cols-[1.1fr_1fr] gap-4 max-h-[90vh]"
-        onClick={e => e.stopPropagation()}>
-        {ev.flyer_url && (
-          <div className="bg-background border-[4px] border-foreground overflow-hidden max-h-[90vh]"
-            style={{ boxShadow: `8px 8px 0 0 ${YELLOW}` }}>
-            <img src={ev.flyer_url} alt={ev.title} className="w-full h-full object-contain max-h-[90vh]" />
-          </div>
-        )}
-        <div className="bg-background border-[4px] border-foreground p-5 overflow-y-auto relative"
-          style={{ boxShadow: `8px 8px 0 0 ${YELLOW}` }}>
-          <button onClick={onClose}
-            className="absolute -top-4 -right-4 z-10 w-10 h-10 bg-foreground text-background font-display text-xl flex items-center justify-center border-[3px] border-foreground"
-            style={{ boxShadow: `3px 3px 0 0 ${YELLOW}` }}>✕</button>
-          <p className="text-[10px] tracking-[0.5em] uppercase font-bold inline-block bg-foreground text-background px-2 py-1 mb-3">
-            {d.month} {d.day} · {d.year}
-          </p>
-          <h3 className="font-display text-3xl uppercase leading-[0.9] mb-3">{ev.title}</h3>
-          <div className="flex flex-wrap gap-1 mb-3">
-            {ev.doors_time && <span className="bg-foreground text-background px-2 py-0.5 text-[10px] font-bold tracking-widest uppercase">⏱ {ev.doors_time}</span>}
-            {ev.venue && <span className="border-2 border-foreground px-2 py-0.5 text-[10px] font-bold tracking-widest uppercase">⌖ {ev.venue}</span>}
-            {ev.city && <span className="px-2 py-0.5 text-[10px] font-bold tracking-widest uppercase" style={{ background: BLACK, color: "white" }}>{ev.city}</span>}
-          </div>
-          {ev.description && <p className="text-sm leading-relaxed mb-4">{ev.description}</p>}
-          {ev.ticket_url && (
-            <a href={ev.ticket_url} target="_blank" rel="noopener noreferrer"
-              className="inline-block font-display text-lg tracking-wider uppercase px-4 py-2 bg-foreground text-background border-[3px] border-foreground"
-              style={{ boxShadow: `5px 5px 0 0 ${YELLOW}` }}>
-              ▶ Tickets →
-            </a>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Page (single viewport, no page scroll) ────────────────────────────────────
+// ── Page ──────────────────────────────────────────────────────────────────────
 export default function Events() {
   const [events, setEvents] = useState<Event[]>([]);
   const [igPosts, setIgPosts] = useState<IgPost[]>([]);
@@ -237,122 +111,248 @@ export default function Events() {
   const past = events.filter(e => e.status === "past")
     .sort((a, b) => new Date(b.event_date).getTime() - new Date(a.event_date).getTime());
   const [hero, ...rest] = upcoming;
+  const heroDate = hero ? fmt(hero.event_date) : null;
 
   return (
     <div className="h-screen w-screen overflow-hidden flex flex-col"
-      style={{ background: BLACK, color: "white" }}>
+      style={{ background: BLACK, color: "white", fontFeatureSettings: '"ss01"' }}>
 
-      {/* Top strip */}
-      <div className="shrink-0 flex items-center justify-between px-4 py-2 border-b-[3px] border-foreground"
-        style={{ background: YELLOW, color: BLACK }}>
-        <h1 className="font-display text-2xl md:text-3xl uppercase tracking-tight leading-none">
-          Events <span className="opacity-50">//</span> Control Deck
-        </h1>
-        <div className="hidden md:flex items-center gap-2 text-[10px] font-bold tracking-[0.4em] uppercase">
-          <span>⚡ Live Feed</span>
-          <span className="w-2 h-2 bg-foreground rounded-full animate-pulse" />
+      {/* Slim header bar */}
+      <header className="shrink-0 flex items-center justify-between px-6 py-3 border-b"
+        style={{ borderColor: GRAY_2 }}>
+        <div className="flex items-center gap-3">
+          <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: YELLOW }} />
+          <span className="font-display text-sm tracking-[0.4em] uppercase">Events / Live</span>
         </div>
-      </div>
+        <span className="text-[10px] tracking-[0.4em] uppercase" style={{ color: GRAY_TXT }}>
+          {upcoming.length.toString().padStart(2, "0")} upcoming · {past.length.toString().padStart(2, "0")} archive
+        </span>
+      </header>
 
-      {/* Main grid — fills remaining viewport, NO scroll */}
-      <div
-        className="flex-1 min-h-0 grid gap-2 p-2"
+      {/* Main grid — fits viewport */}
+      <main
+        className="flex-1 min-h-0 grid gap-3 p-3"
         style={{
-          background: GRAY,
-          gridTemplateColumns: "minmax(0,1.2fr) minmax(0,1.6fr) minmax(0,1fr)",
-          gridTemplateRows: "minmax(0,1.4fr) minmax(0,1fr)",
+          gridTemplateColumns: "minmax(0, 1.6fr) minmax(0, 1fr)",
+          gridTemplateRows: "minmax(0, 1.5fr) minmax(0, 1fr)",
         }}
       >
-        {/* LEFT — Featured flyer (spans both rows) */}
-        <div className="row-span-2 min-h-0 border-[3px] border-foreground overflow-hidden"
-          style={{ boxShadow: `6px 6px 0 0 ${YELLOW}` }}>
+        {/* HERO — Featured flyer (large, dominant) */}
+        <section className="relative row-span-2 min-h-0 overflow-hidden"
+          style={{ background: GRAY, border: `1px solid ${GRAY_2}` }}>
           {loading ? (
-            <div className="h-full w-full animate-pulse" style={{ background: GRAY_LIGHT }} />
-          ) : hero ? (
-            <HeroFlyer ev={hero} onOpen={setOpenFlyer} />
-          ) : (
-            <EmptyHero />
-          )}
-        </div>
+            <div className="h-full w-full animate-pulse" style={{ background: GRAY_2 }} />
+          ) : hero && heroDate ? (
+            <button onClick={() => setOpenFlyer(hero)} className="group relative h-full w-full block text-left">
+              {hero.flyer_url ? (
+                <img src={hero.flyer_url} alt={hero.title}
+                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.02]" />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center" style={{ background: GRAY }}>
+                  <span className="font-display text-[16rem] leading-none" style={{ color: YELLOW }}>{heroDate.day}</span>
+                </div>
+              )}
 
-        {/* CENTER TOP — Upcoming wall (horizontal scroll inside) */}
-        <Panel title="Upcoming Wall" accent={YELLOW} className="min-h-0">
-          {loading ? (
-            <div className="flex gap-3 p-4 h-full">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="w-[150px] aspect-[3/4] animate-pulse" style={{ background: GRAY_LIGHT }} />
-              ))}
-            </div>
-          ) : rest.length === 0 ? (
-            <div className="h-full flex items-center justify-center p-4">
-              <p className="font-display text-lg uppercase opacity-60">// queue empty</p>
-            </div>
-          ) : (
-            <div className="h-full overflow-x-auto overflow-y-hidden">
-              <div className="flex items-center gap-4 p-4 h-full" style={{ background: GRAY_LIGHT }}>
-                {rest.map((ev, i) => <FlyerMini key={ev.id} ev={ev} idx={i} onOpen={setOpenFlyer} />)}
+              {/* Top bar overlay */}
+              <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-5 py-3 z-10"
+                style={{ background: "linear-gradient(180deg, hsl(0 0% 0% / 0.85), transparent)" }}>
+                <span className="text-[10px] tracking-[0.5em] uppercase" style={{ color: YELLOW }}>▲ Next Transmission</span>
+                <span className="text-[10px] tracking-[0.4em] uppercase font-bold">
+                  {heroDate.weekday} · {heroDate.month} {heroDate.day}
+                </span>
               </div>
+
+              {/* Bottom info overlay */}
+              <div className="absolute bottom-0 left-0 right-0 z-10 p-5 md:p-6"
+                style={{ background: "linear-gradient(0deg, hsl(0 0% 0% / 0.92) 0%, hsl(0 0% 0% / 0.7) 60%, transparent)" }}>
+                <div className="flex items-end justify-between gap-4 flex-wrap">
+                  <div className="min-w-0 flex-1">
+                    <h2 className="font-display text-3xl md:text-5xl uppercase leading-[0.9] mb-2 line-clamp-2">
+                      {hero.title}
+                    </h2>
+                    <div className="flex flex-wrap gap-1.5 text-[10px] tracking-widest uppercase">
+                      {hero.venue && <span style={{ color: GRAY_TXT }}>⌖ {hero.venue}</span>}
+                      {hero.city && <span style={{ color: YELLOW }}>· {hero.city}</span>}
+                      {hero.doors_time && <span style={{ color: GRAY_TXT }}>· ⏱ {hero.doors_time}</span>}
+                    </div>
+                  </div>
+                  {hero.ticket_url ? (
+                    <span className="font-display text-sm tracking-[0.3em] uppercase px-4 py-2 transition-transform group-hover:-translate-y-0.5"
+                      style={{ background: YELLOW, color: BLACK }}>
+                      Tickets →
+                    </span>
+                  ) : (
+                    <span className="font-display text-sm tracking-[0.3em] uppercase px-4 py-2"
+                      style={{ border: `1px solid ${YELLOW}`, color: YELLOW }}>
+                      Details →
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Side index */}
+              <div className="absolute top-1/2 right-3 -translate-y-1/2 z-10 hidden md:flex flex-col items-end gap-1"
+                style={{ writingMode: "vertical-rl" }}>
+                <span className="text-[9px] tracking-[0.6em] uppercase" style={{ color: YELLOW }}>FEATURED · 001</span>
+              </div>
+            </button>
+          ) : (
+            <div className="h-full w-full flex items-center justify-center">
+              <p className="font-display text-3xl uppercase tracking-[0.3em]" style={{ color: GRAY_TXT }}>// no drops</p>
             </div>
           )}
-        </Panel>
+        </section>
 
-        {/* CENTER BOTTOM — Gram comic grid (internal scroll) */}
-        <Panel title="From the Gram" accent={YELLOW} className="min-h-0">
-          {igLoading ? (
-            <div className="h-full p-3 grid grid-cols-3 gap-2" style={{ background: GRAY_LIGHT }}>
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="animate-pulse border-[2px] border-foreground" style={{ background: GRAY }} />
+        {/* TOP RIGHT — Upcoming queue */}
+        <section className="min-h-0 flex flex-col overflow-hidden"
+          style={{ background: GRAY, border: `1px solid ${GRAY_2}` }}>
+          <div className="shrink-0 flex items-center justify-between px-4 py-2.5 border-b" style={{ borderColor: GRAY_2 }}>
+            <span className="text-[10px] tracking-[0.4em] uppercase" style={{ color: YELLOW }}>Queue</span>
+            <span className="text-[9px] tracking-[0.3em] uppercase" style={{ color: GRAY_TXT }}>{rest.length} drops</span>
+          </div>
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            {loading ? (
+              <div className="p-3 space-y-2">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="h-14 animate-pulse" style={{ background: GRAY_2 }} />
+                ))}
+              </div>
+            ) : rest.length === 0 ? (
+              <div className="h-full flex items-center justify-center p-4">
+                <p className="text-[10px] tracking-[0.4em] uppercase" style={{ color: GRAY_TXT }}>// queue empty</p>
+              </div>
+            ) : (
+              rest.map((ev, i) => {
+                const d = fmt(ev.event_date);
+                return (
+                  <button key={ev.id} onClick={() => setOpenFlyer(ev)}
+                    className="group w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-foreground"
+                    style={{ borderTop: i === 0 ? "none" : `1px solid ${GRAY_2}` }}>
+                    <div className="shrink-0 w-12 text-center">
+                      <div className="font-display text-2xl leading-none group-hover:text-background" style={{ color: YELLOW }}>{d.day}</div>
+                      <div className="text-[8px] tracking-[0.3em] mt-0.5 group-hover:text-background" style={{ color: GRAY_TXT }}>{d.month}</div>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-display text-sm uppercase leading-tight line-clamp-1 group-hover:text-background">{ev.title}</p>
+                      <p className="text-[9px] tracking-[0.3em] uppercase mt-0.5 line-clamp-1 group-hover:text-background" style={{ color: GRAY_TXT }}>
+                        {[ev.venue, ev.city].filter(Boolean).join(" · ") || "TBA"}
+                      </p>
+                    </div>
+                    <span className="text-xs group-hover:translate-x-1 transition-transform group-hover:text-background" style={{ color: YELLOW }}>→</span>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </section>
+
+        {/* BOTTOM RIGHT — split: Hire + Gram + Archive tabs */}
+        <section className="min-h-0 grid gap-3" style={{ gridTemplateRows: "auto 1fr" }}>
+          {/* Hire panel */}
+          <div className="overflow-hidden" style={{ background: GRAY, border: `1px solid ${GRAY_2}` }}>
+            <div className="flex items-center justify-between px-4 py-2.5 border-b" style={{ borderColor: GRAY_2 }}>
+              <span className="text-[10px] tracking-[0.4em] uppercase" style={{ color: YELLOW }}>Hire</span>
+              <span className="text-[9px] tracking-[0.3em] uppercase" style={{ color: GRAY_TXT }}>book us</span>
+            </div>
+            <ServiceList onOpen={() => setBookingOpen(true)} />
+          </div>
+
+          {/* Gram + Archive side by side */}
+          <BottomTabs
+            igPosts={igPosts} igLoading={igLoading}
+            past={past} loading={loading}
+            onOpenFlyer={setOpenFlyer}
+          />
+        </section>
+      </main>
+
+      <BookingSheet open={bookingOpen} onOpenChange={setBookingOpen} />
+      <FlyerModal ev={openFlyer} onClose={() => setOpenFlyer(null)} />
+    </div>
+  );
+}
+
+// ── Bottom tabs (Gram / Archive) ─────────────────────────────────────────────
+function BottomTabs({
+  igPosts, igLoading, past, loading, onOpenFlyer,
+}: {
+  igPosts: IgPost[]; igLoading: boolean;
+  past: Event[]; loading: boolean;
+  onOpenFlyer: (ev: Event) => void;
+}) {
+  const [tab, setTab] = useState<"gram" | "archive">("gram");
+  return (
+    <div className="min-h-0 flex flex-col overflow-hidden" style={{ background: GRAY, border: `1px solid ${GRAY_2}` }}>
+      <div className="shrink-0 flex items-center border-b" style={{ borderColor: GRAY_2 }}>
+        {(["gram", "archive"] as const).map((t) => (
+          <button key={t} onClick={() => setTab(t)}
+            className="flex-1 px-4 py-2.5 text-[10px] tracking-[0.4em] uppercase transition-colors"
+            style={{
+              background: tab === t ? YELLOW : "transparent",
+              color: tab === t ? BLACK : GRAY_TXT,
+              borderRight: t === "gram" ? `1px solid ${GRAY_2}` : "none",
+            }}>
+            {t === "gram" ? "// Gram" : "// Archive"}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex-1 min-h-0 overflow-y-auto p-2">
+        {tab === "gram" ? (
+          igLoading ? (
+            <div className="grid grid-cols-3 gap-2">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="aspect-square animate-pulse" style={{ background: GRAY_2 }} />
               ))}
             </div>
           ) : igPosts.length === 0 ? (
             <div className="h-full flex items-center justify-center">
-              <p className="font-display text-lg uppercase opacity-60">// no posts yet</p>
+              <p className="text-[10px] tracking-[0.4em] uppercase" style={{ color: GRAY_TXT }}>// no posts</p>
             </div>
           ) : (
-            <div className="h-full overflow-y-auto" style={{ background: GRAY_LIGHT }}>
-              <div className="grid grid-cols-3 md:grid-cols-4 gap-2 p-2">
-                {igPosts.map((p) => (
-                  <div key={p.id} className="relative border-[2px] border-foreground bg-background overflow-hidden"
-                    style={{ boxShadow: `3px 3px 0 0 ${BLACK}`, aspectRatio: "1/1" }}>
-                    <iframe
-                      src={getEmbedUrl(p.instagram_url)}
-                      className="w-full h-full border-0 block"
-                      scrolling="no"
-                      loading="lazy"
-                      title="Instagram post"
-                    />
+            <div className="grid grid-cols-3 gap-2">
+              {igPosts.slice(0, 6).map((p) => (
+                <a key={p.id} href={p.instagram_url} target="_blank" rel="noopener noreferrer"
+                  className="relative aspect-square overflow-hidden block group"
+                  style={{ background: BLACK, border: `1px solid ${GRAY_2}` }}>
+                  <iframe src={getEmbedUrl(p.instagram_url)}
+                    className="absolute inset-0 w-full h-full border-0 pointer-events-none"
+                    scrolling="no" loading="lazy" title="Instagram post" />
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                    style={{ background: "hsl(0 0% 0% / 0.6)" }}>
+                    <span className="text-[9px] tracking-[0.4em] uppercase" style={{ color: YELLOW }}>OPEN ↗</span>
                   </div>
-                ))}
-              </div>
+                </a>
+              ))}
             </div>
-          )}
-        </Panel>
-
-        {/* RIGHT TOP — Hire / Services */}
-        <Panel title="Hire Us" accent={YELLOW} className="min-h-0">
-          <ServicesContent onOpen={() => setBookingOpen(true)} />
-        </Panel>
-
-        {/* RIGHT BOTTOM — Archive (internal scroll) */}
-        <Panel title="Archive" accent={YELLOW} className="min-h-0">
-          {loading ? (
-            <div className="h-full animate-pulse" style={{ background: GRAY_LIGHT }} />
-          ) : past.length === 0 ? (
-            <div className="h-full flex items-center justify-center">
-              <p className="font-display text-sm uppercase opacity-60">// no archive</p>
-            </div>
-          ) : (
-            <div className="h-full overflow-y-auto" style={{ background: GRAY_LIGHT }}>
-              <div className="grid grid-cols-2 gap-3 p-3">
-                {past.map((ev, i) => <PastMini key={ev.id} ev={ev} idx={i} />)}
-              </div>
-            </div>
-          )}
-        </Panel>
+          )
+        ) : loading ? (
+          <div className="space-y-1">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="h-10 animate-pulse" style={{ background: GRAY_2 }} />
+            ))}
+          </div>
+        ) : past.length === 0 ? (
+          <div className="h-full flex items-center justify-center">
+            <p className="text-[10px] tracking-[0.4em] uppercase" style={{ color: GRAY_TXT }}>// no archive</p>
+          </div>
+        ) : (
+          past.map((ev, i) => {
+            const d = fmt(ev.event_date);
+            return (
+              <button key={ev.id} onClick={() => onOpenFlyer(ev)}
+                className="group w-full flex items-center gap-3 px-2 py-2 text-left transition-colors hover:bg-foreground"
+                style={{ borderTop: i === 0 ? "none" : `1px solid ${GRAY_2}` }}>
+                <span className="text-[9px] tracking-[0.3em] uppercase shrink-0 w-16 group-hover:text-background" style={{ color: YELLOW }}>
+                  {d.month} {d.year}
+                </span>
+                <span className="font-display text-xs uppercase leading-tight line-clamp-1 flex-1 group-hover:text-background">{ev.title}</span>
+                <span className="text-[10px] group-hover:translate-x-1 transition-transform group-hover:text-background" style={{ color: YELLOW }}>↗</span>
+              </button>
+            );
+          })
+        )}
       </div>
-
-      <BookingSheet open={bookingOpen} onOpenChange={setBookingOpen} />
-      <FlyerModal ev={openFlyer} onClose={() => setOpenFlyer(null)} />
     </div>
   );
 }
