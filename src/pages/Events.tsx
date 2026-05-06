@@ -197,16 +197,8 @@ export default function Events() {
       {/* Hero */}
       {!loading && hero && <HeroEvent ev={hero} />}
 
-      {/* No upcoming fallback header */}
-      {!loading && !hero && (
-        <div className="bg-primary text-primary-foreground pt-32 pb-16">
-          <div className="container-content">
-            <ScrollReveal>
-              <h1 className="text-5xl md:text-8xl text-heading">Events</h1>
-            </ScrollReveal>
-          </div>
-        </div>
-      )}
+      {/* Spacer for fixed navbar when no hero */}
+      {!loading && !hero && <div className="pt-24" />}
 
       {/* Upcoming events */}
       {!loading && upcoming.length > 0 && (
