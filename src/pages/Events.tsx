@@ -25,28 +25,15 @@ function fmt(dateStr: string) {
 
 // ── BAM! starburst sticker ────────────────────────────────────────────────────
 function Burst({
-  text,
-  color = ROCKET_RED,
-  textColor = "white",
-  size = 140,
-  className = "",
-  spin = false,
+  text, color = ROCKET_RED, textColor = "white", size = 140, className = "", spin = false,
 }: { text: string; color?: string; textColor?: string; size?: number; className?: string; spin?: boolean }) {
   return (
     <div className={`relative inline-block ${className}`} style={{ width: size, height: size }}>
-      <div
-        className={`absolute inset-0 starburst ${spin ? "animate-slow-spin" : ""}`}
-        style={{ background: color }}
-      />
-      <div
-        className="absolute inset-0 starburst"
-        style={{ background: color, transform: "rotate(15deg) scale(0.92)" }}
-      />
+      <div className={`absolute inset-0 starburst ${spin ? "animate-slow-spin" : ""}`} style={{ background: color }} />
+      <div className="absolute inset-0 starburst" style={{ background: color, transform: "rotate(15deg) scale(0.92)" }} />
       <div className="absolute inset-0 flex items-center justify-center">
-        <span
-          className="font-display tracking-tight text-center leading-none px-2"
-          style={{ color: textColor, fontSize: size * 0.22, transform: "rotate(-6deg)" }}
-        >
+        <span className="font-display tracking-tight text-center leading-none px-2"
+          style={{ color: textColor, fontSize: size * 0.22, transform: "rotate(-6deg)" }}>
           {text}
         </span>
       </div>
@@ -54,24 +41,20 @@ function Burst({
   );
 }
 
-// ── Hero panel — explosive comic spread ──────────────────────────────────────
+// ── Hero ──────────────────────────────────────────────────────────────────────
 function HeroEvent({ ev }: { ev: Event }) {
   const d = fmt(ev.event_date);
   return (
     <div className="relative overflow-hidden border-b-[6px] border-foreground" style={{ background: ASTRO_YELLOW }}>
-      {/* Speed lines background */}
       <div className="absolute inset-0 opacity-25 speedlines pointer-events-none" />
-      {/* Halftone wash */}
       <div className="absolute inset-0 opacity-30 halftone-red pointer-events-none" />
 
-      {/* Floating burst stickers */}
       <Burst text="ZAP!" color={SKY_BLUE} textColor="black" size={110}
         className="absolute top-24 right-6 md:right-16 z-20 animate-bob" spin />
       <Burst text="BOOM!" color={ROCKET_RED} size={150}
         className="absolute bottom-10 left-4 md:left-12 z-20 sticker-tilt-l animate-bob" />
 
       <div className="relative z-10 grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] min-h-[85vh]">
-        {/* Flyer panel */}
         <div className="relative order-first lg:order-last p-6 md:p-12 lg:p-16 flex items-center justify-center">
           <div className="relative w-full max-w-md comic-panel comic-panel-red bg-background overflow-hidden scanlines">
             {ev.flyer_url ? (
@@ -81,44 +64,26 @@ function HeroEvent({ ev }: { ev: Event }) {
                 <span className="text-[12rem] font-display leading-none text-foreground">{d.day}</span>
               </div>
             )}
-            {/* Date sticker */}
-            <div
-              className="absolute -top-4 -left-4 bg-foreground text-background px-4 py-2 border-[3px] border-foreground font-display text-xl tracking-wider sticker-tilt-l"
-              style={{ boxShadow: `5px 5px 0 0 ${ASTRO_YELLOW}` }}
-            >
+            <div className="absolute -top-4 -left-4 bg-foreground text-background px-4 py-2 border-[3px] border-foreground font-display text-xl tracking-wider sticker-tilt-l"
+              style={{ boxShadow: `5px 5px 0 0 ${ASTRO_YELLOW}` }}>
               {d.month} {d.day} · {d.year}
             </div>
           </div>
         </div>
 
-        {/* Title panel */}
         <div className="relative px-6 md:px-12 lg:px-16 pt-32 lg:pt-24 pb-16 flex flex-col justify-center text-foreground">
           <p className="text-[10px] tracking-[0.6em] uppercase font-bold mb-4 inline-block bg-foreground text-background px-3 py-1 self-start">
             ▲ NEXT TRANSMISSION
           </p>
-          <h2
-            className="font-display text-6xl md:text-7xl lg:text-[7rem] leading-[0.85] tracking-tight uppercase mb-6 text-glitch"
-            style={{ WebkitTextStroke: "1px hsl(0 0% 0%)" }}
-          >
+          <h2 className="font-display text-6xl md:text-7xl lg:text-[7rem] leading-[0.85] tracking-tight uppercase mb-6 text-glitch"
+            style={{ WebkitTextStroke: "1px hsl(0 0% 0%)" }}>
             {ev.title}
           </h2>
 
           <div className="flex flex-wrap gap-2 mb-8">
-            {ev.doors_time && (
-              <span className="bg-foreground text-background px-3 py-1 text-xs font-bold tracking-widest uppercase">
-                ⏱ {ev.doors_time}
-              </span>
-            )}
-            {ev.venue && (
-              <span className="bg-background border-[3px] border-foreground px-3 py-1 text-xs font-bold tracking-widest uppercase">
-                ⌖ {ev.venue}
-              </span>
-            )}
-            {ev.city && (
-              <span className="px-3 py-1 text-xs font-bold tracking-widest uppercase" style={{ background: ROCKET_RED, color: "white" }}>
-                ✺ {ev.city}
-              </span>
-            )}
+            {ev.doors_time && <span className="bg-foreground text-background px-3 py-1 text-xs font-bold tracking-widest uppercase">⏱ {ev.doors_time}</span>}
+            {ev.venue && <span className="bg-background border-[3px] border-foreground px-3 py-1 text-xs font-bold tracking-widest uppercase">⌖ {ev.venue}</span>}
+            {ev.city && <span className="px-3 py-1 text-xs font-bold tracking-widest uppercase" style={{ background: ROCKET_RED, color: "white" }}>✺ {ev.city}</span>}
           </div>
 
           {ev.description && (
@@ -129,20 +94,15 @@ function HeroEvent({ ev }: { ev: Event }) {
           )}
 
           {ev.ticket_url && (
-            <a
-              href={ev.ticket_url}
-              target="_blank"
-              rel="noopener noreferrer"
+            <a href={ev.ticket_url} target="_blank" rel="noopener noreferrer"
               className="self-start group relative font-display text-2xl tracking-wider uppercase px-8 py-4 bg-foreground text-background border-[4px] border-foreground transition-transform hover:-translate-x-1 hover:-translate-y-1"
-              style={{ boxShadow: `8px 8px 0 0 ${ROCKET_RED}` }}
-            >
+              style={{ boxShadow: `8px 8px 0 0 ${ROCKET_RED}` }}>
               ▶ Get Tickets <span className="inline-block group-hover:translate-x-1 transition-transform">→</span>
             </a>
           )}
         </div>
       </div>
 
-      {/* Bottom ticker */}
       <div className="relative z-10 bg-foreground text-background py-2 overflow-hidden border-t-[3px] border-foreground">
         <div className="animate-marquee whitespace-nowrap text-[11px] font-bold tracking-[0.4em]">
           {"⚡ INCOMING TRANSMISSION ⚡ TOKYO 2099 ⚡ NONSTOP NEW YORK ⚡ ".repeat(8)}
@@ -152,55 +112,90 @@ function HeroEvent({ ev }: { ev: Event }) {
   );
 }
 
-// ── Upcoming card — comic panel ───────────────────────────────────────────────
-function UpcomingCard({ ev, idx }: { ev: Event; idx: number }) {
+// ── Polaroid flyer ────────────────────────────────────────────────────────────
+function FlyerPolaroid({ ev, idx, onOpen }: { ev: Event; idx: number; onOpen: (ev: Event) => void }) {
   const d = fmt(ev.event_date);
-  const palette = [ROCKET_RED, SKY_BLUE, ASTRO_YELLOW];
-  const accent = palette[idx % palette.length];
-  const tilt = idx % 2 === 0 ? "sticker-tilt-l" : "sticker-tilt-r";
+  const tilts = ["-rotate-3", "rotate-2", "-rotate-1", "rotate-3", "-rotate-2", "rotate-1"];
+  const tilt = tilts[idx % tilts.length];
+  const accents = [ROCKET_RED, SKY_BLUE, ASTRO_YELLOW, "hsl(0 0% 0%)"];
+  const accent = accents[idx % accents.length];
   return (
     <ScrollReveal y={30}>
-      <div className={`group relative bg-background border-[4px] border-foreground transition-transform hover:-translate-y-1 ${tilt}`}
-        style={{ boxShadow: `10px 10px 0 0 ${accent}` }}>
-        <div className="grid grid-cols-[110px_1fr_auto] gap-0">
-          {/* Date stamp */}
-          <div className="relative flex flex-col items-center justify-center py-6 border-r-[4px] border-foreground halftone-yellow">
-            <div className="absolute inset-0 bg-foreground/0" />
-            <span className="font-display text-6xl leading-none text-foreground relative">{d.day}</span>
-            <span className="text-[10px] tracking-[0.3em] font-black mt-1 text-foreground relative">{d.month}</span>
-          </div>
-
-          {/* Info */}
-          <div className="p-5 flex flex-col justify-center min-w-0">
-            <h3 className="font-display text-2xl md:text-3xl uppercase tracking-tight leading-none truncate">
-              {ev.title}
-            </h3>
-            <div className="flex flex-wrap gap-2 mt-3">
-              {ev.venue && <span className="text-[10px] font-bold tracking-widest uppercase bg-foreground text-background px-2 py-0.5">⌖ {ev.venue}</span>}
-              {ev.city && <span className="text-[10px] font-bold tracking-widest uppercase border-2 border-foreground px-2 py-0.5">{ev.city}</span>}
-              {ev.doors_time && <span className="text-[10px] font-bold tracking-widest uppercase px-2 py-0.5" style={{ background: accent, color: "white" }}>⏱ {ev.doors_time}</span>}
+      <button
+        onClick={() => onOpen(ev)}
+        className={`group block w-full text-left bg-background border-[4px] border-foreground p-3 ${tilt} transition-transform duration-300 hover:rotate-0 hover:-translate-y-2 hover:scale-105 cursor-pointer`}
+        style={{ boxShadow: `10px 10px 0 0 ${accent}` }}
+      >
+        {ev.flyer_url ? (
+          <div className="relative aspect-[3/4] overflow-hidden scanlines bg-secondary">
+            <img src={ev.flyer_url} alt={ev.title}
+              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+            <div className="absolute top-2 left-2 bg-foreground text-background px-2 py-1 font-display text-sm tracking-wider"
+              style={{ boxShadow: `3px 3px 0 0 ${accent}` }}>
+              {d.month} {d.day}
             </div>
           </div>
-
-          {/* Ticket */}
-          {ev.ticket_url && (
-            <a
-              href={ev.ticket_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="self-stretch flex items-center px-6 font-display text-xl tracking-wider uppercase border-l-[4px] border-foreground bg-foreground text-background hover:bg-background hover:text-foreground transition-colors"
-              onClick={e => e.stopPropagation()}
-            >
-              GO →
-            </a>
-          )}
+        ) : (
+          <div className="aspect-[3/4] halftone-yellow flex items-center justify-center">
+            <span className="font-display text-7xl leading-none text-foreground">{d.day}</span>
+          </div>
+        )}
+        <div className="px-1 pt-3 pb-1">
+          <h3 className="font-display text-xl uppercase leading-none line-clamp-2">{ev.title}</h3>
+          <p className="text-[10px] font-black tracking-[0.3em] uppercase mt-1.5 text-muted-foreground">
+            {[ev.venue, ev.city].filter(Boolean).join(" · ")}
+          </p>
         </div>
-      </div>
+      </button>
     </ScrollReveal>
   );
 }
 
-// ── Past card — manga polaroid ────────────────────────────────────────────────
+// ── Flyer modal ───────────────────────────────────────────────────────────────
+function FlyerModal({ ev, onClose }: { ev: Event | null; onClose: () => void }) {
+  if (!ev) return null;
+  const d = fmt(ev.event_date);
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-10 bg-foreground/80 backdrop-blur-sm animate-fade-up"
+      onClick={onClose}>
+      <div className="relative max-w-4xl w-full grid grid-cols-1 md:grid-cols-[1.1fr_1fr] gap-6 max-h-[90vh]"
+        onClick={e => e.stopPropagation()}>
+        {ev.flyer_url && (
+          <div className="comic-panel comic-panel-red bg-background overflow-hidden scanlines max-h-[90vh]">
+            <img src={ev.flyer_url} alt={ev.title} className="w-full h-full object-contain max-h-[90vh]" />
+          </div>
+        )}
+        <div className="bg-background border-[4px] border-foreground p-6 md:p-8 overflow-y-auto"
+          style={{ boxShadow: `10px 10px 0 0 ${ASTRO_YELLOW}` }}>
+          <button onClick={onClose}
+            className="absolute -top-4 -right-4 z-10 w-12 h-12 bg-foreground text-background font-display text-2xl flex items-center justify-center border-[3px] border-foreground"
+            style={{ boxShadow: `4px 4px 0 0 ${ROCKET_RED}` }}>
+            ✕
+          </button>
+          <p className="text-[10px] tracking-[0.5em] uppercase font-bold inline-block bg-foreground text-background px-3 py-1 mb-4">
+            {d.month} {d.day} · {d.year}
+          </p>
+          <h3 className="font-display text-4xl md:text-5xl uppercase leading-[0.9] mb-4">{ev.title}</h3>
+          <div className="flex flex-wrap gap-2 mb-4">
+            {ev.doors_time && <span className="bg-foreground text-background px-2 py-1 text-[10px] font-bold tracking-widest uppercase">⏱ {ev.doors_time}</span>}
+            {ev.venue && <span className="border-2 border-foreground px-2 py-1 text-[10px] font-bold tracking-widest uppercase">⌖ {ev.venue}</span>}
+            {ev.city && <span className="px-2 py-1 text-[10px] font-bold tracking-widest uppercase text-background" style={{ background: ROCKET_RED }}>{ev.city}</span>}
+          </div>
+          {ev.description && <p className="text-sm leading-relaxed mb-6">{ev.description}</p>}
+          {ev.ticket_url && (
+            <a href={ev.ticket_url} target="_blank" rel="noopener noreferrer"
+              className="inline-block font-display text-xl tracking-wider uppercase px-6 py-3 bg-foreground text-background border-[3px] border-foreground transition-transform hover:-translate-y-1"
+              style={{ boxShadow: `6px 6px 0 0 ${ROCKET_RED}` }}>
+              ▶ Get Tickets →
+            </a>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Past polaroid (small) ─────────────────────────────────────────────────────
 function PastCard({ ev, idx }: { ev: Event; idx: number }) {
   const d = fmt(ev.event_date);
   const tilt = ["-rotate-2", "rotate-1", "-rotate-1", "rotate-2"][idx % 4];
@@ -210,11 +205,8 @@ function PastCard({ ev, idx }: { ev: Event; idx: number }) {
         style={{ boxShadow: "6px 6px 0 0 hsl(0 0% 0%)" }}>
         {ev.flyer_url ? (
           <div className="aspect-[3/4] overflow-hidden relative scanlines">
-            <img
-              src={ev.flyer_url}
-              alt={ev.title}
-              className="w-full h-full object-cover grayscale contrast-125 group-hover:grayscale-0 transition-all duration-500"
-            />
+            <img src={ev.flyer_url} alt={ev.title}
+              className="w-full h-full object-cover grayscale contrast-125 group-hover:grayscale-0 transition-all duration-500" />
           </div>
         ) : (
           <div className="aspect-[3/4] halftone flex items-center justify-center">
@@ -230,6 +222,119 @@ function PastCard({ ev, idx }: { ev: Event; idx: number }) {
   );
 }
 
+// ── Floating Services Dock ────────────────────────────────────────────────────
+function ServicesDock({ onOpen }: { onOpen: () => void }) {
+  const [expanded, setExpanded] = useState(false);
+  const services = [
+    { label: "DJ", icon: "♪", color: ROCKET_RED },
+    { label: "Security", icon: "✺", color: SKY_BLUE },
+    { label: "Venue", icon: "⌖", color: ASTRO_YELLOW },
+    { label: "Promoter", icon: "▲", color: "hsl(0 0% 0%)" },
+  ];
+  return (
+    <>
+      {/* Desktop side dock */}
+      <div className="hidden lg:flex fixed right-4 top-1/2 -translate-y-1/2 z-40 flex-col gap-3">
+        <div className="bg-foreground text-background px-2 py-3 font-display text-[10px] tracking-[0.4em] uppercase text-center border-[3px] border-foreground"
+          style={{ writingMode: "vertical-rl", boxShadow: `4px 4px 0 0 ${ROCKET_RED}` }}>
+          ▼ HIRE US
+        </div>
+        {services.map((s, i) => (
+          <button key={s.label} onClick={onOpen}
+            className={`group relative bg-background border-[3px] border-foreground w-16 h-16 flex flex-col items-center justify-center transition-transform hover:-translate-x-2 hover:scale-105 ${i % 2 === 0 ? "sticker-tilt-l" : "sticker-tilt-r"}`}
+            style={{ boxShadow: `5px 5px 0 0 ${s.color}` }}>
+            <span className="font-display text-2xl leading-none" style={{ color: s.color }}>{s.icon}</span>
+            <span className="text-[8px] font-black tracking-widest uppercase mt-0.5">{s.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Mobile expanding dock */}
+      <div className="lg:hidden fixed bottom-4 right-4 z-40 flex flex-col items-end gap-2">
+        {expanded && services.map((s) => (
+          <button key={s.label} onClick={() => { onOpen(); setExpanded(false); }}
+            className="bg-background border-[3px] border-foreground px-3 py-2 flex items-center gap-2 animate-fade-up"
+            style={{ boxShadow: `4px 4px 0 0 ${s.color}` }}>
+            <span className="font-display text-lg" style={{ color: s.color }}>{s.icon}</span>
+            <span className="text-[10px] font-black tracking-widest uppercase">{s.label}</span>
+          </button>
+        ))}
+        <button onClick={() => setExpanded(v => !v)}
+          className="w-14 h-14 bg-foreground text-background border-[3px] border-foreground font-display text-xl flex items-center justify-center"
+          style={{ boxShadow: `5px 5px 0 0 ${ROCKET_RED}` }}>
+          {expanded ? "✕" : "HIRE"}
+        </button>
+      </div>
+    </>
+  );
+}
+
+// ── Comic-grid Instagram ──────────────────────────────────────────────────────
+function getEmbedUrl(url: string) {
+  const [base, query] = url.split("?");
+  const clean = base.replace(/\/$/, "");
+  return query ? `${clean}/embed/captioned/?${query}` : `${clean}/embed/captioned/`;
+}
+
+function ComicGramGrid({ posts, loading }: { posts: IgPost[]; loading: boolean }) {
+  if (loading) {
+    return (
+      <div className="grid grid-cols-6 auto-rows-[140px] gap-3">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <div key={i} className="bg-secondary animate-pulse border-[3px] border-foreground"
+            style={{
+              gridColumn: `span ${[3, 3, 2, 4, 3, 3, 2, 4][i]}`,
+              gridRow: `span ${[3, 2, 2, 3, 2, 3, 2, 2][i]}`,
+            }} />
+        ))}
+      </div>
+    );
+  }
+  if (posts.length === 0) {
+    return (
+      <div className="border-[3px] border-foreground p-12 text-center bg-background">
+        <p className="font-display text-2xl uppercase">// no posts yet</p>
+      </div>
+    );
+  }
+
+  // Predefined comic-page panel layout pattern (col-span / row-span pairs)
+  const layouts = [
+    { c: 3, r: 3 }, { c: 3, r: 2 },
+    { c: 2, r: 2 }, { c: 4, r: 3 },
+    { c: 3, r: 2 }, { c: 3, r: 3 },
+    { c: 2, r: 2 }, { c: 4, r: 2 },
+    { c: 3, r: 3 }, { c: 3, r: 2 },
+  ];
+
+  return (
+    <div className="grid grid-cols-6 auto-rows-[140px] gap-3 md:gap-4">
+      {posts.map((p, i) => {
+        const l = layouts[i % layouts.length];
+        return (
+          <div key={p.id}
+            className="relative border-[4px] border-foreground bg-background overflow-hidden scanlines"
+            style={{
+              gridColumn: `span ${l.c}`,
+              gridRow: `span ${l.r}`,
+              boxShadow: `4px 4px 0 0 hsl(0 0% 0%)`,
+            }}>
+            <iframe
+              src={getEmbedUrl(p.instagram_url)}
+              className="w-full h-full border-0 block"
+              scrolling="no"
+              loading="lazy"
+              title="Instagram post"
+              style={{ minHeight: "100%" }}
+            />
+            <div className="pointer-events-none absolute inset-0 ring-1 ring-foreground/10" />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function Events() {
   const [events, setEvents] = useState<Event[]>([]);
@@ -237,6 +342,7 @@ export default function Events() {
   const [loading, setLoading] = useState(true);
   const [igLoading, setIgLoading] = useState(true);
   const [bookingOpen, setBookingOpen] = useState(false);
+  const [openFlyer, setOpenFlyer] = useState<Event | null>(null);
 
   useEffect(() => {
     supabase.from("events").select("*").neq("status", "cancelled").order("event_date", { ascending: false })
@@ -254,7 +360,6 @@ export default function Events() {
 
   return (
     <div className="bg-background text-foreground">
-      {/* Hero */}
       {!loading && hero && <HeroEvent ev={hero} />}
 
       {!loading && !hero && (
@@ -266,29 +371,31 @@ export default function Events() {
         </div>
       )}
 
-      {/* Upcoming */}
-      {!loading && upcoming.length > 0 && (
+      {/* Upcoming — POLAROID WALL */}
+      {!loading && rest.length > 0 && (
         <section className="relative section-padding border-b-[6px] border-foreground overflow-hidden">
-          <div className="absolute inset-0 opacity-[0.04] halftone pointer-events-none" />
+          <div className="absolute inset-0 opacity-[0.05] halftone pointer-events-none" />
+          <Burst text="LIVE!" color={ROCKET_RED} size={120}
+            className="absolute -top-6 right-8 md:right-32 z-20 sticker-tilt-r animate-bob" spin />
+
           <div className="container-content relative">
-            <div className="flex items-center gap-4 mb-12">
-              <span className="inline-block w-12 h-12 starburst" style={{ background: ROCKET_RED }} />
+            <div className="flex items-end gap-4 mb-12 flex-wrap">
               <h2 className="font-display text-5xl md:text-7xl uppercase tracking-tight leading-none">
-                Upcoming<span style={{ color: ROCKET_RED }}>!!</span>
+                The<br/>Wall<span style={{ color: ROCKET_RED }}>!!</span>
               </h2>
+              <p className="text-[11px] tracking-[0.4em] uppercase font-bold text-muted-foreground pb-2">
+                ↳ tap a flyer to inspect
+              </p>
             </div>
-            {rest.length > 0 ? (
-              <div className="space-y-6 max-w-4xl">
-                {rest.map((ev, i) => <UpcomingCard key={ev.id} ev={ev} idx={i} />)}
-              </div>
-            ) : (
-              <p className="font-display text-2xl uppercase">// More dates incoming...</p>
-            )}
+
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8">
+              {rest.map((ev, i) => <FlyerPolaroid key={ev.id} ev={ev} idx={i} onOpen={setOpenFlyer} />)}
+            </div>
           </div>
         </section>
       )}
 
-      {/* From the Gram */}
+      {/* From the Gram — comic page panels */}
       <section className="relative section-padding border-b-[6px] border-foreground overflow-hidden" style={{ background: SKY_BLUE }}>
         <div className="absolute inset-0 opacity-20 halftone pointer-events-none" />
         <Burst text="POW!" color={ASTRO_YELLOW} textColor="black" size={120}
@@ -299,18 +406,14 @@ export default function Events() {
               style={{ WebkitTextStroke: "2px hsl(0 0% 0%)" }}>
               From the Gram
             </h2>
-            <a
-              href="https://www.instagram.com/nonstopnewyork"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="bg-foreground text-background px-3 py-1.5 text-[11px] tracking-[0.3em] uppercase font-bold hover:bg-background hover:text-foreground transition-colors border-[3px] border-foreground"
-            >
+            <a href="https://www.instagram.com/nonstopnewyork" target="_blank" rel="noopener noreferrer"
+              className="bg-foreground text-background px-3 py-1.5 text-[11px] tracking-[0.3em] uppercase font-bold hover:bg-background hover:text-foreground transition-colors border-[3px] border-foreground">
               @nonstopnewyork ↗
             </a>
           </div>
-          <div className="bg-background border-[4px] border-foreground p-4 md:p-6"
+          <div className="bg-background border-[4px] border-foreground p-3 md:p-5"
             style={{ boxShadow: `12px 12px 0 0 hsl(0 0% 0%)` }}>
-            <InstagramFeed posts={igPosts} loading={igLoading} />
+            <ComicGramGrid posts={igPosts} loading={igLoading} />
           </div>
         </div>
       </section>
@@ -320,10 +423,8 @@ export default function Events() {
         <section className="relative section-padding border-b-[6px] border-foreground overflow-hidden">
           <div className="absolute inset-0 opacity-[0.05] speedlines pointer-events-none" />
           <div className="container-content relative">
-            <div className="flex items-center gap-4 mb-12">
-              <h2 className="font-display text-5xl md:text-7xl uppercase tracking-tight leading-none">
-                Archive
-              </h2>
+            <div className="flex items-center gap-4 mb-12 flex-wrap">
+              <h2 className="font-display text-5xl md:text-7xl uppercase tracking-tight leading-none">Archive</h2>
               <span className="font-display text-3xl" style={{ color: ROCKET_RED }}>※</span>
               <span className="text-[11px] tracking-[0.4em] uppercase font-bold text-muted-foreground">flashback file</span>
             </div>
@@ -334,59 +435,10 @@ export default function Events() {
         </section>
       )}
 
-      {/* Book / Hire ─── manga services panel ─────────────────────────────── */}
-      <section className="relative py-24 overflow-hidden border-b-[6px] border-foreground" style={{ background: ROCKET_RED }}>
-        <div className="absolute inset-0 opacity-25 halftone pointer-events-none" />
-        <Burst text="HIRE!" color={ASTRO_YELLOW} textColor="black" size={130}
-          className="absolute top-12 left-6 md:left-20 z-10 animate-bob sticker-tilt-l" spin />
-
-        <div className="container-content relative grid grid-cols-1 md:grid-cols-2 gap-12 items-start">
-          <div className="text-background">
-            <p className="text-[10px] tracking-[0.6em] uppercase font-bold mb-4 inline-block bg-background text-foreground px-3 py-1">
-              ▼ SERVICES MENU
-            </p>
-            <h2 className="font-display text-6xl md:text-8xl uppercase tracking-tight leading-[0.85] mb-6"
-              style={{ WebkitTextStroke: "2px hsl(0 0% 0%)" }}>
-              Book<br/>or Hire
-            </h2>
-            <div className="bg-background/95 text-foreground border-[4px] border-foreground p-5 max-w-md">
-              <p className="text-sm leading-relaxed font-medium">
-                From the booth to the door — DJ sets, event security, venue connections, and full-scale promotion. One team, every angle.
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            {[
-              { label: "DJ", desc: "Sets that hit", icon: "♪" },
-              { label: "Security", desc: "Crowd control", icon: "✺" },
-              { label: "Venue", desc: "Spaces on lock", icon: "⌖" },
-              { label: "Promoter", desc: "Sell-out fuel", icon: "▲" },
-            ].map(({ label, desc, icon }, i) => (
-              <button
-                key={label}
-                onClick={() => setBookingOpen(true)}
-                className={`group relative bg-background text-foreground border-[4px] border-foreground p-5 text-left transition-transform hover:-translate-y-1 hover:-translate-x-1 ${i % 2 === 0 ? "sticker-tilt-l" : "sticker-tilt-r"}`}
-                style={{ boxShadow: `8px 8px 0 0 hsl(0 0% 0%)` }}
-              >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="font-display text-3xl uppercase tracking-tight leading-none">{label}</p>
-                    <p className="text-[10px] font-bold tracking-widest uppercase mt-2 text-muted-foreground">{desc}</p>
-                  </div>
-                  <span className="font-display text-3xl" style={{ color: ROCKET_RED }}>{icon}</span>
-                </div>
-                <span className="absolute bottom-2 right-3 text-[10px] font-bold tracking-widest uppercase opacity-40 group-hover:opacity-100 transition-opacity">
-                  TAP →
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-      </section>
-
       <Marquee />
       <BookingSheet open={bookingOpen} onOpenChange={setBookingOpen} />
+      <ServicesDock onOpen={() => setBookingOpen(true)} />
+      <FlyerModal ev={openFlyer} onClose={() => setOpenFlyer(null)} />
     </div>
   );
 }
