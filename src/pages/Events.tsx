@@ -224,67 +224,66 @@ export default function Events() {
         </section>
       )}
 
-      {/* From the Gram */}
-      <section className="section-padding">
-        <div className="container-content">
-          <div className="flex items-center gap-4 mb-8">
-            <p className="text-[9px] tracking-[0.4em] uppercase text-muted-foreground">From the Gram</p>
-            <a
-              href="https://www.instagram.com/nonstopnewyork"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[9px] tracking-[0.3em] uppercase text-muted-foreground/50 hover:text-foreground transition-colors"
-            >
-              @nonstopnewyork ↗
-            </a>
-          </div>
-          <InstagramFeed posts={igPosts} loading={igLoading} />
-
-          {/* Past flyer archive */}
-          {!loading && past.length > 0 && (
-            <div className="mt-16">
-              <p className="text-[9px] tracking-[0.4em] uppercase text-muted-foreground mb-6">Archive</p>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {past.map(ev => <PastCard key={ev.id} ev={ev} />)}
-              </div>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Book / Hire ─────────────────────────────────────────────────────────── */}
-      <section className="bg-primary text-primary-foreground py-24">
-        <div className="container-content grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+      {/* Gram + Book/Hire combined — fits one desktop viewport */}
+      <section className="py-12 lg:py-16">
+        <div className="container-content grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-12 items-start">
+          {/* From the Gram */}
           <div>
-            <p className="text-[9px] tracking-[0.5em] uppercase text-primary-foreground/40 mb-4">Services</p>
-            <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tight leading-[0.9] mb-6">
-              Book<br />or Hire
-            </h2>
-            <p className="text-sm text-primary-foreground/60 leading-relaxed max-w-sm">
-              From the booth to the door — DJ sets, event security, venue connections, and full-scale promotion. One team, every angle.
-            </p>
-          </div>
-          <div className="flex flex-col gap-4">
-            {[
-              { label: "DJ", desc: "Sets from underground to main stage" },
-              { label: "Security", desc: "Professional crowd management" },
-              { label: "Venue", desc: "Spaces that fit the vision" },
-              { label: "Promoter", desc: "Sell-out strategy & execution" },
-            ].map(({ label, desc }) => (
-              <button
-                key={label}
-                onClick={() => setBookingOpen(true)}
-                className="group flex items-center justify-between border border-primary-foreground/20 px-6 py-4 hover:border-primary-foreground hover:bg-primary-foreground/5 transition-colors text-left"
+            <div className="flex items-center gap-4 mb-5">
+              <p className="text-[9px] tracking-[0.4em] uppercase text-muted-foreground">From the Gram</p>
+              <a
+                href="https://www.instagram.com/nonstopnewyork"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[9px] tracking-[0.3em] uppercase text-muted-foreground/50 hover:text-foreground transition-colors"
               >
-                <div>
-                  <p className="font-black uppercase tracking-tight text-sm">{label}</p>
-                  <p className="text-[10px] text-primary-foreground/40 mt-0.5">{desc}</p>
-                </div>
-                <span className="text-primary-foreground/30 group-hover:text-primary-foreground transition-colors text-lg">→</span>
-              </button>
-            ))}
+                @nonstopnewyork ↗
+              </a>
+            </div>
+            <InstagramFeed posts={igPosts} loading={igLoading} />
+          </div>
+
+          {/* Book / Hire */}
+          <div className="bg-primary text-primary-foreground p-8 lg:p-10">
+            <p className="text-[9px] tracking-[0.5em] uppercase text-primary-foreground/40 mb-3">Services</p>
+            <h2 className="text-3xl lg:text-5xl font-black uppercase tracking-tight leading-[0.9] mb-4">
+              Book or Hire
+            </h2>
+            <p className="text-xs text-primary-foreground/60 leading-relaxed mb-6">
+              From the booth to the door — DJ sets, event security, venue connections, and full-scale promotion.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { label: "DJ", desc: "Underground to main stage" },
+                { label: "Security", desc: "Crowd management" },
+                { label: "Venue", desc: "Spaces that fit" },
+                { label: "Promoter", desc: "Sell-out strategy" },
+              ].map(({ label, desc }) => (
+                <button
+                  key={label}
+                  onClick={() => setBookingOpen(true)}
+                  className="group flex items-center justify-between border border-primary-foreground/20 px-4 py-3 hover:border-primary-foreground hover:bg-primary-foreground/5 transition-colors text-left"
+                >
+                  <div>
+                    <p className="font-black uppercase tracking-tight text-xs">{label}</p>
+                    <p className="text-[9px] text-primary-foreground/40 mt-0.5">{desc}</p>
+                  </div>
+                  <span className="text-primary-foreground/30 group-hover:text-primary-foreground transition-colors">→</span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
+
+        {/* Past flyer archive */}
+        {!loading && past.length > 0 && (
+          <div className="container-content mt-12">
+            <p className="text-[9px] tracking-[0.4em] uppercase text-muted-foreground mb-6">Archive</p>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              {past.map(ev => <PastCard key={ev.id} ev={ev} />)}
+            </div>
+          </div>
+        )}
       </section>
 
       <Marquee />
