@@ -271,7 +271,7 @@ export default function Events() {
         {!loading && past.length > 0 && (
           <div className="container-content mt-12">
             <p className="text-[9px] tracking-[0.4em] uppercase text-muted-foreground mb-6">Archive</p>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {past.map(ev => <PastCard key={ev.id} ev={ev} />)}
             </div>
           </div>
