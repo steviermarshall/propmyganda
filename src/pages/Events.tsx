@@ -22,12 +22,6 @@ function fmt(dateStr: string) {
   };
 }
 
-function getEmbedUrl(url: string) {
-  const [base, query] = url.split("?");
-  const clean = base.replace(/\/$/, "");
-  return query ? `${clean}/embed/captioned/?${query}` : `${clean}/embed/captioned/`;
-}
-
 // ── Flyer modal ───────────────────────────────────────────────────────────────
 function FlyerModal({ ev, onClose }: { ev: Event | null; onClose: () => void }) {
   if (!ev) return null;
