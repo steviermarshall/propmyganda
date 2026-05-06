@@ -4,7 +4,7 @@ import type { Database } from "@/integrations/supabase/types";
 import BookingSheet from "@/components/BookingSheet";
 
 type Event = Database["public"]["Tables"]["events"]["Row"];
-type IgPost = Database["public"]["Tables"]["instagram_posts"]["Row"];
+
 
 const YELLOW = "hsl(58 100% 50%)";
 const BLACK = "hsl(0 0% 0%)";
