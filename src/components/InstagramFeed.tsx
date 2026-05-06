@@ -6,26 +6,24 @@ declare global {
   }
 }
 
-// Load Instagram's embed script once per page
-function loadEmbedScript() {
-  if (document.getElementById("ig-embed-js")) return;
+function loadAndProcess() {
+  const existing = document.getElementById("ig-embed-js");
+  if (existing) {
+    if (window.instgrm) {
+      window.instgrm.Embeds.process();
+    } else {
+      existing.addEventListener("load", () => window.instgrm?.Embeds.process(), { once: true });
+    }
+    return;
+  }
   const s = document.createElement("script");
   s.id = "ig-embed-js";
   s.src = "https://www.instagram.com/embed.js";
   s.async = true;
-  s.defer = true;
+  s.addEventListener("load", () => window.instgrm?.Embeds.process(), { once: true });
   document.body.appendChild(s);
 }
 
-function waitAndProcess(attempts = 0) {
-  if (window.instgrm) {
-    window.instgrm.Embeds.process();
-    return;
-  }
-  if (attempts < 20) setTimeout(() => waitAndProcess(attempts + 1), 300);
-}
-
-// Single post — uses innerHTML so React never reconciles Instagram's injected iframe
 function InstagramPost({ url }: { url: string }) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -47,17 +45,10 @@ function InstagramPost({ url }: { url: string }) {
           View on Instagram →
         </a>
       </blockquote>`;
-    loadEmbedScript();
-    waitAndProcess();
+    loadAndProcess();
   }, [url]);
 
-  return (
-    <div
-      ref={ref}
-      className="instagram-post-wrapper"
-      style={{ minHeight: 300 }}
-    />
-  );
+  return <div ref={ref} style={{ minHeight: 480 }} />;
 }
 
 interface Post {
@@ -74,9 +65,9 @@ interface Props {
 export default function InstagramFeed({ posts, loading }: Props) {
   if (loading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="columns-1 sm:columns-2 lg:columns-3 gap-6 space-y-6">
         {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="bg-secondary animate-pulse rounded-sm" style={{ minHeight: 480 }} />
+          <div key={i} className="break-inside-avoid bg-secondary animate-pulse" style={{ minHeight: 480 }} />
         ))}
       </div>
     );
@@ -86,10 +77,6 @@ export default function InstagramFeed({ posts, loading }: Props) {
     return (
       <div className="border border-border p-16 text-center max-w-lg">
         <p className="text-muted-foreground text-sm uppercase tracking-widest">No posts yet</p>
-        <p className="text-xs text-muted-foreground mt-2">
-          Add Instagram post URLs in the Supabase dashboard under{" "}
-          <code className="text-xs bg-secondary px-1">instagram_posts</code>
-        </p>
       </div>
     );
   }
