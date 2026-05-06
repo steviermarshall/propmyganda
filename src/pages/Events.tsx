@@ -9,6 +9,10 @@ import InstagramFeed from "@/components/InstagramFeed";
 type Event = Database["public"]["Tables"]["events"]["Row"];
 type IgPost = Database["public"]["Tables"]["instagram_posts"]["Row"];
 
+const ROCKET_RED = "hsl(355 85% 52%)";
+const ASTRO_YELLOW = "hsl(58 100% 50%)";
+const SKY_BLUE = "hsl(195 100% 50%)";
+
 function fmt(dateStr: string) {
   const d = new Date(dateStr);
   return {
@@ -19,103 +23,175 @@ function fmt(dateStr: string) {
   };
 }
 
-// ── Hero: next upcoming event ─────────────────────────────────────────────────
-function HeroEvent({ ev }: { ev: Event }) {
-  const d = fmt(ev.event_date);
+// ── BAM! starburst sticker ────────────────────────────────────────────────────
+function Burst({
+  text,
+  color = ROCKET_RED,
+  textColor = "white",
+  size = 140,
+  className = "",
+  spin = false,
+}: { text: string; color?: string; textColor?: string; size?: number; className?: string; spin?: boolean }) {
   return (
-    <div className="relative min-h-[70vh] bg-primary text-primary-foreground overflow-hidden grid grid-cols-1 lg:grid-cols-2">
-      {/* Details */}
-      <div className="flex flex-col justify-end lg:justify-center px-8 md:px-16 pb-12 lg:pb-0 pt-36 lg:pt-24 z-10">
-        <p className="text-[9px] tracking-[0.5em] uppercase text-primary-foreground/40 mb-6">Next Event</p>
-        <h2 className="text-4xl md:text-6xl lg:text-7xl font-black uppercase tracking-tight leading-[0.9] mb-6">
-          {ev.title}
-        </h2>
-        <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-primary-foreground/60 mb-8">
-          <span>{d.full}</span>
-          {ev.doors_time && <><span>·</span><span>Doors {ev.doors_time}</span></>}
-          {ev.venue && <><span>·</span><span>{ev.venue}</span></>}
-          {ev.city && <><span>·</span><span>{ev.city}</span></>}
-        </div>
-        {ev.description && (
-          <p className="text-sm text-primary-foreground/50 max-w-md mb-10 leading-relaxed">{ev.description}</p>
-        )}
-        {ev.ticket_url && (
-          <a
-            href={ev.ticket_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="self-start border border-primary-foreground px-8 py-4 text-xs tracking-[0.25em] uppercase font-bold hover:bg-primary-foreground hover:text-primary transition-colors"
-          >
-            Get Tickets →
-          </a>
-        )}
+    <div className={`relative inline-block ${className}`} style={{ width: size, height: size }}>
+      <div
+        className={`absolute inset-0 starburst ${spin ? "animate-slow-spin" : ""}`}
+        style={{ background: color }}
+      />
+      <div
+        className="absolute inset-0 starburst"
+        style={{ background: color, transform: "rotate(15deg) scale(0.92)" }}
+      />
+      <div className="absolute inset-0 flex items-center justify-center">
+        <span
+          className="font-display tracking-tight text-center leading-none px-2"
+          style={{ color: textColor, fontSize: size * 0.22, transform: "rotate(-6deg)" }}
+        >
+          {text}
+        </span>
       </div>
-
-      {/* Flyer */}
-      {ev.flyer_url ? (
-        <div className="relative overflow-hidden lg:h-full h-64 order-first lg:order-last">
-          <img
-            src={ev.flyer_url}
-            alt={ev.title}
-            className="w-full h-full object-cover object-center"
-          />
-          <div className="absolute inset-0 lg:bg-gradient-to-r lg:from-primary/60 bg-gradient-to-t from-primary/80 via-transparent" />
-        </div>
-      ) : (
-        /* No flyer — big date display */
-        <div className="hidden lg:flex items-center justify-center opacity-5 select-none">
-          <p className="text-[20rem] font-black leading-none tabular-nums">{d.day}</p>
-        </div>
-      )}
     </div>
   );
 }
 
-// ── Upcoming card ─────────────────────────────────────────────────────────────
-function UpcomingCard({ ev }: { ev: Event }) {
+// ── Hero panel — explosive comic spread ──────────────────────────────────────
+function HeroEvent({ ev }: { ev: Event }) {
   const d = fmt(ev.event_date);
   return (
-    <ScrollReveal y={30}>
-      <div className="group border border-border hover:border-foreground transition-colors overflow-hidden grid grid-cols-[auto_1fr_auto] gap-0">
-        {/* Date column */}
-        <div className="bg-primary text-primary-foreground flex flex-col items-center justify-center px-6 py-8 min-w-[80px]">
-          <span className="text-4xl font-black leading-none">{d.day}</span>
-          <span className="text-[9px] tracking-[0.3em] uppercase mt-1 opacity-60">{d.month}</span>
-          <span className="text-[9px] opacity-40 mt-0.5">{d.year}</span>
+    <div className="relative overflow-hidden border-b-[6px] border-foreground" style={{ background: ASTRO_YELLOW }}>
+      {/* Speed lines background */}
+      <div className="absolute inset-0 opacity-25 speedlines pointer-events-none" />
+      {/* Halftone wash */}
+      <div className="absolute inset-0 opacity-30 halftone-red pointer-events-none" />
+
+      {/* Floating burst stickers */}
+      <Burst text="ZAP!" color={SKY_BLUE} textColor="black" size={110}
+        className="absolute top-24 right-6 md:right-16 z-20 animate-bob" spin />
+      <Burst text="BOOM!" color={ROCKET_RED} size={150}
+        className="absolute bottom-10 left-4 md:left-12 z-20 sticker-tilt-l animate-bob" />
+
+      <div className="relative z-10 grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] min-h-[85vh]">
+        {/* Flyer panel */}
+        <div className="relative order-first lg:order-last p-6 md:p-12 lg:p-16 flex items-center justify-center">
+          <div className="relative w-full max-w-md comic-panel comic-panel-red bg-background overflow-hidden scanlines">
+            {ev.flyer_url ? (
+              <img src={ev.flyer_url} alt={ev.title} className="w-full aspect-[3/4] object-cover" />
+            ) : (
+              <div className="aspect-[3/4] flex items-center justify-center halftone">
+                <span className="text-[12rem] font-display leading-none text-foreground">{d.day}</span>
+              </div>
+            )}
+            {/* Date sticker */}
+            <div
+              className="absolute -top-4 -left-4 bg-foreground text-background px-4 py-2 border-[3px] border-foreground font-display text-xl tracking-wider sticker-tilt-l"
+              style={{ boxShadow: `5px 5px 0 0 ${ASTRO_YELLOW}` }}
+            >
+              {d.month} {d.day} · {d.year}
+            </div>
+          </div>
         </div>
 
-        {/* Info */}
-        <div className="p-6 flex flex-col justify-center min-w-0">
-          <h3 className="font-black text-lg uppercase tracking-tight truncate group-hover:opacity-70 transition-opacity">
-            {ev.title}
-          </h3>
-          <p className="text-xs text-muted-foreground mt-1">
-            {[ev.venue, ev.city].filter(Boolean).join(" · ")}
+        {/* Title panel */}
+        <div className="relative px-6 md:px-12 lg:px-16 pt-32 lg:pt-24 pb-16 flex flex-col justify-center text-foreground">
+          <p className="text-[10px] tracking-[0.6em] uppercase font-bold mb-4 inline-block bg-foreground text-background px-3 py-1 self-start">
+            ▲ NEXT TRANSMISSION
           </p>
-          {ev.doors_time && (
-            <p className="text-[10px] text-muted-foreground mt-0.5">Doors {ev.doors_time}</p>
-          )}
-          {ev.description && (
-            <p className="text-sm text-muted-foreground mt-3 line-clamp-1">{ev.description}</p>
-          )}
-        </div>
+          <h2
+            className="font-display text-6xl md:text-7xl lg:text-[7rem] leading-[0.85] tracking-tight uppercase mb-6 text-glitch"
+            style={{ WebkitTextStroke: "1px hsl(0 0% 0%)" }}
+          >
+            {ev.title}
+          </h2>
 
-        {/* Flyer thumbnail + ticket CTA */}
-        <div className="flex flex-col">
-          {ev.flyer_url && (
-            <div className="w-24 h-full overflow-hidden hidden md:block">
-              <img src={ev.flyer_url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+          <div className="flex flex-wrap gap-2 mb-8">
+            {ev.doors_time && (
+              <span className="bg-foreground text-background px-3 py-1 text-xs font-bold tracking-widest uppercase">
+                ⏱ {ev.doors_time}
+              </span>
+            )}
+            {ev.venue && (
+              <span className="bg-background border-[3px] border-foreground px-3 py-1 text-xs font-bold tracking-widest uppercase">
+                ⌖ {ev.venue}
+              </span>
+            )}
+            {ev.city && (
+              <span className="px-3 py-1 text-xs font-bold tracking-widest uppercase" style={{ background: ROCKET_RED, color: "white" }}>
+                ✺ {ev.city}
+              </span>
+            )}
+          </div>
+
+          {ev.description && (
+            <div className="bg-background/90 border-[3px] border-foreground p-5 max-w-md mb-8 relative">
+              <p className="text-sm leading-relaxed font-medium">{ev.description}</p>
+              <div className="absolute -bottom-3 left-8 w-6 h-6 bg-background border-r-[3px] border-b-[3px] border-foreground rotate-45" />
             </div>
           )}
+
           {ev.ticket_url && (
             <a
               href={ev.ticket_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="shrink-0 flex items-center self-center mr-6 text-[10px] tracking-[0.2em] uppercase font-bold border border-foreground px-5 py-3 hover:bg-foreground hover:text-background transition-colors whitespace-nowrap ml-4"
+              className="self-start group relative font-display text-2xl tracking-wider uppercase px-8 py-4 bg-foreground text-background border-[4px] border-foreground transition-transform hover:-translate-x-1 hover:-translate-y-1"
+              style={{ boxShadow: `8px 8px 0 0 ${ROCKET_RED}` }}
+            >
+              ▶ Get Tickets <span className="inline-block group-hover:translate-x-1 transition-transform">→</span>
+            </a>
+          )}
+        </div>
+      </div>
+
+      {/* Bottom ticker */}
+      <div className="relative z-10 bg-foreground text-background py-2 overflow-hidden border-t-[3px] border-foreground">
+        <div className="animate-marquee whitespace-nowrap text-[11px] font-bold tracking-[0.4em]">
+          {"⚡ INCOMING TRANSMISSION ⚡ TOKYO 2099 ⚡ NONSTOP NEW YORK ⚡ ".repeat(8)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Upcoming card — comic panel ───────────────────────────────────────────────
+function UpcomingCard({ ev, idx }: { ev: Event; idx: number }) {
+  const d = fmt(ev.event_date);
+  const palette = [ROCKET_RED, SKY_BLUE, ASTRO_YELLOW];
+  const accent = palette[idx % palette.length];
+  const tilt = idx % 2 === 0 ? "sticker-tilt-l" : "sticker-tilt-r";
+  return (
+    <ScrollReveal y={30}>
+      <div className={`group relative bg-background border-[4px] border-foreground transition-transform hover:-translate-y-1 ${tilt}`}
+        style={{ boxShadow: `10px 10px 0 0 ${accent}` }}>
+        <div className="grid grid-cols-[110px_1fr_auto] gap-0">
+          {/* Date stamp */}
+          <div className="relative flex flex-col items-center justify-center py-6 border-r-[4px] border-foreground halftone-yellow">
+            <div className="absolute inset-0 bg-foreground/0" />
+            <span className="font-display text-6xl leading-none text-foreground relative">{d.day}</span>
+            <span className="text-[10px] tracking-[0.3em] font-black mt-1 text-foreground relative">{d.month}</span>
+          </div>
+
+          {/* Info */}
+          <div className="p-5 flex flex-col justify-center min-w-0">
+            <h3 className="font-display text-2xl md:text-3xl uppercase tracking-tight leading-none truncate">
+              {ev.title}
+            </h3>
+            <div className="flex flex-wrap gap-2 mt-3">
+              {ev.venue && <span className="text-[10px] font-bold tracking-widest uppercase bg-foreground text-background px-2 py-0.5">⌖ {ev.venue}</span>}
+              {ev.city && <span className="text-[10px] font-bold tracking-widest uppercase border-2 border-foreground px-2 py-0.5">{ev.city}</span>}
+              {ev.doors_time && <span className="text-[10px] font-bold tracking-widest uppercase px-2 py-0.5" style={{ background: accent, color: "white" }}>⏱ {ev.doors_time}</span>}
+            </div>
+          </div>
+
+          {/* Ticket */}
+          {ev.ticket_url && (
+            <a
+              href={ev.ticket_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="self-stretch flex items-center px-6 font-display text-xl tracking-wider uppercase border-l-[4px] border-foreground bg-foreground text-background hover:bg-background hover:text-foreground transition-colors"
               onClick={e => e.stopPropagation()}
             >
-              Tickets
+              GO →
             </a>
           )}
         </div>
@@ -124,29 +200,30 @@ function UpcomingCard({ ev }: { ev: Event }) {
   );
 }
 
-// ── Past event card ───────────────────────────────────────────────────────────
-function PastCard({ ev }: { ev: Event }) {
+// ── Past card — manga polaroid ────────────────────────────────────────────────
+function PastCard({ ev, idx }: { ev: Event; idx: number }) {
   const d = fmt(ev.event_date);
+  const tilt = ["-rotate-2", "rotate-1", "-rotate-1", "rotate-2"][idx % 4];
   return (
     <ScrollReveal y={20}>
-      <div className="group relative overflow-hidden border border-border/40 hover:border-border transition-colors">
+      <div className={`group bg-background border-[3px] border-foreground p-2 ${tilt} transition-transform hover:rotate-0 hover:-translate-y-1`}
+        style={{ boxShadow: "6px 6px 0 0 hsl(0 0% 0%)" }}>
         {ev.flyer_url ? (
-          <div className="aspect-[3/4] overflow-hidden">
+          <div className="aspect-[3/4] overflow-hidden relative scanlines">
             <img
               src={ev.flyer_url}
               alt={ev.title}
-              className="w-full h-full object-cover grayscale opacity-60 group-hover:opacity-80 group-hover:grayscale-0 transition-all duration-500"
+              className="w-full h-full object-cover grayscale contrast-125 group-hover:grayscale-0 transition-all duration-500"
             />
           </div>
         ) : (
-          <div className="aspect-[3/4] bg-secondary flex items-center justify-center">
-            <span className="text-6xl font-black text-border">{d.day}</span>
+          <div className="aspect-[3/4] halftone flex items-center justify-center">
+            <span className="font-display text-7xl">{d.day}</span>
           </div>
         )}
-        <div className="p-4">
-          <p className="text-[9px] tracking-[0.3em] uppercase text-muted-foreground">{d.month} {d.year}</p>
-          <h3 className="font-black text-sm uppercase tracking-tight mt-1 line-clamp-2">{ev.title}</h3>
-          {ev.city && <p className="text-[10px] text-muted-foreground mt-0.5">{ev.city}</p>}
+        <div className="px-1 pt-2 pb-1">
+          <p className="text-[9px] tracking-[0.3em] font-black uppercase">{d.month} · {d.year}</p>
+          <h3 className="font-display text-lg uppercase leading-none mt-1 line-clamp-2">{ev.title}</h3>
         </div>
       </div>
     </ScrollReveal>
@@ -162,125 +239,146 @@ export default function Events() {
   const [bookingOpen, setBookingOpen] = useState(false);
 
   useEffect(() => {
-    supabase
-      .from("events")
-      .select("*")
-      .neq("status", "cancelled")
-      .order("event_date", { ascending: false })
-      .then(({ data }) => {
-        setEvents((data ?? []) as Event[]);
-        setLoading(false);
-      });
-
-    supabase
-      .from("instagram_posts")
-      .select("*")
-      .eq("active", true)
-      .order("display_order", { ascending: true })
-      .order("created_at", { ascending: false })
-      .then(({ data }) => {
-        setIgPosts((data ?? []) as IgPost[]);
-        setIgLoading(false);
-      });
+    supabase.from("events").select("*").neq("status", "cancelled").order("event_date", { ascending: false })
+      .then(({ data }) => { setEvents((data ?? []) as Event[]); setLoading(false); });
+    supabase.from("instagram_posts").select("*").eq("active", true)
+      .order("display_order", { ascending: true }).order("created_at", { ascending: false })
+      .then(({ data }) => { setIgPosts((data ?? []) as IgPost[]); setIgLoading(false); });
   }, []);
 
-  const upcoming = events.filter(e => e.status === "upcoming").sort(
-    (a, b) => new Date(a.event_date).getTime() - new Date(b.event_date).getTime()
-  );
-  const past = events.filter(e => e.status === "past").sort(
-    (a, b) => new Date(b.event_date).getTime() - new Date(a.event_date).getTime()
-  );
+  const upcoming = events.filter(e => e.status === "upcoming")
+    .sort((a, b) => new Date(a.event_date).getTime() - new Date(b.event_date).getTime());
+  const past = events.filter(e => e.status === "past")
+    .sort((a, b) => new Date(b.event_date).getTime() - new Date(a.event_date).getTime());
   const [hero, ...rest] = upcoming;
 
   return (
-    <div className="bg-background">
+    <div className="bg-background text-foreground">
       {/* Hero */}
       {!loading && hero && <HeroEvent ev={hero} />}
 
-      {/* No upcoming fallback header */}
       {!loading && !hero && (
-        <div className="bg-primary text-primary-foreground pt-32 pb-16">
-          <div className="container-content">
-            <ScrollReveal>
-              <h1 className="text-5xl md:text-8xl text-heading">Events</h1>
-            </ScrollReveal>
+        <div className="relative pt-32 pb-16 overflow-hidden border-b-[6px] border-foreground" style={{ background: ASTRO_YELLOW }}>
+          <div className="absolute inset-0 opacity-30 halftone-red" />
+          <div className="container-content relative">
+            <h1 className="font-display text-7xl md:text-9xl uppercase tracking-tight text-glitch">Events</h1>
           </div>
         </div>
       )}
 
-      {/* Upcoming events */}
+      {/* Upcoming */}
       {!loading && upcoming.length > 0 && (
-        <section className="section-padding border-b border-border">
-          <div className="container-content">
-            <p className="text-[9px] tracking-[0.5em] uppercase text-muted-foreground mb-8">Upcoming</p>
+        <section className="relative section-padding border-b-[6px] border-foreground overflow-hidden">
+          <div className="absolute inset-0 opacity-[0.04] halftone pointer-events-none" />
+          <div className="container-content relative">
+            <div className="flex items-center gap-4 mb-12">
+              <span className="inline-block w-12 h-12 starburst" style={{ background: ROCKET_RED }} />
+              <h2 className="font-display text-5xl md:text-7xl uppercase tracking-tight leading-none">
+                Upcoming<span style={{ color: ROCKET_RED }}>!!</span>
+              </h2>
+            </div>
             {rest.length > 0 ? (
-              <div className="space-y-3 max-w-4xl">
-                {rest.map(ev => <UpcomingCard key={ev.id} ev={ev} />)}
+              <div className="space-y-6 max-w-4xl">
+                {rest.map((ev, i) => <UpcomingCard key={ev.id} ev={ev} idx={i} />)}
               </div>
             ) : (
-              <p className="text-xs text-muted-foreground uppercase tracking-widest">More dates coming soon</p>
+              <p className="font-display text-2xl uppercase">// More dates incoming...</p>
             )}
           </div>
         </section>
       )}
 
       {/* From the Gram */}
-      <section className="section-padding">
-        <div className="container-content">
-          <div className="flex items-center gap-4 mb-8">
-            <p className="text-[9px] tracking-[0.4em] uppercase text-muted-foreground">From the Gram</p>
+      <section className="relative section-padding border-b-[6px] border-foreground overflow-hidden" style={{ background: SKY_BLUE }}>
+        <div className="absolute inset-0 opacity-20 halftone pointer-events-none" />
+        <Burst text="POW!" color={ASTRO_YELLOW} textColor="black" size={120}
+          className="absolute top-12 right-8 md:right-20 z-10 animate-bob" />
+        <div className="container-content relative">
+          <div className="flex flex-wrap items-center gap-4 mb-10">
+            <h2 className="font-display text-5xl md:text-7xl uppercase tracking-tight leading-none text-background"
+              style={{ WebkitTextStroke: "2px hsl(0 0% 0%)" }}>
+              From the Gram
+            </h2>
             <a
               href="https://www.instagram.com/nonstopnewyork"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[9px] tracking-[0.3em] uppercase text-muted-foreground/50 hover:text-foreground transition-colors"
+              className="bg-foreground text-background px-3 py-1.5 text-[11px] tracking-[0.3em] uppercase font-bold hover:bg-background hover:text-foreground transition-colors border-[3px] border-foreground"
             >
               @nonstopnewyork ↗
             </a>
           </div>
-          <InstagramFeed posts={igPosts} loading={igLoading} />
-
-          {/* Past flyer archive */}
-          {!loading && past.length > 0 && (
-            <div className="mt-16">
-              <p className="text-[9px] tracking-[0.4em] uppercase text-muted-foreground mb-6">Archive</p>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {past.map(ev => <PastCard key={ev.id} ev={ev} />)}
-              </div>
-            </div>
-          )}
+          <div className="bg-background border-[4px] border-foreground p-4 md:p-6"
+            style={{ boxShadow: `12px 12px 0 0 hsl(0 0% 0%)` }}>
+            <InstagramFeed posts={igPosts} loading={igLoading} />
+          </div>
         </div>
       </section>
 
-      {/* Book / Hire ─────────────────────────────────────────────────────────── */}
-      <section className="bg-primary text-primary-foreground py-24">
-        <div className="container-content grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-          <div>
-            <p className="text-[9px] tracking-[0.5em] uppercase text-primary-foreground/40 mb-4">Services</p>
-            <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tight leading-[0.9] mb-6">
-              Book<br />or Hire
-            </h2>
-            <p className="text-sm text-primary-foreground/60 leading-relaxed max-w-sm">
-              From the booth to the door — DJ sets, event security, venue connections, and full-scale promotion. One team, every angle.
-            </p>
+      {/* Archive */}
+      {!loading && past.length > 0 && (
+        <section className="relative section-padding border-b-[6px] border-foreground overflow-hidden">
+          <div className="absolute inset-0 opacity-[0.05] speedlines pointer-events-none" />
+          <div className="container-content relative">
+            <div className="flex items-center gap-4 mb-12">
+              <h2 className="font-display text-5xl md:text-7xl uppercase tracking-tight leading-none">
+                Archive
+              </h2>
+              <span className="font-display text-3xl" style={{ color: ROCKET_RED }}>※</span>
+              <span className="text-[11px] tracking-[0.4em] uppercase font-bold text-muted-foreground">flashback file</span>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8">
+              {past.map((ev, i) => <PastCard key={ev.id} ev={ev} idx={i} />)}
+            </div>
           </div>
-          <div className="flex flex-col gap-4">
+        </section>
+      )}
+
+      {/* Book / Hire ─── manga services panel ─────────────────────────────── */}
+      <section className="relative py-24 overflow-hidden border-b-[6px] border-foreground" style={{ background: ROCKET_RED }}>
+        <div className="absolute inset-0 opacity-25 halftone pointer-events-none" />
+        <Burst text="HIRE!" color={ASTRO_YELLOW} textColor="black" size={130}
+          className="absolute top-12 left-6 md:left-20 z-10 animate-bob sticker-tilt-l" spin />
+
+        <div className="container-content relative grid grid-cols-1 md:grid-cols-2 gap-12 items-start">
+          <div className="text-background">
+            <p className="text-[10px] tracking-[0.6em] uppercase font-bold mb-4 inline-block bg-background text-foreground px-3 py-1">
+              ▼ SERVICES MENU
+            </p>
+            <h2 className="font-display text-6xl md:text-8xl uppercase tracking-tight leading-[0.85] mb-6"
+              style={{ WebkitTextStroke: "2px hsl(0 0% 0%)" }}>
+              Book<br/>or Hire
+            </h2>
+            <div className="bg-background/95 text-foreground border-[4px] border-foreground p-5 max-w-md">
+              <p className="text-sm leading-relaxed font-medium">
+                From the booth to the door — DJ sets, event security, venue connections, and full-scale promotion. One team, every angle.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             {[
-              { label: "DJ", desc: "Sets from underground to main stage" },
-              { label: "Security", desc: "Professional crowd management" },
-              { label: "Venue", desc: "Spaces that fit the vision" },
-              { label: "Promoter", desc: "Sell-out strategy & execution" },
-            ].map(({ label, desc }) => (
+              { label: "DJ", desc: "Sets that hit", icon: "♪" },
+              { label: "Security", desc: "Crowd control", icon: "✺" },
+              { label: "Venue", desc: "Spaces on lock", icon: "⌖" },
+              { label: "Promoter", desc: "Sell-out fuel", icon: "▲" },
+            ].map(({ label, desc, icon }, i) => (
               <button
                 key={label}
                 onClick={() => setBookingOpen(true)}
-                className="group flex items-center justify-between border border-primary-foreground/20 px-6 py-4 hover:border-primary-foreground hover:bg-primary-foreground/5 transition-colors text-left"
+                className={`group relative bg-background text-foreground border-[4px] border-foreground p-5 text-left transition-transform hover:-translate-y-1 hover:-translate-x-1 ${i % 2 === 0 ? "sticker-tilt-l" : "sticker-tilt-r"}`}
+                style={{ boxShadow: `8px 8px 0 0 hsl(0 0% 0%)` }}
               >
-                <div>
-                  <p className="font-black uppercase tracking-tight text-sm">{label}</p>
-                  <p className="text-[10px] text-primary-foreground/40 mt-0.5">{desc}</p>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="font-display text-3xl uppercase tracking-tight leading-none">{label}</p>
+                    <p className="text-[10px] font-bold tracking-widest uppercase mt-2 text-muted-foreground">{desc}</p>
+                  </div>
+                  <span className="font-display text-3xl" style={{ color: ROCKET_RED }}>{icon}</span>
                 </div>
-                <span className="text-primary-foreground/30 group-hover:text-primary-foreground transition-colors text-lg">→</span>
+                <span className="absolute bottom-2 right-3 text-[10px] font-bold tracking-widest uppercase opacity-40 group-hover:opacity-100 transition-opacity">
+                  TAP →
+                </span>
               </button>
             ))}
           </div>
