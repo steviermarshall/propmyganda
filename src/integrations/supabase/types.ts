@@ -132,7 +132,7 @@ export type Database = {
       bookings: {
         Row: {
           id: string;
-          service: "security" | "dj" | "venue" | "promoter";
+          service: "security" | "dj" | "venue" | "promoter" | "event_recap" | "artist" | "bartender";
           name: string;
           email: string;
           phone: string | null;

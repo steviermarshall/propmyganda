@@ -160,6 +160,8 @@ export default function Events() {
   const [loading, setLoading] = useState(true);
   const [igLoading, setIgLoading] = useState(true);
   const [bookingOpen, setBookingOpen] = useState(false);
+  const [bookingService, setBookingService] = useState<"security"|"dj"|"venue"|"promoter"|"event_recap"|"artist"|"bartender">("dj");
+  const openBooking = (svc: typeof bookingService) => { setBookingService(svc); setBookingOpen(true); };
 
   useEffect(() => {
     supabase
@@ -252,14 +254,17 @@ export default function Events() {
             </p>
             <div className="flex flex-col gap-2">
               {[
-                { label: "DJ", desc: "Underground to main stage" },
-                { label: "Security", desc: "Crowd management" },
-                { label: "Venue", desc: "Spaces that fit" },
-                { label: "Promoter", desc: "Sell-out strategy" },
-              ].map(({ label, desc }) => (
+                { label: "DJ", desc: "Underground to main stage", svc: "dj" as const },
+                { label: "Security", desc: "Crowd management", svc: "security" as const },
+                { label: "Venue", desc: "Spaces that fit", svc: "venue" as const },
+                { label: "Promoter", desc: "Sell-out strategy", svc: "promoter" as const },
+                { label: "Event Recap", desc: "Photo & video coverage", svc: "event_recap" as const },
+                { label: "Artist", desc: "Live performances", svc: "artist" as const },
+                { label: "Bartender", desc: "Professional bar service", svc: "bartender" as const },
+              ].map(({ label, desc, svc }) => (
                 <button
                   key={label}
-                  onClick={() => setBookingOpen(true)}
+                  onClick={() => openBooking(svc)}
                   className="group flex items-center justify-between border border-primary-foreground/20 px-3 py-2.5 hover:border-primary-foreground hover:bg-primary-foreground/5 transition-colors text-left"
                 >
                   <div>
@@ -285,7 +290,7 @@ export default function Events() {
       </section>
 
       <Marquee />
-      <BookingSheet open={bookingOpen} onOpenChange={setBookingOpen} />
+      <BookingSheet open={bookingOpen} onOpenChange={setBookingOpen} initialService={bookingService} />
     </div>
   );
 }

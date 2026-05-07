@@ -4,12 +4,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
-type Service = "security" | "dj" | "venue" | "promoter";
+type Service = "security" | "dj" | "venue" | "promoter" | "event_recap" | "artist" | "bartender";
 type BookingInsert = Database["public"]["Tables"]["bookings"]["Insert"];
 
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
+  initialService?: Service;
 }
 
 const WEBHOOK = import.meta.env.VITE_BOOKING_WEBHOOK_URL as string | undefined;
@@ -160,8 +161,114 @@ function PromoterForm({ data, set }: { data: Partial<BookingInsert>; set: (k: ke
   );
 }
 
-export default function BookingSheet({ open, onOpenChange }: Props) {
-  const [service, setService] = useState<Service>("dj");
+function EventRecapForm({ data, set }: { data: Partial<BookingInsert>; set: (k: keyof BookingInsert, v: string) => void }) {
+  return (
+    <div className="space-y-6">
+      <CommonFields data={data} set={set} />
+      <Field label="Event Type">
+        <input className={inputCls} placeholder="e.g. Concert, Club night, Private party" value={data.event_type ?? ""} onChange={e => set("event_type", e.target.value)} />
+      </Field>
+      <Field label="Deliverables">
+        <select className={selectCls} value={data.amenities ?? ""} onChange={e => set("amenities", e.target.value)}>
+          <option value="">What do you need?</option>
+          <option>Photos only</option>
+          <option>Video only</option>
+          <option>Photos + highlight reel</option>
+          <option>Full coverage (photos + video)</option>
+          <option>Let's discuss</option>
+        </select>
+      </Field>
+      <Field label="Budget Range">
+        <select className={selectCls} value={data.budget_range ?? ""} onChange={e => set("budget_range", e.target.value)}>
+          <option value="">Select a range…</option>
+          <option>Under $500</option>
+          <option>$500 – $1,500</option>
+          <option>$1,500 – $3,000</option>
+          <option>$3,000+</option>
+          <option>Let's discuss</option>
+        </select>
+      </Field>
+      <Field label="Additional Notes">
+        <textarea className={inputCls} rows={3} placeholder="Vibe, expected attendance, turnaround time…" value={data.notes ?? ""} onChange={e => set("notes", e.target.value)} />
+      </Field>
+    </div>
+  );
+}
+
+function ArtistForm({ data, set }: { data: Partial<BookingInsert>; set: (k: keyof BookingInsert, v: string) => void }) {
+  return (
+    <div className="space-y-6">
+      <CommonFields data={data} set={set} />
+      <Field label="Genre / Style">
+        <input className={inputCls} placeholder="e.g. Afrobeats, Hip-Hop, R&B" value={data.genre ?? ""} onChange={e => set("genre", e.target.value)} />
+      </Field>
+      <Field label="Set Length">
+        <input className={inputCls} placeholder="e.g. 45 minutes" value={data.set_length ?? ""} onChange={e => set("set_length", e.target.value)} />
+      </Field>
+      <Field label="Event Type">
+        <input className={inputCls} placeholder="e.g. Festival, Club, Private event" value={data.event_type ?? ""} onChange={e => set("event_type", e.target.value)} />
+      </Field>
+      <Field label="Stage Requirements">
+        <textarea className={inputCls} rows={3} placeholder="Sound system, backline, lighting…" value={data.equipment ?? ""} onChange={e => set("equipment", e.target.value)} />
+      </Field>
+      <Field label="Budget Range">
+        <select className={selectCls} value={data.budget_range ?? ""} onChange={e => set("budget_range", e.target.value)}>
+          <option value="">Select a range…</option>
+          <option>Under $1,000</option>
+          <option>$1,000 – $5,000</option>
+          <option>$5,000 – $15,000</option>
+          <option>$15,000 – $50,000</option>
+          <option>$50,000+</option>
+          <option>Let's discuss</option>
+        </select>
+      </Field>
+      <Field label="Additional Notes">
+        <textarea className={inputCls} rows={3} placeholder="Anything else we should know…" value={data.notes ?? ""} onChange={e => set("notes", e.target.value)} />
+      </Field>
+    </div>
+  );
+}
+
+function BartenderForm({ data, set }: { data: Partial<BookingInsert>; set: (k: keyof BookingInsert, v: string) => void }) {
+  return (
+    <div className="space-y-6">
+      <CommonFields data={data} set={set} />
+      <Field label="Expected Attendance">
+        <input className={inputCls} placeholder="e.g. 150 guests" value={data.expected_attendance ?? ""} onChange={e => set("expected_attendance", e.target.value)} />
+      </Field>
+      <Field label="Event Type">
+        <input className={inputCls} placeholder="e.g. Private party, Corporate, Wedding" value={data.event_type ?? ""} onChange={e => set("event_type", e.target.value)} />
+      </Field>
+      <Field label="Bar Type">
+        <select className={selectCls} value={data.amenities ?? ""} onChange={e => set("amenities", e.target.value)}>
+          <option value="">Select…</option>
+          <option>Open bar</option>
+          <option>Cash bar</option>
+          <option>Beer & wine only</option>
+          <option>Cocktail service</option>
+          <option>Let's discuss</option>
+        </select>
+      </Field>
+      <Field label="Hours Needed">
+        <input className={inputCls} placeholder="e.g. 4 hours" value={data.set_length ?? ""} onChange={e => set("set_length", e.target.value)} />
+      </Field>
+      <Field label="Indoor / Outdoor">
+        <select className={selectCls} value={data.indoor_outdoor ?? ""} onChange={e => set("indoor_outdoor", e.target.value)}>
+          <option value="">Select…</option>
+          <option>Indoor</option>
+          <option>Outdoor</option>
+          <option>Both</option>
+        </select>
+      </Field>
+      <Field label="Additional Notes">
+        <textarea className={inputCls} rows={3} placeholder="Special cocktails, theme, equipment…" value={data.notes ?? ""} onChange={e => set("notes", e.target.value)} />
+      </Field>
+    </div>
+  );
+}
+
+export default function BookingSheet({ open, onOpenChange, initialService }: Props) {
+  const [service, setService] = useState<Service>(initialService ?? "dj");
   const [data, setData] = useState<Partial<BookingInsert>>({});
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
 
@@ -211,14 +318,22 @@ export default function BookingSheet({ open, onOpenChange }: Props) {
         ) : (
           <>
             <Tabs value={service} onValueChange={v => { setService(v as Service); setData(prev => ({ name: prev.name, email: prev.email, phone: prev.phone })); }}>
-              <TabsList className="w-full mb-8 grid grid-cols-4 h-auto p-0 bg-transparent border border-border rounded-none">
-                {(["security","dj","venue","promoter"] as Service[]).map(s => (
+              <TabsList className="w-full mb-8 grid grid-cols-7 h-auto p-0 bg-transparent border border-border rounded-none">
+                {([
+                  { value: "dj", label: "DJ" },
+                  { value: "security", label: "Security" },
+                  { value: "venue", label: "Venue" },
+                  { value: "promoter", label: "Promoter" },
+                  { value: "event_recap", label: "Recap" },
+                  { value: "artist", label: "Artist" },
+                  { value: "bartender", label: "Bar" },
+                ] as { value: Service; label: string }[]).map(s => (
                   <TabsTrigger
-                    key={s}
-                    value={s}
-                    className="rounded-none text-[10px] tracking-[0.15em] uppercase py-2.5 data-[state=active]:bg-foreground data-[state=active]:text-background"
+                    key={s.value}
+                    value={s.value}
+                    className="rounded-none text-[9px] tracking-[0.05em] uppercase py-2.5 data-[state=active]:bg-foreground data-[state=active]:text-background"
                   >
-                    {s}
+                    {s.label}
                   </TabsTrigger>
                 ))}
               </TabsList>
@@ -227,6 +342,9 @@ export default function BookingSheet({ open, onOpenChange }: Props) {
               <TabsContent value="dj"><DjForm data={data} set={set} /></TabsContent>
               <TabsContent value="venue"><VenueForm data={data} set={set} /></TabsContent>
               <TabsContent value="promoter"><PromoterForm data={data} set={set} /></TabsContent>
+              <TabsContent value="event_recap"><EventRecapForm data={data} set={set} /></TabsContent>
+              <TabsContent value="artist"><ArtistForm data={data} set={set} /></TabsContent>
+              <TabsContent value="bartender"><BartenderForm data={data} set={set} /></TabsContent>
             </Tabs>
 
             {status === "error" && (
