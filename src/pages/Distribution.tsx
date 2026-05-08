@@ -101,27 +101,6 @@ const Distribution = () => {
         </div>
       </section>
 
-      {/* Featured Track */}
-      <section className="section-padding bg-background border-t border-border">
-        <div className="container-content max-w-3xl">
-          <ScrollReveal>
-            <p className="text-xs tracking-[0.4em] uppercase text-muted-foreground mb-4">Featured Now</p>
-            <h2 className="font-display text-3xl md:text-5xl uppercase mb-8">Chuckiee — Angel Convo</h2>
-          </ScrollReveal>
-          <ScrollReveal delay={0.15}>
-            <iframe
-              src="https://open.spotify.com/embed/track/3flxgvIQjnGWBqphapjazO?utm_source=generator&theme=0"
-              width="100%"
-              height="152"
-              frameBorder="0"
-              allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-              loading="eager"
-              className="rounded-none"
-            />
-          </ScrollReveal>
-        </div>
-      </section>
-
       {/* Artist Showcase */}
       <section className="section-padding bg-background border-t border-border">
         <div className="container-content">
@@ -145,29 +124,46 @@ const Distribution = () => {
               ))}
             </div>
             <div className="flex-1">
-              <div className="flex flex-col md:flex-row gap-8">
-                <div className="md:w-1/2 aspect-square overflow-hidden bg-secondary">
-                  <img
-                    src={rosterArtists[activeArtist].image}
-                    alt={rosterArtists[activeArtist].name}
-                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"
-                    loading="lazy"
-                    width={800}
-                    height={800}
-                  />
-                </div>
-                <div className="md:w-1/2 flex flex-col justify-center">
-                  <p className="text-xs tracking-[0.2em] uppercase text-muted-foreground mb-2">{rosterArtists[activeArtist].genre}</p>
-                  <h3 className="font-display text-4xl md:text-5xl uppercase leading-none">{rosterArtists[activeArtist].name}</h3>
-                  <p className="text-muted-foreground mt-4 text-sm leading-relaxed">
-                    {(rosterArtists[activeArtist] as typeof rosterArtists[0] & { bio?: string }).bio
-                      ?? `One of PMG's cornerstone artists. ${rosterArtists[activeArtist].name} embodies what it means to be 100% independent.`}
-                  </p>
-                  <button className="mt-6 self-start bg-black text-white px-6 py-3 text-xs tracking-[0.2em] uppercase font-bold hover:bg-electric hover:text-black transition-colors">
-                    Listen Now
-                  </button>
-                </div>
-              </div>
+              {(() => {
+                const artist = rosterArtists[activeArtist] as typeof rosterArtists[0] & { bio?: string; albumCover?: string; spotifyAlbumId?: string };
+                return (
+                  <div className="flex flex-col md:flex-row gap-8">
+                    <div className="md:w-1/2 aspect-square overflow-hidden bg-secondary">
+                      <img
+                        src={artist.albumCover ?? artist.image}
+                        alt={artist.name}
+                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"
+                        loading="lazy"
+                        width={800}
+                        height={800}
+                      />
+                    </div>
+                    <div className="md:w-1/2 flex flex-col justify-center gap-4">
+                      <div>
+                        <p className="text-xs tracking-[0.2em] uppercase text-muted-foreground mb-2">{artist.genre}</p>
+                        <h3 className="font-display text-4xl md:text-5xl uppercase leading-none">{artist.name}</h3>
+                        <p className="text-muted-foreground mt-4 text-sm leading-relaxed">
+                          {artist.bio ?? `One of PMG's cornerstone artists. ${artist.name} embodies what it means to be 100% independent.`}
+                        </p>
+                      </div>
+                      {artist.spotifyAlbumId ? (
+                        <iframe
+                          src={`https://open.spotify.com/embed/album/${artist.spotifyAlbumId}?utm_source=generator&theme=0`}
+                          width="100%"
+                          height="380"
+                          frameBorder="0"
+                          allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                          loading="eager"
+                        />
+                      ) : (
+                        <button className="self-start bg-black text-white px-6 py-3 text-xs tracking-[0.2em] uppercase font-bold hover:bg-electric hover:text-black transition-colors">
+                          Listen Now
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </ScrollReveal>
         </div>
