@@ -21,6 +21,8 @@ const stats = [
 ];
 
 const Distribution = () => {
+  const rosterArtists = artists.filter((a) => a.id === "chuckiee" || a.id === "mercy-porter");
+
   const [activeService, setActiveService] = useState(0);
   const [activeArtist, setActiveArtist] = useState(0);
   const [submitted, setSubmitted] = useState(false);
@@ -99,6 +101,27 @@ const Distribution = () => {
         </div>
       </section>
 
+      {/* Featured Track */}
+      <section className="section-padding bg-background border-t border-border">
+        <div className="container-content max-w-3xl">
+          <ScrollReveal>
+            <p className="text-xs tracking-[0.4em] uppercase text-muted-foreground mb-4">Featured Now</p>
+            <h2 className="font-display text-3xl md:text-5xl uppercase mb-8">Chuckiee — Angel Convo</h2>
+          </ScrollReveal>
+          <ScrollReveal delay={0.15}>
+            <iframe
+              src="https://open.spotify.com/embed/track/3flxgvIQjnGWBqphapjazO?utm_source=generator&theme=0"
+              width="100%"
+              height="152"
+              frameBorder="0"
+              allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+              loading="eager"
+              className="rounded-none"
+            />
+          </ScrollReveal>
+        </div>
+      </section>
+
       {/* Artist Showcase */}
       <section className="section-padding bg-background border-t border-border">
         <div className="container-content">
@@ -107,7 +130,7 @@ const Distribution = () => {
           </ScrollReveal>
           <ScrollReveal delay={0.15} className="flex flex-col md:flex-row gap-8">
             <div className="md:w-48 flex md:flex-col gap-2 overflow-x-auto md:overflow-visible pb-2 md:pb-0">
-              {artists.map((a, i) => (
+              {rosterArtists.map((a, i) => (
                 <button
                   key={a.id}
                   onClick={() => setActiveArtist(i)}
@@ -125,8 +148,8 @@ const Distribution = () => {
               <div className="flex flex-col md:flex-row gap-8">
                 <div className="md:w-1/2 aspect-square overflow-hidden bg-secondary">
                   <img
-                    src={artists[activeArtist].image}
-                    alt={artists[activeArtist].name}
+                    src={rosterArtists[activeArtist].image}
+                    alt={rosterArtists[activeArtist].name}
                     className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"
                     loading="lazy"
                     width={800}
@@ -134,10 +157,11 @@ const Distribution = () => {
                   />
                 </div>
                 <div className="md:w-1/2 flex flex-col justify-center">
-                  <p className="text-xs tracking-[0.2em] uppercase text-muted-foreground mb-2">{artists[activeArtist].genre}</p>
-                  <h3 className="font-display text-4xl md:text-5xl uppercase leading-none">{artists[activeArtist].name}</h3>
+                  <p className="text-xs tracking-[0.2em] uppercase text-muted-foreground mb-2">{rosterArtists[activeArtist].genre}</p>
+                  <h3 className="font-display text-4xl md:text-5xl uppercase leading-none">{rosterArtists[activeArtist].name}</h3>
                   <p className="text-muted-foreground mt-4 text-sm leading-relaxed">
-                    One of PMG's cornerstone artists. {artists[activeArtist].name} embodies what it means to be 100% independent.
+                    {(rosterArtists[activeArtist] as typeof rosterArtists[0] & { bio?: string }).bio
+                      ?? `One of PMG's cornerstone artists. ${rosterArtists[activeArtist].name} embodies what it means to be 100% independent.`}
                   </p>
                   <button className="mt-6 self-start bg-black text-white px-6 py-3 text-xs tracking-[0.2em] uppercase font-bold hover:bg-electric hover:text-black transition-colors">
                     Listen Now

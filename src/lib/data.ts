@@ -13,7 +13,7 @@ export const artists = [
   { id: "albee-al", name: "Albee Al", genre: "Hip-Hop", image: artist1 },
   { id: "elcamino", name: "ElCamino", genre: "Hip-Hop", image: artist2 },
   { id: "max-b", name: "Max B", genre: "Hip-Hop / Wave", image: artist3 },
-  { id: "curly-gen", name: "Curly Gen", genre: "Hip-Hop", image: artist4 },
+  { id: "chuckiee", name: "Chuckiee", genre: "Hip-Hop", image: artist4, bio: "Brooklyn-bred and fully independent, Chuckiee is one of Propmyganda's most distinctive voices. His 2025 project 'i guess im the bad guy ..' marked a turning point — raw, experimental hip-hop that refuses to fit a mold. With tracks like 'angel convo' and 'BUTTON EYES!', he's building something real, on his own terms." },
   { id: "mercy-porter", name: "Mercy Porter", genre: "R&B / Hip-Hop", image: artist5 },
   { id: "dex-osama", name: "Dex Osama", genre: "Hip-Hop", image: artist6 },
 ];
