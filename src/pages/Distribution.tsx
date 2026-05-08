@@ -128,7 +128,7 @@ const Distribution = () => {
                 const artist = rosterArtists[activeArtist] as typeof rosterArtists[0] & { bio?: string; albumCover?: string; spotifyAlbumId?: string };
                 return (
                   <div className="flex flex-col md:flex-row gap-8">
-                    <div className="md:w-1/2 aspect-square overflow-hidden bg-secondary">
+                    <div className="md:w-1/2 flex-shrink-0 self-start aspect-square overflow-hidden bg-secondary">
                       <img
                         src={artist.albumCover ?? artist.image}
                         alt={artist.name}
