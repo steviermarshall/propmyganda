@@ -1,15 +1,36 @@
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { useTexture, Float } from "@react-three/drei";
-import { Suspense, useMemo, useRef } from "react";
+import { Float } from "@react-three/drei";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import logo from "@/assets/pmg-logo-clean.png";
 
 /* ---------- Distorted, glitched logo plane ---------- */
 const LogoPlane = () => {
-  const tex = useTexture(logo);
+  const [tex, setTex] = useState<THREE.Texture | null>(null);
   const matRef = useRef<THREE.ShaderMaterial>(null);
   const meshRef = useRef<THREE.Mesh>(null);
   const { viewport, pointer } = useThree();
+
+  useEffect(() => {
+    let cancelled = false;
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      if (cancelled) return;
+      const t = new THREE.Texture(img);
+      t.needsUpdate = true;
+      t.colorSpace = THREE.SRGBColorSpace;
+      setTex(t);
+    };
+    img.onerror = (e) => {
+      // eslint-disable-next-line no-console
+      console.warn("Logo texture failed to load", e);
+    };
+    img.src = logo;
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const uniforms = useMemo(
     () => ({
@@ -20,6 +41,7 @@ const LogoPlane = () => {
     }),
     [tex]
   );
+
 
   useFrame((_, delta) => {
     if (!matRef.current) return;
