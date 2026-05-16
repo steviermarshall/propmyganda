@@ -1,9 +1,32 @@
 import { Instagram, Twitter, Youtube } from "lucide-react";
 import ScrollReveal from "@/components/webgl/ScrollReveal";
+import SEO from "@/components/SEO";
+
+const localBusinessJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "LocalBusiness",
+  name: "Propmyganda",
+  image: "https://propmyganda.lovable.app/og-image-v2.jpg",
+  url: "https://propmyganda.com/contact",
+  email: "info@propmyganda.com",
+  address: {
+    "@type": "PostalAddress",
+    addressLocality: "Brooklyn",
+    addressRegion: "NY",
+    addressCountry: "US",
+  },
+  priceRange: "$$",
+};
 
 const Contact = () => {
   return (
     <div className="bg-primary text-primary-foreground min-h-screen">
+      <SEO
+        title="Contact PMG — Brooklyn, NY"
+        description="Get in touch with PROPMYGANDA. Distribution, press, booking, and general inquiries. Based in Brooklyn, NY."
+        path="/contact"
+        jsonLd={localBusinessJsonLd}
+      />
       <div className="container-content pt-32 pb-20 md:pt-40">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-16 md:gap-24">
           {/* Left */}

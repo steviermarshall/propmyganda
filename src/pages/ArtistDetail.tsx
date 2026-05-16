@@ -1,6 +1,7 @@
 import { useParams, Link } from "react-router-dom";
 import { artists, products } from "@/lib/data";
 import { ExternalLink } from "lucide-react";
+import SEO from "@/components/SEO";
 
 const ArtistDetail = () => {
   const { id } = useParams();
@@ -23,6 +24,13 @@ const ArtistDetail = () => {
 
   return (
     <div>
+      <SEO
+        title={`${artist.name} — ${artist.genre} | PMG`}
+        description={`${artist.name} is a ${artist.genre} artist on the PMG roster. Listen, watch, and shop merch.`}
+        path={`/artists/${artist.id}`}
+        image={artist.image}
+        type="article"
+      />
       {/* Hero */}
       <div className="relative h-[70vh] bg-primary">
         <img src={artist.image} alt={`${artist.name} — PMG artist portrait`} className="absolute inset-0 w-full h-full object-cover" width={800} height={800} />

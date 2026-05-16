@@ -2,10 +2,16 @@ import { Link } from "react-router-dom";
 import { artists } from "@/lib/data";
 import Marquee from "@/components/Marquee";
 import ScrollReveal from "@/components/webgl/ScrollReveal";
+import SEO from "@/components/SEO";
 
 const Artists = () => {
   return (
     <div>
+      <SEO
+        title="Artists — The PMG Roster | PROPMYGANDA"
+        description="Meet the PMG roster of independent artists. Hip-hop, R&B, and more — 100% independent, distributed worldwide."
+        path="/artists"
+      />
       {/* Hero */}
       <div className="bg-primary text-primary-foreground pt-32 pb-16">
         <div className="container-content">
@@ -25,7 +31,7 @@ const Artists = () => {
                   <div className="relative hover-zoom aspect-square bg-secondary">
                     <img
                       src={artist.image}
-                      alt={artist.name}
+                      alt={`${artist.name} — PMG artist portrait`}
                       className="w-full h-full object-cover"
                       loading="lazy"
                       width={800}
@@ -37,7 +43,7 @@ const Artists = () => {
                       </span>
                     </div>
                   </div>
-                  <h3 className="text-lg font-bold uppercase tracking-wider mt-4">{artist.name}</h3>
+                  <h2 className="text-lg font-bold uppercase tracking-wider mt-4">{artist.name}</h2>
                   <p className="text-xs text-muted-foreground uppercase tracking-wider">{artist.genre}</p>
                 </Link>
               </ScrollReveal>

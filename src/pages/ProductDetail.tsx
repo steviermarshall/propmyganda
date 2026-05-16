@@ -2,6 +2,7 @@ import { useParams, Link } from "react-router-dom";
 import { useState } from "react";
 import { products } from "@/lib/data";
 import { Minus, Plus } from "lucide-react";
+import SEO from "@/components/SEO";
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -25,8 +26,32 @@ const ProductDetail = () => {
   const isApparel = product.category === "Clothing";
   const related = products.filter((p) => p.id !== product.id).slice(0, 3);
 
+  const productJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: product.name,
+    image: product.image,
+    description: `${product.name} by ${product.artist}. PMG official merchandise.`,
+    brand: { "@type": "Brand", name: product.artist || "PMG" },
+    offers: {
+      "@type": "Offer",
+      price: product.price,
+      priceCurrency: "USD",
+      availability: "https://schema.org/InStock",
+      url: `https://propmyganda.com/store/${product.id}`,
+    },
+  };
+
   return (
     <div>
+      <SEO
+        title={`${product.name} — ${product.artist} | PMG Store`}
+        description={`${product.name} by ${product.artist}. $${product.price}. Official PMG merchandise, ships worldwide.`}
+        path={`/store/${product.id}`}
+        image={product.image}
+        type="product"
+        jsonLd={productJsonLd}
+      />
       <div className="pt-20 bg-background">
         <div className="container-content section-padding">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
