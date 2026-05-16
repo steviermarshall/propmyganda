@@ -3,6 +3,7 @@ import { artists } from "@/lib/data";
 import { supabase } from "@/integrations/supabase/client";
 import Marquee from "@/components/Marquee";
 import ScrollReveal from "@/components/webgl/ScrollReveal";
+import SEO from "@/components/SEO";
 
 const services = [
   { name: "Digital Distribution", desc: "We deliver your music to every major platform — Spotify, Apple Music, Amazon, Tidal, YouTube Music, and 150+ more. Global reach, zero compromise." },
@@ -65,6 +66,11 @@ const Distribution = () => {
 
   return (
     <div>
+      <SEO
+        title="Distribution — Independent Music Distribution | PMG"
+        description="PMG delivers your music to Spotify, Apple Music, and 150+ DSPs. Marketing, sync, catalog management. Apply to work with PMG."
+        path="/distribution"
+      />
       {/* Hero */}
       <section className="bg-black text-white pt-32 pb-24 md:pt-44 md:pb-32 overflow-hidden relative">
         <div className="container-content relative z-10">
@@ -219,8 +225,9 @@ const Distribution = () => {
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
-                    <label className="text-[10px] uppercase tracking-widest text-muted-foreground block mb-2">Artist Name *</label>
+                    <label htmlFor="dist-artist-name" className="text-[10px] uppercase tracking-widest text-muted-foreground block mb-2">Artist Name *</label>
                     <input
+                      id="dist-artist-name"
                       type="text"
                       required
                       value={form.artist_name}
@@ -229,8 +236,9 @@ const Distribution = () => {
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] uppercase tracking-widest text-muted-foreground block mb-2">Contact Name *</label>
+                    <label htmlFor="dist-contact-name" className="text-[10px] uppercase tracking-widest text-muted-foreground block mb-2">Contact Name *</label>
                     <input
+                      id="dist-contact-name"
                       type="text"
                       required
                       value={form.contact_name}
@@ -241,8 +249,9 @@ const Distribution = () => {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
-                    <label className="text-[10px] uppercase tracking-widest text-muted-foreground block mb-2">Email *</label>
+                    <label htmlFor="dist-email" className="text-[10px] uppercase tracking-widest text-muted-foreground block mb-2">Email *</label>
                     <input
+                      id="dist-email"
                       type="email"
                       required
                       value={form.email}
@@ -251,8 +260,9 @@ const Distribution = () => {
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] uppercase tracking-widest text-muted-foreground block mb-2">Phone</label>
+                    <label htmlFor="dist-phone" className="text-[10px] uppercase tracking-widest text-muted-foreground block mb-2">Phone</label>
                     <input
+                      id="dist-phone"
                       type="tel"
                       value={form.phone}
                       onChange={(e) => set("phone", e.target.value)}
@@ -262,8 +272,9 @@ const Distribution = () => {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
-                    <label className="text-[10px] uppercase tracking-widest text-muted-foreground block mb-2">Genre</label>
+                    <label htmlFor="dist-genre" className="text-[10px] uppercase tracking-widest text-muted-foreground block mb-2">Genre</label>
                     <select
+                      id="dist-genre"
                       value={form.genre}
                       onChange={(e) => set("genre", e.target.value)}
                       className="w-full bg-background border-b border-border py-3 text-sm focus:border-foreground outline-none transition-colors"
@@ -277,8 +288,9 @@ const Distribution = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="text-[10px] uppercase tracking-widest text-muted-foreground block mb-2">Monthly Listeners</label>
+                    <label htmlFor="dist-monthly" className="text-[10px] uppercase tracking-widest text-muted-foreground block mb-2">Monthly Listeners</label>
                     <select
+                      id="dist-monthly"
                       value={form.monthly_listeners}
                       onChange={(e) => set("monthly_listeners", e.target.value)}
                       className="w-full bg-background border-b border-border py-3 text-sm focus:border-foreground outline-none transition-colors"
@@ -293,8 +305,9 @@ const Distribution = () => {
                   </div>
                 </div>
                 <div>
-                  <label className="text-[10px] uppercase tracking-widest text-muted-foreground block mb-2">Current Distributor</label>
+                  <label htmlFor="dist-current-distro" className="text-[10px] uppercase tracking-widest text-muted-foreground block mb-2">Current Distributor</label>
                   <input
+                    id="dist-current-distro"
                     type="text"
                     value={form.current_distributor}
                     onChange={(e) => set("current_distributor", e.target.value)}
@@ -303,8 +316,9 @@ const Distribution = () => {
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] uppercase tracking-widest text-muted-foreground block mb-2">Tell Us About Yourself</label>
+                  <label htmlFor="dist-message" className="text-[10px] uppercase tracking-widest text-muted-foreground block mb-2">Tell Us About Yourself</label>
                   <textarea
+                    id="dist-message"
                     value={form.message}
                     onChange={(e) => set("message", e.target.value)}
                     rows={4}

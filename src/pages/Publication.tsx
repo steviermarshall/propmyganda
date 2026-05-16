@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import Marquee from "@/components/Marquee";
 import ScrollReveal from "@/components/webgl/ScrollReveal";
+import SEO from "@/components/SEO";
 
 type Pub = Database["public"]["Tables"]["publications"]["Row"];
 
@@ -33,9 +34,9 @@ function ArticleCard({ pub, featured }: { pub: Pub; featured?: boolean }) {
               </span>
             )}
           </div>
-          <h3 className={`font-black uppercase tracking-tight leading-tight ${featured ? "text-2xl md:text-3xl" : "text-lg"}`}>
+          <h2 className={`font-black uppercase tracking-tight leading-tight ${featured ? "text-2xl md:text-3xl" : "text-lg"}`}>
             {pub.title}
-          </h3>
+          </h2>
           {pub.excerpt && (
             <p className="text-muted-foreground text-sm mt-2 line-clamp-2">{pub.excerpt}</p>
           )}
@@ -70,8 +71,26 @@ export default function Publication() {
   const featured = filtered.find((a) => a.featured);
   const rest = filtered.filter((a) => !a.featured || a !== featured);
 
+  const articleJsonLd = featured
+    ? {
+        "@context": "https://schema.org",
+        "@type": "Article",
+        headline: featured.title,
+        description: featured.excerpt ?? undefined,
+        image: featured.cover_url ?? undefined,
+        author: featured.author ? { "@type": "Person", name: featured.author } : undefined,
+        datePublished: featured.published_at ?? undefined,
+      }
+    : undefined;
+
   return (
     <div>
+      <SEO
+        title="Publication — PMG Editorial on Independent Music"
+        description="Editorial on independent music: business, artists, culture, milestones, and industry. By PROPMYGANDA."
+        path="/publication"
+        jsonLd={articleJsonLd}
+      />
       <div className="bg-primary text-primary-foreground pt-32 pb-16">
         <div className="container-content">
           <ScrollReveal>
