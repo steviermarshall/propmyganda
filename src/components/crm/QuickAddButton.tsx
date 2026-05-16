@@ -280,5 +280,17 @@ const SCHEMAS: Record<
       status: "scheduled",
       shooter: memberId,
     }),
+    afterInsert: async (row) => {
+      const formats = row.shoot_type === "media_agency"
+        ? ["Music Video", "Creative Content", "Short-form", "Interview"]
+        : ["1 Mic Performance", "Crazy Story", "Show & Tell", "Long-form YouTube"];
+      const rows = formats.map((format) => ({
+        shoot_id: row.id,
+        format,
+        status: "filmed",
+        upload_urls: {},
+      }));
+      await (supabase.from("deliverables") as any).insert(rows);
+    },
   },
 };
