@@ -60,6 +60,8 @@ const LogoPlane = () => {
   const w = Math.min(viewport.width * 0.7, 8);
   const h = w * (167 / 325);
 
+  if (!tex) return null;
+
   return (
     <Float speed={1.2} rotationIntensity={0.15} floatIntensity={0.3}>
       <mesh ref={meshRef} scale={[w, h, 1]}>
