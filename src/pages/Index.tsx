@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import PMGScene from "@/components/webgl/PMGScene";
+import WebGLBoundary from "@/components/webgl/WebGLBoundary";
 import Marquee from "@/components/Marquee";
 import ScrollReveal from "@/components/webgl/ScrollReveal";
 import pmgLogo from "@/assets/pmg-logo-clean.png";
@@ -27,7 +28,15 @@ const Index = () => {
       {/* WebGL Hero */}
       <section className="relative h-screen w-full overflow-hidden">
         <div className="absolute inset-0">
-          <PMGScene />
+          <WebGLBoundary
+            fallback={
+              <div className="absolute inset-0 flex items-center justify-center bg-black">
+                <img src={pmgLogo} alt="PMG" className="h-20 md:h-32 w-auto opacity-90" />
+              </div>
+            }
+          >
+            <PMGScene />
+          </WebGLBoundary>
         </div>
 
         {/* Overlay UI */}
