@@ -67,6 +67,7 @@ function QuickAddModal({
         .single();
       if (error) throw error;
       await logActivity(member.id, schema.entityType as any, data.id, "created", payload);
+      if (schema.afterInsert) await schema.afterInsert(data, member.id);
       toast.success(`${schema.label} created`);
       qc.invalidateQueries();
       setFields({});
@@ -144,6 +145,7 @@ const SCHEMAS: Record<
     entityType: string;
     fields: Field[];
     build: (f: Record<string, string>, memberId: string) => Record<string, any>;
+    afterInsert?: (row: any, memberId: string) => Promise<void>;
   }
 > = {
   booking: {
