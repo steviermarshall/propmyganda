@@ -16,6 +16,7 @@ export default {
       fontFamily: {
         sans: ["Inter", "Helvetica Neue", "Arial", "sans-serif"],
         display: ["Bebas Neue", "Impact", "Arial Narrow", "sans-serif"],
+        mono: ["IBM Plex Mono", "ui-monospace", "SFMono-Regular", "monospace"],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -47,6 +48,14 @@ export default {
           DEFAULT: "hsl(var(--electric))",
           foreground: "hsl(var(--electric-foreground))",
         },
+        // CRM team member accents
+        mike:   "#00F0FF",
+        steven: "#d97000",
+        jay:    "#b366ff",
+        stevie: "#F5FF00",
+        // CRM surfaces
+        "crm-bg":      "#0a0a0a",
+        "crm-surface": "#1a1a1a",
         popover: {
           DEFAULT: "hsl(var(--popover))",
           foreground: "hsl(var(--popover-foreground))",
