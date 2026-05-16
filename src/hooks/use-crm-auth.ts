@@ -55,10 +55,9 @@ export function useCrmAuth(): CrmAuthState {
 
       // Auto-link auth_user_id so future lookups are fast
       if (data) {
-        await supabase
-          .from("team_members")
+        await (supabase.from("team_members") as any)
           .update({ auth_user_id: s.user.id })
-          .eq("id", data.id);
+          .eq("id", (data as { id: string }).id);
       }
     }
 
