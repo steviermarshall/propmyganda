@@ -64,11 +64,11 @@ const ProductDetail = () => {
               <div className="mt-8">
                 <p className="text-xs uppercase tracking-[0.2em] font-bold mb-3">Quantity</p>
                 <div className="flex items-center border border-border w-fit">
-                  <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="p-3 hover:bg-secondary transition-colors">
+                  <button aria-label="Decrease quantity" onClick={() => setQuantity(Math.max(1, quantity - 1))} className="p-3 hover:bg-secondary transition-colors">
                     <Minus size={14} />
                   </button>
-                  <span className="px-6 text-sm font-bold">{quantity}</span>
-                  <button onClick={() => setQuantity(quantity + 1)} className="p-3 hover:bg-secondary transition-colors">
+                  <span className="px-6 text-sm font-bold" aria-live="polite">{quantity}</span>
+                  <button aria-label="Increase quantity" onClick={() => setQuantity(quantity + 1)} className="p-3 hover:bg-secondary transition-colors">
                     <Plus size={14} />
                   </button>
                 </div>

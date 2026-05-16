@@ -33,9 +33,9 @@ function ArticleCard({ pub, featured }: { pub: Pub; featured?: boolean }) {
               </span>
             )}
           </div>
-          <h3 className={`font-black uppercase tracking-tight leading-tight ${featured ? "text-2xl md:text-3xl" : "text-lg"}`}>
+          <h2 className={`font-black uppercase tracking-tight leading-tight ${featured ? "text-2xl md:text-3xl" : "text-lg"}`}>
             {pub.title}
-          </h3>
+          </h2>
           {pub.excerpt && (
             <p className="text-muted-foreground text-sm mt-2 line-clamp-2">{pub.excerpt}</p>
           )}

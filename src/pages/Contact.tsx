@@ -39,7 +39,8 @@ const Contact = () => {
                 placeholder="Email"
                 className="w-full bg-transparent border-b border-primary-foreground/30 py-3 text-sm placeholder:text-primary-foreground/40 focus:border-primary-foreground outline-none transition-colors"
               />
-              <select className="w-full bg-transparent border-b border-primary-foreground/30 py-3 text-sm text-primary-foreground/40 focus:border-primary-foreground outline-none transition-colors">
+              <label htmlFor="contact-subject" className="sr-only">Subject</label>
+              <select id="contact-subject" aria-label="Message subject" className="w-full bg-transparent border-b border-primary-foreground/30 py-3 text-sm text-primary-foreground/40 focus:border-primary-foreground outline-none transition-colors">
                 <option value="" className="bg-primary">Subject</option>
                 <option value="general" className="bg-primary">General</option>
                 <option value="distribution" className="bg-primary">Distribution</option>

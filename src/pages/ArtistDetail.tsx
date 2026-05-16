@@ -25,7 +25,7 @@ const ArtistDetail = () => {
     <div>
       {/* Hero */}
       <div className="relative h-[70vh] bg-primary">
-        <img src={artist.image} alt={artist.name} className="absolute inset-0 w-full h-full object-cover" width={800} height={800} />
+        <img src={artist.image} alt={`${artist.name} — PMG artist portrait`} className="absolute inset-0 w-full h-full object-cover" width={800} height={800} />
         <div className="absolute inset-0 bg-primary/50" />
         <div className="absolute bottom-0 left-0 right-0 p-8 md:p-16">
           <div className="container-content">
@@ -68,7 +68,7 @@ const ArtistDetail = () => {
             {[1, 2, 3, 4].map((i) => (
               <div key={i} className="group cursor-pointer">
                 <div className="aspect-square bg-primary/10 mb-3 hover-zoom">
-                  <img src={artist.image} alt="Album" className="w-full h-full object-cover grayscale" loading="lazy" width={800} height={800} />
+                  <img src={artist.image} alt={`${artist.name} — album cover artwork`} className="w-full h-full object-cover grayscale" loading="lazy" width={800} height={800} />
                 </div>
                 <p className="text-sm font-bold uppercase">Project {i}</p>
                 <p className="text-xs text-muted-foreground">202{i + 2}</p>
