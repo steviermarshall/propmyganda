@@ -221,7 +221,6 @@ export type Database = {
         Insert: Omit<Database["public"]["Tables"]["cron_logs"]["Row"], "id">;
         Update: Partial<Database["public"]["Tables"]["cron_logs"]["Insert"]>;
       };
-    };
       team_members: {
         Row: {
           id: string;
