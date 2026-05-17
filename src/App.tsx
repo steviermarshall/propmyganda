@@ -80,6 +80,7 @@ const AppRoutes = () => {
         <Route path="/admin/steven" element={<CrmProtectedRoute allowedRoles={["admin","steven"]}><StevenDashboard /></CrmProtectedRoute>} />
         <Route path="/admin/jay"    element={<CrmProtectedRoute allowedRoles={["admin","jay"]}><JayDashboard /></CrmProtectedRoute>} />
         <Route path="/admin/editor" element={<CrmProtectedRoute allowedRoles={["admin","editor","jay"]}><EditorDashboard /></CrmProtectedRoute>} />
+        <Route path="/admin/reports/deliverables" element={<CrmProtectedRoute allowedRoles={["admin","jay"]}><DeliverablesReport /></CrmProtectedRoute>} />
       </Routes>
     );
   }
