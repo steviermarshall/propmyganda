@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
-import DashLayout from "@/components/dashboard/DashLayout";
+import CrmLayout from "@/components/crm/CrmLayout";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
 type App = Database["public"]["Tables"]["distribution_applications"]["Row"];
 type Artist = Database["public"]["Tables"]["artists"]["Row"];
+
+const ACCENT = "#00F0FF";
 
 const STATUS_STYLE: Record<string, string> = {
   pending:   "bg-yellow-500/10 text-yellow-400 border-yellow-500/30",
@@ -36,7 +38,7 @@ export default function DistributionDashboard() {
   }
 
   return (
-    <DashLayout title="Distribution">
+    <CrmLayout title="Distribution" accent={ACCENT}>
       <div className="space-y-6">
         {/* Tabs */}
         <div className="flex gap-1 border-b border-white/10">
@@ -44,9 +46,12 @@ export default function DistributionDashboard() {
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`px-4 py-2 text-xs uppercase tracking-widest transition-colors ${
-                tab === t ? "text-electric border-b-2 border-electric -mb-px" : "text-white/40 hover:text-white"
+              className={`px-4 py-2 text-[10px] uppercase tracking-widest transition-colors ${
+                tab === t
+                  ? "border-b-2 -mb-px font-bold"
+                  : "text-white/40 hover:text-white"
               }`}
+              style={tab === t ? { color: ACCENT, borderColor: ACCENT } : {}}
             >
               {t}
             </button>
@@ -60,27 +65,40 @@ export default function DistributionDashboard() {
           <div className="space-y-3">
             {apps.length === 0 && <p className="text-white/40 text-sm">No applications yet.</p>}
             {apps.map((app) => (
-              <div key={app.id} className="border border-white/10 bg-white/[0.02] p-5 space-y-3">
+              <div key={app.id} className="border border-white/10 bg-crm-surface p-5 space-y-3">
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="font-bold text-sm uppercase tracking-wide">{app.artist_name}</p>
                     <p className="text-white/50 text-xs mt-0.5">{app.contact_name} · {app.email}</p>
                   </div>
-                  <span className={`text-[10px] font-semibold px-2 py-1 border uppercase tracking-wider ${STATUS_STYLE[app.status]}`}>
+                  <span className={`text-[10px] font-semibold px-2 py-1 border uppercase tracking-wider ${STATUS_STYLE[app.status ?? "pending"]}`}>
                     {app.status}
                   </span>
                 </div>
-                {app.genre && <p className="text-white/50 text-xs">{app.genre} · {app.monthly_listeners ?? "—"} monthly listeners</p>}
-                {app.message && <p className="text-white/60 text-sm border-l-2 border-white/10 pl-3 italic">{app.message}</p>}
+                {app.genre && (
+                  <p className="text-white/50 text-xs">{app.genre} · {app.monthly_listeners ?? "—"} monthly listeners</p>
+                )}
+                {app.message && (
+                  <p className="text-white/60 text-sm border-l-2 border-white/10 pl-3 italic">{app.message}</p>
+                )}
                 {app.status === "pending" && (
                   <div className="flex gap-2 pt-1">
-                    <button onClick={() => updateStatus(app.id, "reviewing")} className="text-[10px] uppercase tracking-wider px-3 py-1.5 border border-blue-500/40 text-blue-400 hover:bg-blue-500/10 transition-colors">
+                    <button
+                      onClick={() => updateStatus(app.id, "reviewing")}
+                      className="text-[10px] uppercase tracking-wider px-3 py-1.5 border border-blue-500/40 text-blue-400 hover:bg-blue-500/10 transition-colors"
+                    >
                       Review
                     </button>
-                    <button onClick={() => updateStatus(app.id, "approved")} className="text-[10px] uppercase tracking-wider px-3 py-1.5 border border-green-500/40 text-green-400 hover:bg-green-500/10 transition-colors">
+                    <button
+                      onClick={() => updateStatus(app.id, "approved")}
+                      className="text-[10px] uppercase tracking-wider px-3 py-1.5 border border-green-500/40 text-green-400 hover:bg-green-500/10 transition-colors"
+                    >
                       Approve
                     </button>
-                    <button onClick={() => updateStatus(app.id, "rejected")} className="text-[10px] uppercase tracking-wider px-3 py-1.5 border border-red-500/40 text-red-400 hover:bg-red-500/10 transition-colors">
+                    <button
+                      onClick={() => updateStatus(app.id, "rejected")}
+                      className="text-[10px] uppercase tracking-wider px-3 py-1.5 border border-red-500/40 text-red-400 hover:bg-red-500/10 transition-colors"
+                    >
                       Reject
                     </button>
                   </div>
@@ -93,8 +111,9 @@ export default function DistributionDashboard() {
         {/* Artists */}
         {!loading && tab === "artists" && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {artists.length === 0 && <p className="text-white/40 text-sm">No artists yet.</p>}
             {artists.map((artist) => (
-              <div key={artist.id} className="border border-white/10 bg-white/[0.02] p-4 flex items-center gap-4">
+              <div key={artist.id} className="border border-white/10 bg-crm-surface p-4 flex items-center gap-4">
                 {artist.image_url && (
                   <img src={artist.image_url} alt={artist.name} className="w-12 h-12 object-cover" />
                 )}
@@ -110,6 +129,6 @@ export default function DistributionDashboard() {
           </div>
         )}
       </div>
-    </DashLayout>
+    </CrmLayout>
   );
 }
