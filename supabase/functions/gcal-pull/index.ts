@@ -41,8 +41,26 @@ Deno.serve(async (req) => {
     let updated = 0, deleted = 0, skipped = 0;
 
     for (const ev of events) {
-      const { data: syncRow } = await supabase
+      // Match by google_event_id, or fall back to extendedProperties (orphaned PMG events)
+      let { data: syncRow } = await supabase
         .from("calendar_sync").select("*").eq("google_event_id", ev.id).maybeSingle();
+
+      const pmgSource = ev.extendedProperties?.private?.pmg_source as ("shoot"|"deliverable"|undefined);
+      const pmgId = ev.extendedProperties?.private?.pmg_id as string | undefined;
+
+      if (!syncRow && pmgSource && pmgId) {
+        // Reconcile: PMG-originated event lost its sync row (e.g. cleared). Re-link.
+        const { data: relinked } = await supabase.from("calendar_sync").upsert({
+          entity_type: pmgSource, entity_id: pmgId,
+          google_event_id: ev.id,
+          google_calendar_id: calendarId,
+          etag: ev.etag,
+          sync_direction: "pull",
+          last_synced_at: new Date().toISOString(),
+        }, { onConflict: "entity_type,entity_id" }).select().maybeSingle();
+        syncRow = relinked;
+      }
+
       if (!syncRow) { skipped++; continue; }
 
       if (ev.status === "cancelled") {

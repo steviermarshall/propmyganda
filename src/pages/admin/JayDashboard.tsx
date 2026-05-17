@@ -84,6 +84,19 @@ export default function JayDashboard() {
     },
   });
 
+  // Sync errors map (entity_id -> last_error) for inline chips
+  const { data: syncErrors = {} } = useQuery({
+    queryKey: ["jay-sync-errors"],
+    queryFn: async () => {
+      const { data } = await (supabase.from("calendar_sync") as any)
+        .select("entity_id, last_error").eq("entity_type", "deliverable").not("last_error", "is", null);
+      const map: Record<string, string> = {};
+      (data ?? []).forEach((r: any) => { if (r.last_error) map[r.entity_id] = r.last_error; });
+      return map;
+    },
+    refetchInterval: 60_000,
+  });
+
   const { data: uploadQueue = [] } = useQuery({
     queryKey: ["jay-upload-queue"],
     queryFn: async () => {
@@ -319,6 +332,9 @@ export default function JayDashboard() {
                                   )}
                                   {d.filmed_at && <span className="text-white/30">filmed {daysSince(d.filmed_at)}d ago</span>}
                                   {d.revision_count > 0 && <span className="text-white/30">rev {d.revision_count}</span>}
+                                  {syncErrors[d.id] && (
+                                    <span className="text-amber-400" title={syncErrors[d.id]}>⚠ gcal</span>
+                                  )}
                                 </div>
                                 {d.objective && <div className="text-[10px] text-white/50 mt-1 italic">"{d.objective}"</div>}
                               </div>
@@ -583,6 +599,8 @@ function GcalSyncBar({ accent, onSynced }: { accent: string; onSynced: () => voi
 
   useEffect(() => {
     getGcalSettings().then(setStatus);
+    const tick = setInterval(() => getGcalSettings().then(setStatus), 60_000);
+    return () => clearInterval(tick);
   }, []);
 
   async function syncNow() {
