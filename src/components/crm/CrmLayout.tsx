@@ -19,6 +19,7 @@ export default function CrmLayout({ children, title, accent, quickAdd, onQuickAd
   const navigate = useNavigate();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [freeArtistOpen, setFreeArtistOpen] = useState(false);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
