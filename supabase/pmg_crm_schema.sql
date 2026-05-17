@@ -737,11 +737,23 @@ AS $$
   LIMIT 1;
 $$;
 
+-- Link Stevie's auth account to the admin CRM profile without violating the
+-- auth_user_id unique constraint if this script is run multiple times.
 UPDATE public.team_members
 SET email = 'steviermarshall@gmail.com',
     name = 'Stevie Marshall',
     auth_user_id = '6d72ebb5-7251-47c9-89d8-e3668b4a47a1'
-WHERE role = 'admin';
+WHERE role = 'admin'
+  AND (
+    auth_user_id IS NULL
+    OR auth_user_id = '6d72ebb5-7251-47c9-89d8-e3668b4a47a1'
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM public.team_members existing
+    WHERE existing.auth_user_id = '6d72ebb5-7251-47c9-89d8-e3668b4a47a1'
+      AND existing.role <> 'admin'
+  );
 
 -- ─── PART 3/4: PHASE 1 EXPANSION (calendar_sync, distro members, sponsor CRM) ───
 -- ============================================================================
