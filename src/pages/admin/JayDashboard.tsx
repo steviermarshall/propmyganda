@@ -246,7 +246,7 @@ export default function JayDashboard() {
             })}
           </div>
           <p className="text-[10px] text-white/30 mt-4">
-            Google Calendar two-way sync ships in Phase 5.
+            Color = editor. Drag in Google Calendar — pull syncs back every refresh.
           </p>
         </section>
       )}
