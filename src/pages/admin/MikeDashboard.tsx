@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import CrmLayout from "@/components/crm/CrmLayout";
 import KpiCard from "@/components/crm/KpiCard";
@@ -9,6 +10,8 @@ import { startOfWeek, addDaysISO, todayISO, daysSince } from "@/lib/crm/dates";
 import { logActivity } from "@/lib/crm/activity";
 import { toast } from "sonner";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import DistroIntakeWizard from "@/components/crm/DistroIntakeWizard";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const MIKE = "#00F0FF";
 
@@ -48,6 +51,8 @@ export default function MikeDashboard() {
   const qc = useQueryClient();
   const { member } = useCrmAuth();
   const weekStart = startOfWeek().toISOString();
+  const [intakeOpen, setIntakeOpen] = useState(false);
+  const [manageArtist, setManageArtist] = useState<any | null>(null);
 
   // KPIs
   const { data: kpis } = useQuery({
