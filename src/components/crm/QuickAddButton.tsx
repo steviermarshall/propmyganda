@@ -6,6 +6,7 @@ import { useCrmAuth } from "@/hooks/use-crm-auth";
 import { logActivity } from "@/lib/crm/activity";
 import { useQueryClient } from "@tanstack/react-query";
 import { addDaysISO } from "@/lib/crm/dates";
+import DistroIntakeWizard from "./DistroIntakeWizard";
 
 export type QuickAddEntity =
   | "booking"
@@ -32,7 +33,11 @@ export default function QuickAddButton({ entity, accent, open, onOpenChange }: P
       >
         +
       </button>
-      <QuickAddModal entity={entity} accent={accent} open={open} onClose={() => onOpenChange(false)} />
+      {entity === "distro" ? (
+        <DistroIntakeWizard open={open} onClose={() => onOpenChange(false)} accent={accent} />
+      ) : (
+        <QuickAddModal entity={entity} accent={accent} open={open} onClose={() => onOpenChange(false)} />
+      )}
     </>
   );
 }
