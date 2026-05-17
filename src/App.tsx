@@ -38,6 +38,7 @@ import MikeDashboard from "./pages/admin/MikeDashboard";
 import StevenDashboard from "./pages/admin/StevenDashboard";
 import JayDashboard from "./pages/admin/JayDashboard";
 import EditorDashboard from "./pages/admin/EditorDashboard";
+import DeliverablesReport from "./pages/admin/DeliverablesReport";
 
 const queryClient = new QueryClient();
 
