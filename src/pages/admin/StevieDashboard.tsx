@@ -148,7 +148,7 @@ export default function StevieDashboard() {
   }
 
   return (
-    <CrmLayout title="CEO Dashboard" accent={STEVIE} quickAdd="booking">
+    <CrmLayout title="Marshall's Dashboard" accent={STEVIE} quickAdd="booking">
       {/* Full-view nav */}
       <nav className="flex flex-wrap gap-2 border border-white/10 bg-crm-surface p-3">
         {[

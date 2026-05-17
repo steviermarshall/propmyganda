@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
   format, addDays, startOfDay, isSameDay, isSameMonth,
@@ -40,126 +41,121 @@ interface Props {
   filter?: Source[];
 }
 
+async function fetchCalendarData(month: Date): Promise<Evt[]> {
+  const since = startOfDay(addDays(startOfMonth(month), -7)).toISOString();
+  const until = addDays(endOfMonth(month), 14).toISOString();
+  const sinceDate = since.slice(0, 10);
+
+  const [shootsRes, delivRes, bookRes, crmRes, gcalEvents] = await Promise.all([
+    (supabase.from("shoots") as any)
+      .select("id, shoot_date, scheduled_at, artist_name, location, status")
+      .gte("shoot_date", sinceDate).lte("shoot_date", until.slice(0, 10)).limit(500),
+    (supabase.from("deliverables") as any)
+      .select("id, format, due_at, status")
+      .gte("due_at", since).lte("due_at", until).limit(500),
+    (supabase.from("bookings") as any)
+      .select("id, service, name, artist_name, event_date, event_at, location, is_free")
+      .limit(500),
+    (supabase.from("crm_bookings") as any)
+      .select("id, artist_name, shoot_date, status")
+      .gte("shoot_date", sinceDate).limit(500),
+    listGcalEvents(since, until),
+  ]);
+
+  const all: Evt[] = [];
+
+  (shootsRes.data ?? []).forEach((s: any) => {
+    const raw = s.scheduled_at || s.shoot_date;
+    if (!raw) return;
+    const at = new Date(raw);
+    if (isNaN(at.getTime())) return;
+    all.push({
+      id: `shoot-${s.id}`, source: "shoot",
+      title: s.artist_name || "Shoot",
+      sub: [s.location, s.status].filter(Boolean).join(" · "),
+      at, color: COLORS.shoot,
+    });
+  });
+
+  (delivRes.data ?? []).forEach((d: any) => {
+    if (!d.due_at) return;
+    all.push({
+      id: `deliv-${d.id}`, source: "deliverable",
+      title: d.format || "Deliverable",
+      sub: d.status || "",
+      at: new Date(d.due_at), color: COLORS.deliverable,
+    });
+  });
+
+  (bookRes.data ?? []).forEach((b: any) => {
+    const raw = b.event_at || b.event_date;
+    if (!raw) return;
+    const at = new Date(raw);
+    if (isNaN(at.getTime())) return;
+    const name = b.artist_name || b.name || "Booking";
+    all.push({
+      id: `book-${b.id}`, source: "booking",
+      title: `${b.service?.toUpperCase() ?? "BOOKING"} — ${name}`,
+      sub: b.location || "",
+      at, color: COLORS.booking,
+    });
+  });
+
+  (crmRes.data ?? []).forEach((c: any) => {
+    if (!c.shoot_date) return;
+    all.push({
+      id: `crm-${c.id}`, source: "crm_booking",
+      title: `${c.artist_name} — pipeline`,
+      sub: c.status, at: new Date(c.shoot_date), color: COLORS.crm_booking,
+    });
+  });
+
+  (gcalEvents ?? []).forEach((ev) => {
+    if (ev.isPmg) return;
+    if (!ev.start) return;
+    const at = new Date(ev.start);
+    if (isNaN(at.getTime())) return;
+    all.push({
+      id: `ext-${ev.id}`,
+      source: "external",
+      title: ev.summary,
+      sub: ev.location || "external calendar",
+      at,
+      color: COLORS.external,
+      htmlLink: ev.htmlLink,
+    });
+  });
+
+  all.sort((a, b) => a.at.getTime() - b.at.getTime());
+  return all;
+}
+
 export default function SharedCalendar({ accent, filter }: Props) {
-  const [events, setEvents] = useState<Evt[]>([]);
-  const [loading, setLoading] = useState(true);
+  const qc = useQueryClient();
   const [viewMonth, setViewMonth] = useState<Date>(startOfMonth(new Date()));
   const [selected, setSelected] = useState<Date>(startOfDay(new Date()));
   const [gcal, setGcal] = useState<{ calendar_id: string; last_pull_at: string | null } | null>(null);
   const [syncing, setSyncing] = useState(false);
 
-  async function loadAll(month: Date) {
-    setLoading(true);
-
-    // Fetch a wide window so navigating doesn't constantly re-query.
-    const since = startOfDay(addDays(startOfMonth(month), -7)).toISOString();
-    const until = addDays(endOfMonth(month), 14).toISOString();
-    const sinceDate = since.slice(0, 10);
-
-    const [shootsRes, delivRes, bookRes, crmRes, gcalEvents] = await Promise.all([
-      // Shoots: filter on shoot_date (always populated). scheduled_at is optional.
-      (supabase.from("shoots") as any)
-        .select("id, shoot_date, scheduled_at, artist_name, location, status")
-        .gte("shoot_date", sinceDate).lte("shoot_date", until.slice(0, 10)).limit(500),
-      (supabase.from("deliverables") as any)
-        .select("id, format, due_at, status")
-        .gte("due_at", since).lte("due_at", until).limit(500),
-      (supabase.from("bookings") as any)
-        .select("id, service, name, artist_name, event_date, event_at, location, is_free")
-        .limit(500),
-      (supabase.from("crm_bookings") as any)
-        .select("id, artist_name, shoot_date, status")
-        .gte("shoot_date", sinceDate).limit(500),
-      listGcalEvents(since, until),
-    ]);
-
-    const all: Evt[] = [];
-
-    (shootsRes.data ?? []).forEach((s: any) => {
-      // Prefer scheduled_at (has time) over shoot_date (date-only)
-      const raw = s.scheduled_at || s.shoot_date;
-      if (!raw) return;
-      const at = new Date(raw);
-      if (isNaN(at.getTime())) return;
-      all.push({
-        id: `shoot-${s.id}`, source: "shoot",
-        title: s.artist_name || "Shoot",
-        sub: [s.location, s.status].filter(Boolean).join(" · "),
-        at, color: COLORS.shoot,
+  const { data: allEvents = [], isFetching } = useQuery({
+    queryKey: ["shared-calendar", viewMonth.toISOString()],
+    queryFn: () => fetchCalendarData(viewMonth),
+    staleTime: 2 * 60 * 1000,
+    onSuccess: () => {
+      getGcalSettings().then((s) => {
+        setGcal(s);
+        const last = s?.last_pull_at ? new Date(s.last_pull_at).getTime() : 0;
+        if (Date.now() - last > 5 * 60 * 1000) {
+          pullGcal()
+            .then(() => getGcalSettings().then(setGcal))
+            .catch(() => {});
+        }
       });
-    });
+    },
+  } as any);
 
-    (delivRes.data ?? []).forEach((d: any) => {
-      if (!d.due_at) return;
-      all.push({
-        id: `deliv-${d.id}`, source: "deliverable",
-        title: d.format || "Deliverable",
-        sub: d.status || "",
-        at: new Date(d.due_at), color: COLORS.deliverable,
-      });
-    });
+  const events = filter ? allEvents.filter((e: Evt) => filter.includes(e.source)) : allEvents;
 
-    (bookRes.data ?? []).forEach((b: any) => {
-      const raw = b.event_at || b.event_date;
-      if (!raw) return;
-      const at = new Date(raw);
-      if (isNaN(at.getTime())) return;
-      const name = b.artist_name || b.name || "Booking";
-      all.push({
-        id: `book-${b.id}`, source: "booking",
-        title: `${b.service?.toUpperCase() ?? "BOOKING"} — ${name}${b.is_free ? " (free)" : ""}`,
-        sub: b.location || "",
-        at, color: COLORS.booking,
-      });
-    });
-
-    (crmRes.data ?? []).forEach((c: any) => {
-      if (!c.shoot_date) return;
-      all.push({
-        id: `crm-${c.id}`, source: "crm_booking",
-        title: `${c.artist_name} — pipeline`,
-        sub: c.status, at: new Date(c.shoot_date), color: COLORS.crm_booking,
-      });
-    });
-
-    // External Google Calendar events (anything not PMG-sourced)
-    (gcalEvents ?? []).forEach((ev) => {
-      if (ev.isPmg) return;
-      if (!ev.start) return;
-      const at = new Date(ev.start);
-      if (isNaN(at.getTime())) return;
-      all.push({
-        id: `ext-${ev.id}`,
-        source: "external",
-        title: ev.summary,
-        sub: ev.location || "external calendar",
-        at,
-        color: COLORS.external,
-        htmlLink: ev.htmlLink,
-      });
-    });
-
-    all.sort((a, b) => a.at.getTime() - b.at.getTime());
-    setEvents(filter ? all.filter(e => filter.includes(e.source)) : all);
-    setLoading(false);
-  }
-
-  useEffect(() => {
-    loadAll(viewMonth);
-    getGcalSettings().then((s) => {
-      setGcal(s);
-      const last = s?.last_pull_at ? new Date(s.last_pull_at).getTime() : 0;
-      if (Date.now() - last > 5 * 60 * 1000) {
-        pullGcal()
-          .then(() => getGcalSettings().then(setGcal))
-          .catch(() => { /* silent — user can click Sync to see the error */ });
-      }
-    });
-    /* eslint-disable-next-line */
-  }, [viewMonth]);
-
-  // Build the month grid: array of weeks, each containing 7 dates,
-  // starting from the Monday on or before the 1st of the month.
   const monthGrid = useMemo(() => {
     const gridStart = startOfWeek(startOfMonth(viewMonth), { weekStartsOn: 1 });
     const gridEnd = endOfWeek(endOfMonth(viewMonth), { weekStartsOn: 1 });
@@ -195,7 +191,7 @@ export default function SharedCalendar({ accent, filter }: Props) {
       const r = await pullGcal();
       toast.success(`Synced · ${r.updated} updated, ${r.skipped} skipped`);
       setGcal(await getGcalSettings());
-      await loadAll(viewMonth);
+      qc.invalidateQueries({ queryKey: ["shared-calendar"] });
     } catch (e: any) {
       toast.error(e?.message ?? "Sync failed");
     } finally { setSyncing(false); }
@@ -222,11 +218,11 @@ export default function SharedCalendar({ accent, filter }: Props) {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => loadAll(viewMonth)}
-            disabled={loading}
+            onClick={() => qc.invalidateQueries({ queryKey: ["shared-calendar"] })}
+            disabled={isFetching}
             className="px-2 py-1 text-[10px] uppercase tracking-widest text-white/50 hover:text-white border border-white/10"
           >
-            {loading ? "…" : "Refresh"}
+            {isFetching ? "…" : "Refresh"}
           </button>
           <button
             onClick={syncNow}

@@ -58,10 +58,10 @@ export default function CrmLayout({ children, title, accent, quickAdd, onQuickAd
         <div className="flex items-center gap-3">
           <button
             onClick={() => setFreeArtistOpen(true)}
-            title="Book an artist (free)"
+            title="Schedule a complimentary artist shoot"
             className="text-[10px] uppercase tracking-widest font-bold border border-white/20 hover:border-white/60 px-3 py-1.5 text-white/80 hover:text-white transition-colors"
           >
-            + Artist (free)
+            + Artist Shoot
           </button>
           <button
             onClick={() => setPaletteOpen(true)}
