@@ -753,8 +753,8 @@ ALTER TABLE public.deliverables
   ADD COLUMN IF NOT EXISTS revision_count         INTEGER DEFAULT 0,
   ADD COLUMN IF NOT EXISTS last_review_notes      TEXT;
 
-CREATE INDEX IF NOT EXISTS IF NOT EXISTS deliverables_assigned_idx ON public.deliverables (assigned_to);
-CREATE INDEX IF NOT EXISTS IF NOT EXISTS deliverables_due_idx ON public.deliverables (due_at);
+CREATE INDEX IF NOT EXISTS deliverables_assigned_idx ON public.deliverables (assigned_to);
+CREATE INDEX IF NOT EXISTS deliverables_due_idx ON public.deliverables (due_at);
 
 DROP POLICY IF EXISTS "deliverables_editor_own" ON public.deliverables;
 DROP POLICY IF EXISTS "deliverables_editor_own" ON public.deliverables;
@@ -817,7 +817,7 @@ CREATE TABLE IF NOT EXISTS public.distro_artist_members (
   agreements_email    TEXT,
   created_at          TIMESTAMPTZ DEFAULT NOW()
 );
-CREATE INDEX IF NOT EXISTS IF NOT EXISTS distro_members_artist_idx ON public.distro_artist_members (distro_artist_id);
+CREATE INDEX IF NOT EXISTS distro_members_artist_idx ON public.distro_artist_members (distro_artist_id);
 ALTER TABLE public.distro_artist_members ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "distro_members_admin_mike" ON public.distro_artist_members;
 DROP POLICY IF EXISTS "distro_members_admin_mike" ON public.distro_artist_members;
@@ -837,7 +837,7 @@ CREATE TABLE IF NOT EXISTS public.streaming_metrics (
   recorded_at       TIMESTAMPTZ DEFAULT NOW(),
   notes             TEXT
 );
-CREATE INDEX IF NOT EXISTS IF NOT EXISTS streaming_metrics_artist_idx ON public.streaming_metrics (distro_artist_id, recorded_at DESC);
+CREATE INDEX IF NOT EXISTS streaming_metrics_artist_idx ON public.streaming_metrics (distro_artist_id, recorded_at DESC);
 ALTER TABLE public.streaming_metrics ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "streaming_metrics_admin_mike" ON public.streaming_metrics;
 DROP POLICY IF EXISTS "streaming_metrics_admin_mike" ON public.streaming_metrics;
@@ -870,8 +870,8 @@ CREATE TABLE IF NOT EXISTS public.sponsor_brands (
   created_at                TIMESTAMPTZ DEFAULT NOW(),
   updated_at                TIMESTAMPTZ DEFAULT NOW()
 );
-CREATE INDEX IF NOT EXISTS IF NOT EXISTS sponsor_brands_status_idx ON public.sponsor_brands (status);
-CREATE INDEX IF NOT EXISTS IF NOT EXISTS sponsor_brands_tier_idx   ON public.sponsor_brands (tier);
+CREATE INDEX IF NOT EXISTS sponsor_brands_status_idx ON public.sponsor_brands (status);
+CREATE INDEX IF NOT EXISTS sponsor_brands_tier_idx   ON public.sponsor_brands (tier);
 
 CREATE TABLE IF NOT EXISTS public.sponsor_contacts (
   id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -892,8 +892,8 @@ CREATE TABLE IF NOT EXISTS public.sponsor_contacts (
   birthday              DATE,
   created_at            TIMESTAMPTZ DEFAULT NOW()
 );
-CREATE INDEX IF NOT EXISTS IF NOT EXISTS sponsor_contacts_brand_idx ON public.sponsor_contacts (brand_id);
-CREATE INDEX IF NOT EXISTS IF NOT EXISTS sponsor_contacts_next_touch_idx ON public.sponsor_contacts (next_touch_at);
+CREATE INDEX IF NOT EXISTS sponsor_contacts_brand_idx ON public.sponsor_contacts (brand_id);
+CREATE INDEX IF NOT EXISTS sponsor_contacts_next_touch_idx ON public.sponsor_contacts (next_touch_at);
 
 CREATE TABLE IF NOT EXISTS public.sponsor_properties (
   id                       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -930,8 +930,8 @@ CREATE TABLE IF NOT EXISTS public.sponsor_deals (
   created_at            TIMESTAMPTZ DEFAULT NOW(),
   updated_at            TIMESTAMPTZ DEFAULT NOW()
 );
-CREATE INDEX IF NOT EXISTS IF NOT EXISTS sponsor_deals_brand_idx ON public.sponsor_deals (brand_id);
-CREATE INDEX IF NOT EXISTS IF NOT EXISTS sponsor_deals_stage_idx ON public.sponsor_deals (stage);
+CREATE INDEX IF NOT EXISTS sponsor_deals_brand_idx ON public.sponsor_deals (brand_id);
+CREATE INDEX IF NOT EXISTS sponsor_deals_stage_idx ON public.sponsor_deals (stage);
 
 CREATE TABLE IF NOT EXISTS public.sponsor_deliverables (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -943,7 +943,7 @@ CREATE TABLE IF NOT EXISTS public.sponsor_deliverables (
   recap_status    TEXT DEFAULT 'pending' CHECK (recap_status IN ('pending','in_progress','delivered','approved')),
   created_at      TIMESTAMPTZ DEFAULT NOW()
 );
-CREATE INDEX IF NOT EXISTS IF NOT EXISTS sponsor_deliverables_deal_idx ON public.sponsor_deliverables (deal_id);
+CREATE INDEX IF NOT EXISTS sponsor_deliverables_deal_idx ON public.sponsor_deliverables (deal_id);
 
 CREATE TABLE IF NOT EXISTS public.sponsor_activities (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -955,8 +955,8 @@ CREATE TABLE IF NOT EXISTS public.sponsor_activities (
   occurred_at     TIMESTAMPTZ DEFAULT NOW(),
   created_by      UUID REFERENCES public.team_members(id) ON DELETE SET NULL
 );
-CREATE INDEX IF NOT EXISTS IF NOT EXISTS sponsor_activities_deal_idx ON public.sponsor_activities (deal_id, occurred_at DESC);
-CREATE INDEX IF NOT EXISTS IF NOT EXISTS sponsor_activities_brand_idx ON public.sponsor_activities (brand_id, occurred_at DESC);
+CREATE INDEX IF NOT EXISTS sponsor_activities_deal_idx ON public.sponsor_activities (deal_id, occurred_at DESC);
+CREATE INDEX IF NOT EXISTS sponsor_activities_brand_idx ON public.sponsor_activities (brand_id, occurred_at DESC);
 
 -- RLS + admin/steven policies for all sponsor_* tables
 DO $$
