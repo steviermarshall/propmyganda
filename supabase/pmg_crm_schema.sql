@@ -744,6 +744,19 @@ SET email = 'steviermarshall@gmail.com',
     name = 'Stevie Marshall',
     auth_user_id = '6d72ebb5-7251-47c9-89d8-e3668b4a47a1'
 WHERE role = 'admin'
+  AND id = (
+    SELECT id
+    FROM public.team_members candidate
+    WHERE candidate.role = 'admin'
+      AND (
+        candidate.auth_user_id IS NULL
+        OR candidate.auth_user_id = '6d72ebb5-7251-47c9-89d8-e3668b4a47a1'
+      )
+    ORDER BY (candidate.auth_user_id = '6d72ebb5-7251-47c9-89d8-e3668b4a47a1') DESC,
+             candidate.created_at ASC,
+             candidate.id ASC
+    LIMIT 1
+  )
   AND (
     auth_user_id IS NULL
     OR auth_user_id = '6d72ebb5-7251-47c9-89d8-e3668b4a47a1'
