@@ -4,6 +4,7 @@ import pmgLogo from "@/assets/pmg-logo-clean.png";
 import { supabase } from "@/integrations/supabase/client";
 import CommandPalette from "./CommandPalette";
 import QuickAddButton, { QuickAddEntity } from "./QuickAddButton";
+import BookingSheet from "@/components/BookingSheet";
 
 interface Props {
   children: ReactNode;
