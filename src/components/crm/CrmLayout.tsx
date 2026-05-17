@@ -4,7 +4,6 @@ import pmgLogo from "@/assets/pmg-logo-clean.png";
 import { supabase } from "@/integrations/supabase/client";
 import CommandPalette from "./CommandPalette";
 import QuickAddButton, { QuickAddEntity } from "./QuickAddButton";
-import BookingSheet from "@/components/BookingSheet";
 
 interface Props {
   children: ReactNode;
@@ -19,8 +18,6 @@ export default function CrmLayout({ children, title, accent, quickAdd, onQuickAd
   const navigate = useNavigate();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
-  const [freeArtistOpen, setFreeArtistOpen] = useState(false);
-
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
@@ -57,13 +54,6 @@ export default function CrmLayout({ children, title, accent, quickAdd, onQuickAd
         </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={() => setFreeArtistOpen(true)}
-            title="Schedule a complimentary artist shoot"
-            className="text-[10px] uppercase tracking-widest font-bold border border-white/20 hover:border-white/60 px-3 py-1.5 text-white/80 hover:text-white transition-colors"
-          >
-            + Artist Shoot
-          </button>
-          <button
             onClick={() => setPaletteOpen(true)}
             className="text-[10px] text-white/30 hover:text-white/70 uppercase tracking-widest border border-white/10 px-2 py-1"
           >
@@ -98,13 +88,6 @@ export default function CrmLayout({ children, title, accent, quickAdd, onQuickAd
           onOpenChange={setQuickAddOpen}
         />
       ) : null}
-      <BookingSheet
-        open={freeArtistOpen}
-        onOpenChange={setFreeArtistOpen}
-        initialService="artist"
-        free
-        servicesAllowed={["artist"]}
-      />
     </div>
   );
 }
