@@ -6,6 +6,7 @@ import { useCrmAuth } from "@/hooks/use-crm-auth";
 import { logActivity } from "@/lib/crm/activity";
 import { useQueryClient } from "@tanstack/react-query";
 import { addDaysISO } from "@/lib/crm/dates";
+import { pushToGcal } from "@/lib/crm/gcal";
 import DistroIntakeWizard from "./DistroIntakeWizard";
 
 export type QuickAddEntity =
@@ -62,7 +63,10 @@ function QuickAddModal({
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!member) return;
+    if (!member) {
+      toast.error("You must be signed in to add records");
+      return;
+    }
     setSaving(true);
     try {
       const payload = schema.build(fields, member.id);
@@ -70,14 +74,26 @@ function QuickAddModal({
         .insert(payload)
         .select()
         .single();
-      if (error) throw error;
+      if (error) {
+        const detail = [error.message, error.details, error.hint].filter(Boolean).join(" · ");
+        throw new Error(detail || "Database insert failed");
+      }
       await logActivity(member.id, schema.entityType as any, data.id, "created", payload);
       if (schema.afterInsert) await schema.afterInsert(data, member.id);
+
+      // Auto-push to Google Calendar for entities with a date
+      if (entity === "shoot") {
+        pushToGcal("shoot", data.id);
+      } else if (entity === "booking" && data.shoot_date) {
+        pushToGcal("crm_booking", data.id);
+      }
+
       toast.success(`${schema.label} created`);
       qc.invalidateQueries();
       setFields({});
       onClose();
     } catch (err: any) {
+      console.error("QuickAdd insert error:", err);
       toast.error(err?.message ?? "Failed to create");
     } finally {
       setSaving(false);
@@ -159,6 +175,7 @@ const SCHEMAS: Record<
     entityType: "crm_booking",
     fields: [
       { key: "artist_name", label: "Artist", type: "text", required: true },
+      { key: "shoot_date",  label: "Shoot Date (optional)", type: "date" },
       {
         key: "package", label: "Package", type: "select",
         options: [
@@ -178,6 +195,7 @@ const SCHEMAS: Record<
     ],
     build: (f, memberId) => ({
       artist_name: f.artist_name,
+      shoot_date: f.shoot_date || null,
       package: f.package || "550",
       source: f.source || "inbound",
       status: "inquiry",
@@ -236,27 +254,37 @@ const SCHEMAS: Record<
     }),
   },
   sponsor: {
-    label: "Sponsor",
-    table: "sponsor_pipeline",
-    entityType: "sponsor_pipeline",
+    label: "Sponsor Brand",
+    table: "sponsor_brands",
+    entityType: "sponsor_brand",
     fields: [
-      { key: "brand_name", label: "Brand", type: "text", required: true },
-      { key: "contact_name", label: "Contact", type: "text" },
+      { key: "name", label: "Brand Name", type: "text", required: true },
+      { key: "industry", label: "Industry", type: "text" },
       {
-        key: "category", label: "Category", type: "select",
+        key: "tier", label: "Tier", type: "select",
         options: [
-          { value: "brand", label: "Brand" },
-          { value: "event", label: "Event" },
-          { value: "publication", label: "Publication" },
+          { value: "tier_1", label: "Tier 1 (Top)" },
+          { value: "tier_2", label: "Tier 2" },
+          { value: "tier_3", label: "Tier 3" },
+        ],
+      },
+      {
+        key: "status", label: "Status", type: "select",
+        options: [
+          { value: "cold",        label: "Cold" },
+          { value: "prospecting", label: "Prospecting" },
+          { value: "pitched",     label: "Pitched" },
+          { value: "negotiating", label: "Negotiating" },
+          { value: "active",      label: "Active" },
         ],
       },
     ],
     build: (f, memberId) => ({
-      brand_name: f.brand_name,
-      contact_name: f.contact_name || null,
-      category: f.category || "brand",
-      stage: "lead",
-      assigned_to: memberId,
+      name: f.name,
+      industry: f.industry || null,
+      tier: f.tier || "tier_3",
+      status: f.status || "cold",
+      owner_id: memberId,
     }),
   },
   shoot: {

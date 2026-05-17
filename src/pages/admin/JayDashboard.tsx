@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { pushToGcal, pullGcal, getGcalSettings } from "@/lib/crm/gcal";
 import { useEffect } from "react";
+import { addDays, format, startOfWeek as dfStartOfWeek } from "date-fns";
 
 const JAY = "#b366ff";
 
@@ -50,14 +51,18 @@ export default function JayDashboard() {
   const [uploadUrls, setUploadUrls] = useState<Record<string, string>>({});
   const [assignModal, setAssignModal] = useState<any | null>(null);
 
+  // Calendar tab: which week to display (default = this week, Monday start)
+  const [viewWeek, setViewWeek] = useState<Date>(dfStartOfWeek(new Date(), { weekStartsOn: 1 }));
+  const viewWeekEnd = useMemo(() => addDays(viewWeek, 7), [viewWeek]);
+
   // ---- queries
   const { data: shoots = [] } = useQuery({
-    queryKey: ["jay-shoots", weekStart.toISOString()],
+    queryKey: ["jay-shoots", viewWeek.toISOString()],
     queryFn: async () => {
       const { data } = await (supabase.from("shoots") as any)
         .select("*")
-        .gte("shoot_date", weekStart.toISOString().slice(0, 10))
-        .lt("shoot_date", weekEnd.toISOString().slice(0, 10))
+        .gte("shoot_date", viewWeek.toISOString().slice(0, 10))
+        .lt("shoot_date", viewWeekEnd.toISOString().slice(0, 10))
         .order("shoot_date", { ascending: true });
       return data ?? [];
     },
@@ -111,7 +116,7 @@ export default function JayDashboard() {
     queryKey: ["jay-editors"],
     queryFn: async () => {
       const { data } = await (supabase.from("team_members") as any)
-        .select("id, full_name, email, role")
+        .select("id, name, email, role")
         .in("role", ["editor", "jay"]);
       return data ?? [];
     },
@@ -190,8 +195,11 @@ export default function JayDashboard() {
   }
 
   // ---- calendar layout
-  const dayCols = [3, 4, 5, 6];
-  const dayLabels = ["Wed", "Thu", "Fri", "Sat"];
+  // Show all 7 days of the selected week (Mon → Sun).
+  const weekDates = useMemo(
+    () => Array.from({ length: 7 }, (_, i) => addDays(viewWeek, i)),
+    [viewWeek],
+  );
 
   const TABS: { id: Tab; label: string; count?: number }[] = [
     { id: "calendar",     label: "Calendar" },
@@ -246,23 +254,49 @@ export default function JayDashboard() {
 
       {tab === "calendar" && (
         <section className="border border-white/10 bg-crm-surface p-6">
-          <p className="text-white/30 text-[10px] tracking-[0.3em] uppercase mb-4">Shoot Calendar (Wed–Sat)</p>
-          <div className="grid grid-cols-4 gap-3">
-            {dayCols.map((dow, i) => {
-              const items = shoots.filter((s: any) => new Date(s.shoot_date).getUTCDay() === dow);
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+            <p className="text-white/30 text-[10px] tracking-[0.3em] uppercase">
+              Shoot Week — {format(viewWeek, "MMM d")} → {format(addDays(viewWeek, 6), "MMM d")}
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setViewWeek((w) => addDays(w, -7))}
+                className="px-2 py-1 text-[10px] uppercase tracking-widest text-white/60 hover:text-white border border-white/10"
+              >
+                ← Prev
+              </button>
+              <button
+                onClick={() => setViewWeek(dfStartOfWeek(new Date(), { weekStartsOn: 1 }))}
+                className="px-2 py-1 text-[10px] uppercase tracking-widest text-white/60 hover:text-white border border-white/10"
+              >
+                This Week
+              </button>
+              <button
+                onClick={() => setViewWeek((w) => addDays(w, 7))}
+                className="px-2 py-1 text-[10px] uppercase tracking-widest text-white/60 hover:text-white border border-white/10"
+              >
+                Next →
+              </button>
+            </div>
+          </div>
+          <div className="grid grid-cols-7 gap-2">
+            {weekDates.map((d) => {
+              const iso = d.toISOString().slice(0, 10);
+              const items = shoots.filter((s: any) => s.shoot_date === iso);
+              const isToday = iso === new Date().toISOString().slice(0, 10);
               return (
-                <div key={dow} className="border border-white/10 bg-black/50 min-h-[200px]">
-                  <div className="px-3 py-2 border-b border-white/10 text-[10px] uppercase tracking-widest text-white/60">
-                    {dayLabels[i]}
+                <div key={iso} className="border border-white/10 bg-black/50 min-h-[200px]">
+                  <div className={`px-2 py-2 border-b border-white/10 text-[10px] uppercase tracking-widest ${isToday ? "text-white" : "text-white/60"}`} style={isToday ? { backgroundColor: `${JAY}33`, color: JAY } : {}}>
+                    {format(d, "EEE d")}
                   </div>
                   <div className="p-2 space-y-2">
                     {items.length === 0 ? (
                       <p className="text-white/20 text-[10px]">—</p>
                     ) : items.map((s: any) => (
                       <div key={s.id} className="border border-white/10 bg-crm-surface p-2">
-                        <div className="text-xs font-bold">{s.artist_name}</div>
+                        <div className="text-xs font-bold truncate">{s.artist_name}</div>
                         <div className="text-[10px] text-white/40">{s.shoot_window ?? "—"}</div>
-                        <div className="text-[10px] text-white/30">{s.location ?? ""}</div>
+                        <div className="text-[10px] text-white/30 truncate">{s.location ?? ""}</div>
                         <div className="text-[10px] mt-1 uppercase tracking-widest" style={{ color: JAY }}>
                           {s.status}
                         </div>
@@ -329,7 +363,7 @@ export default function JayDashboard() {
                                 <div className="text-white/80">{d.format}</div>
                                 <div className="flex items-center gap-3 mt-1 text-[10px] flex-wrap">
                                   {editor ? (
-                                    <span className="text-white/60">→ {editor.full_name ?? editor.email}</span>
+                                    <span className="text-white/60">→ {editor.name ?? editor.email}</span>
                                   ) : (
                                     <span className="text-white/30">unassigned</span>
                                   )}
@@ -384,7 +418,7 @@ export default function JayDashboard() {
                   <div key={e.id} className="border border-white/10 bg-black/40 p-3">
                     <div className="flex items-center justify-between mb-2">
                       <div>
-                        <div className="text-sm font-bold">{e.full_name ?? e.email}</div>
+                        <div className="text-sm font-bold">{e.name ?? e.email}</div>
                         <div className="text-[10px] text-white/40 uppercase tracking-widest">{e.role}</div>
                       </div>
                       <div className="text-right">
@@ -532,7 +566,7 @@ function AssignEditorModal({
             >
               <option value="">— Unassigned —</option>
               {editors.map((e: any) => (
-                <option key={e.id} value={e.id}>{e.full_name ?? e.email} ({e.role})</option>
+                <option key={e.id} value={e.id}>{e.name ?? e.email} ({e.role})</option>
               ))}
             </select>
           </Field>
