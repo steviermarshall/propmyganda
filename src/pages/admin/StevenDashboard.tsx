@@ -152,6 +152,8 @@ export default function StevenDashboard() {
         </div>
       </section>
 
+      <SharedCalendar accent={STEVEN} />
+
       {/* Touch reminders */}
       <section className="border border-white/10 bg-crm-surface p-6">
         <p className="text-white/30 text-[10px] tracking-[0.3em] uppercase mb-3">

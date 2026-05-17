@@ -88,6 +88,8 @@ export default function EditorDashboard() {
         </div>
       </section>
 
+      <SharedCalendar accent={EDITOR} />
+
       <section className="border border-white/10 bg-crm-surface p-6">
         <p className="text-white/30 text-[10px] tracking-[0.3em] uppercase mb-3">Assignments</p>
         {open.length === 0 ? (
