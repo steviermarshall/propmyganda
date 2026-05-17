@@ -9,6 +9,8 @@ import { startOfWeek, endOfWeek, todayISO, hoursBetween, daysSince } from "@/lib
 import { logActivity } from "@/lib/crm/activity";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { pushToGcal, pullGcal, getGcalSettings } from "@/lib/crm/gcal";
+import { useEffect } from "react";
 
 const JAY = "#b366ff";
 
@@ -133,6 +135,7 @@ export default function JayDashboard() {
     if (error) { toast.error("Failed"); qc.invalidateQueries({ queryKey: ["jay-deliverables"] }); return; }
     await logActivity(member?.id, "deliverable", id, "status_changed", { from: current, to: next });
     qc.invalidateQueries({ queryKey: ["jay-all-open-deliverables"] });
+    pushToGcal("deliverable", id);
   }
 
   async function confirmUpload() {
@@ -165,6 +168,7 @@ export default function JayDashboard() {
     if (error) { toast.error(error.message); return; }
     await logActivity(member?.id, "deliverable", assignModal.id, "assigned", patch);
     toast.success("Assigned");
+    pushToGcal("deliverable", assignModal.id);
     setAssignModal(null);
     qc.invalidateQueries({ queryKey: ["jay-deliverables"] });
     qc.invalidateQueries({ queryKey: ["jay-all-open-deliverables"] });
@@ -193,6 +197,12 @@ export default function JayDashboard() {
           <KpiCard label="Overdue"       value={overdueCount}  accent={JAY} />
         </div>
       </section>
+
+      <GcalSyncBar accent={JAY} onSynced={() => {
+        qc.invalidateQueries({ queryKey: ["jay-shoots"] });
+        qc.invalidateQueries({ queryKey: ["jay-deliverables"] });
+        qc.invalidateQueries({ queryKey: ["jay-all-open-deliverables"] });
+      }} />
 
       {/* Tab bar */}
       <div className="border-b border-white/10 flex gap-1 overflow-x-auto">
@@ -242,7 +252,7 @@ export default function JayDashboard() {
             })}
           </div>
           <p className="text-[10px] text-white/30 mt-4">
-            Google Calendar two-way sync ships in Phase 5.
+            Color = editor. Drag in Google Calendar — pull syncs back every refresh.
           </p>
         </section>
       )}
@@ -563,6 +573,55 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     <div className="space-y-1">
       <label className="text-[10px] uppercase tracking-widest text-white/40">{label}</label>
       {children}
+    </div>
+  );
+}
+
+function GcalSyncBar({ accent, onSynced }: { accent: string; onSynced: () => void }) {
+  const [status, setStatus] = useState<{ calendar_id: string; last_pull_at: string | null } | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    getGcalSettings().then(setStatus);
+  }, []);
+
+  async function syncNow() {
+    setBusy(true);
+    try {
+      const r = await pullGcal();
+      toast.success(`Synced · ${r.updated} updated, ${r.skipped} skipped`);
+      setStatus(await getGcalSettings());
+      onSynced();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Sync failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const last = status?.last_pull_at ? new Date(status.last_pull_at) : null;
+  const ago = last ? Math.round((Date.now() - last.getTime()) / 60000) : null;
+
+  return (
+    <div className="flex items-center justify-between border border-white/10 bg-black/40 px-4 py-2">
+      <div className="flex items-center gap-3 text-[10px] uppercase tracking-widest">
+        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: accent }} />
+        <span className="text-white/60">Google Calendar</span>
+        <span className="text-white/30">·</span>
+        <span className="text-white/40">{status?.calendar_id ?? "primary"}</span>
+        <span className="text-white/30">·</span>
+        <span className="text-white/40">
+          {ago == null ? "never synced" : ago < 1 ? "just now" : `${ago}m ago`}
+        </span>
+      </div>
+      <button
+        onClick={syncNow}
+        disabled={busy}
+        className="px-3 py-1 text-[10px] uppercase tracking-widest font-bold text-black disabled:opacity-50"
+        style={{ backgroundColor: accent }}
+      >
+        {busy ? "Syncing…" : "Sync now"}
+      </button>
     </div>
   );
 }
