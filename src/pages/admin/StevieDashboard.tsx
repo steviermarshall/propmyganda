@@ -148,6 +148,27 @@ export default function StevieDashboard() {
 
   return (
     <CrmLayout title="CEO Dashboard" accent={STEVIE} quickAdd="booking">
+      {/* Full-view nav */}
+      <nav className="flex flex-wrap gap-2 border border-white/10 bg-crm-surface p-3">
+        {[
+          { to: "/admin/mike",   label: "Mike — Bookings",      color: "#00F0FF" },
+          { to: "/admin/steven", label: "Steven — Sponsors",    color: "#d97000" },
+          { to: "/admin/jay",    label: "Jay — Production",     color: "#b366ff" },
+          { to: "/admin/editor", label: "Editors",              color: "#7CFFB2" },
+          { to: "/admin/reports/deliverables", label: "Reports → Deliverables", color: STEVIE },
+          { to: "/dashboard/admin",        label: "Site · Overview",     color: "#ffffff" },
+          { to: "/dashboard/distribution", label: "Site · Distribution", color: "#ffffff" },
+          { to: "/dashboard/marketing",    label: "Site · Marketing",    color: "#ffffff" },
+          { to: "/dashboard/sponsorships", label: "Site · Sponsorships", color: "#ffffff" },
+        ].map((l) => (
+          <a key={l.to} href={l.to}
+            className="text-[10px] uppercase tracking-widest font-bold px-3 py-2 border border-white/10 hover:bg-white/5 transition-colors"
+            style={{ color: l.color }}>
+            {l.label}
+          </a>
+        ))}
+      </nav>
+
       {/* MRR */}
       <section className="border border-white/10 bg-crm-surface p-6">
         <p className="text-white/30 text-[10px] tracking-[0.3em] uppercase mb-4">
