@@ -1,67 +1,134 @@
-# Calendar + Booking Expansion Plan
+## Why the error happens
 
-## 1. Fix the Google Calendar edge function error
+`ERROR: 42703: column "client_id" does not exist` is not coming from anything in the Phase 6 script itself — there's no `client_id` anywhere in the repo. It's coming from an **existing RLS policy or trigger on `public.bookings`** (left over from an earlier experiment) that references a `client_id` column the table no longer has. As soon as Postgres re-evaluates that policy during the migration, it fails.
 
-When the "Sync now" button is clicked on Jay's dashboard, `gcal-pull` is invoked but throws (likely "GOOGLE_CALENDAR_API_KEY is not configured" or similar) because the edge function hasn't been re-deployed since the connection was linked.
+The fix is to **drop every existing policy on `public.bookings` first**, then recreate the ones we actually want. The script below is fully idempotent — safe to run repeatedly.
 
-**Actions**
-- Re-deploy `gcal-pull` and `gcal-push` so they pick up the new `GOOGLE_CALENDAR_API_KEY` + `LOVABLE_API_KEY` env vars.
-- Add a friendlier error path in `src/lib/crm/gcal.ts` — surface the real edge function message in the toast instead of just "Sync failed".
-- Verify the connection with the gateway `verify_credentials` endpoint as part of the sync click, so we can tell the user "reconnect Google Calendar" vs "transient error".
+## File to replace
 
-## 2. Shared full calendar on every dashboard
+`supabase/crm_phase6_bookings.sql` — overwrite with the SQL below, then paste it into **Cloud → Database → SQL Editor** and run.
 
-Today only Jay sees the calendar context (via the gcal sync bar + deliverables board). We will create one reusable component used by Stevie, Mike, Steven, Jay and Editors.
+```sql
+-- ============================================================================
+-- PHASE 6 — Bookings expansion for CRM-wide scheduling  (defensive rewrite)
+-- Safe to run multiple times. Drops stale policies that reference removed
+-- columns (e.g. client_id) before recreating the team-wide policies.
+-- ============================================================================
 
-**New component:** `src/components/crm/SharedCalendar.tsx`
-- Month + week view (lightweight — `react-day-picker` for month grid we already have, plus a week-strip), color-coded by source:
-  - Shoots (Jay)
-  - Deliverable due dates (Jay)
-  - Bookings — DJ / Security / Venue / Promoter / Recap / Artist / Bartender (Mike)
-  - JV / Distro opportunities (Mike) — new type, see §3
-  - Sponsor activations (Steven)
-- Click an event → side panel with details + "Open in Google Calendar" link (uses the `event_html_link` we already store in `calendar_sync`).
-- "Add to my calendar" button on every event (writes through `gcal-push`).
-- Sync-now button + last-pulled timestamp moved into this component so every dashboard gets it.
+-- 1. Nuke ALL existing policies on public.bookings so leftover ones referencing
+--    columns like client_id can't block the migration.
+DO $$
+DECLARE
+  pol record;
+BEGIN
+  FOR pol IN
+    SELECT policyname
+    FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'bookings'
+  LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.bookings', pol.policyname);
+  END LOOP;
+END $$;
 
-**Wire-in**
-- Add `<SharedCalendar />` tab/section to: `StevieDashboard`, `MikeDashboard`, `StevenDashboard`, `JayDashboard`, `EditorDashboard`.
-- Each dashboard passes an `accent` color + optional `defaultFilter` (e.g. Mike defaults to bookings, Jay to shoots).
+-- 2. Drop any stale triggers that might reference client_id
+DO $$
+DECLARE
+  trg record;
+BEGIN
+  FOR trg IN
+    SELECT tgname
+    FROM pg_trigger
+    WHERE tgrelid = 'public.bookings'::regclass
+      AND NOT tgisinternal
+  LOOP
+    EXECUTE format('DROP TRIGGER IF EXISTS %I ON public.bookings', trg.tgname);
+  END LOOP;
+END $$;
 
-## 3. Mike — add JV & Distro opportunities like a booking
+-- 3. Broaden the service whitelist + add CRM-only services
+ALTER TABLE public.bookings DROP CONSTRAINT IF EXISTS bookings_service_check;
+ALTER TABLE public.bookings
+  ADD CONSTRAINT bookings_service_check
+  CHECK (service IN (
+    'security','dj','venue','promoter',
+    'event_recap','artist','bartender',
+    'jv','distro'
+  ));
 
-Today `BookingSheet` covers DJ/Security/Venue/Promoter/Recap/Artist/Bartender. We extend it so Mike (and the team) can also schedule:
-- **JV Opportunity** (joint-venture event) — fields: partner name, deal type, revenue split, event date, location, deliverables, notes.
-- **Distro Opportunity** — fields: artist, release title, release date, platforms, marketing budget, notes. (Mirrors the existing `DistroIntakeWizard` but lighter, calendar-first.)
+-- 4. Add new columns used by JV / Distro / free-artist bookings + shared calendar
+ALTER TABLE public.bookings
+  ADD COLUMN IF NOT EXISTS is_free          BOOLEAN     NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS created_by       UUID        REFERENCES auth.users(id) ON DELETE SET NULL,
+  -- JV
+  ADD COLUMN IF NOT EXISTS partner_name     TEXT,
+  ADD COLUMN IF NOT EXISTS deal_type        TEXT,
+  ADD COLUMN IF NOT EXISTS revenue_split    TEXT,
+  -- Distro
+  ADD COLUMN IF NOT EXISTS artist_name      TEXT,
+  ADD COLUMN IF NOT EXISTS release_title    TEXT,
+  ADD COLUMN IF NOT EXISTS release_date     TEXT,
+  ADD COLUMN IF NOT EXISTS platforms        TEXT,
+  ADD COLUMN IF NOT EXISTS marketing_budget TEXT,
+  -- Shared scheduling
+  ADD COLUMN IF NOT EXISTS event_at         TIMESTAMPTZ;
 
-**Schema (migration)**
-- Extend `bookings.service` enum / check constraint to include `jv` and `distro`.
-- Add nullable columns: `partner_name`, `deal_type`, `revenue_split`, `release_title`, `release_date`, `platforms`, `marketing_budget`.
+CREATE INDEX IF NOT EXISTS bookings_event_at_idx ON public.bookings (event_at);
+CREATE INDEX IF NOT EXISTS bookings_service_idx  ON public.bookings (service);
 
-**UI**
-- Add two new tabs ("JV", "Distro") to `BookingSheet` with the field components above.
-- Add a "+ New" button on Mike's dashboard that opens `BookingSheet` pre-set to JV or Distro.
-- After insert, automatically `pushToGcal("booking", id)` so it shows up on the shared calendar.
+-- 5. Make sure RLS is on
+ALTER TABLE public.bookings ENABLE ROW LEVEL SECURITY;
 
-## 4. Free Artist Bookings — available to everyone
+-- 6. Fallback has_crm_role(text) — only created if missing, so we never
+--    fail on environments where it isn't deployed yet.
+CREATE OR REPLACE FUNCTION public.has_crm_role(_role text)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.team_members tm
+    WHERE tm.auth_user_id = auth.uid()
+      AND tm.role::text = _role
+  );
+$$;
 
-The Artist tab already exists in `BookingSheet` but is tucked inside the public site. We will expose it inside the CRM for every team role.
+-- 7. Team-wide policies (recreated cleanly)
+CREATE POLICY "bookings_read_team" ON public.bookings
+  FOR SELECT TO authenticated
+  USING (
+    public.has_crm_role('admin')
+    OR public.has_crm_role('mike')
+    OR public.has_crm_role('steven')
+    OR public.has_crm_role('jay')
+    OR public.has_crm_role('editor')
+  );
 
-**Actions**
-- Add a global "+ Book Artist (free)" quick-add button to `CrmLayout` (next to the existing QuickAddButton) — opens `BookingSheet` with `initialService="artist"` and a `free=true` flag.
-- Add `is_free BOOLEAN DEFAULT false` to `bookings`; default `true` for the in-CRM artist quick-add.
-- RLS: any authenticated team member can insert bookings (already true), so no policy change needed beyond the new column.
+CREATE POLICY "bookings_insert_team" ON public.bookings
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    public.has_crm_role('admin')
+    OR public.has_crm_role('mike')
+    OR public.has_crm_role('steven')
+    OR public.has_crm_role('jay')
+    OR public.has_crm_role('editor')
+  );
 
-## 5. Verification
+CREATE POLICY "bookings_update_team" ON public.bookings
+  FOR UPDATE TO authenticated
+  USING (public.has_crm_role('admin') OR public.has_crm_role('mike'));
 
-- Manual: open each dashboard, confirm the shared calendar renders with mixed event types.
-- Click "Sync now" → confirm success toast with counts (or actionable error).
-- Mike: create a JV and a Distro booking → confirm both appear on the calendar and in Google Calendar.
-- Any user: click "+ Book Artist (free)" → submit → confirm row in `bookings` with `service='artist'`, `is_free=true`, and a calendar event created.
+-- 8. Public form still needs to insert booking inquiries from the website
+CREATE POLICY "bookings_insert_public" ON public.bookings
+  FOR INSERT TO anon
+  WITH CHECK (true);
+```
 
-## Technical notes
+## After running
 
-- Files created: `src/components/crm/SharedCalendar.tsx`, `src/components/crm/CalendarEventDetail.tsx`, migration file for `bookings` extensions.
-- Files edited: `src/components/BookingSheet.tsx` (new tabs + free flag), `src/lib/crm/gcal.ts` (better errors), `src/pages/admin/{Stevie,Mike,Steven,Jay,Editor}Dashboard.tsx` (mount calendar), `src/components/crm/CrmLayout.tsx` (free-artist quick-add).
-- Edge functions to re-deploy: `gcal-pull`, `gcal-push`.
-- No breaking changes to existing data.
+1. Paste the script above into the Supabase SQL Editor and run.
+2. Reload the CRM — JV / Distro / free-artist bookings and the shared calendar should now read and write without the `client_id` error.
+
+If after this you still hit a `client_id` error, it'll be coming from a different table — send me the new error and I'll patch that one the same way.
