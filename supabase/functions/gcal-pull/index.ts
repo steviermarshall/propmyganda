@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
       let { data: syncRow } = await supabase
         .from("calendar_sync").select("*").eq("google_event_id", ev.id).maybeSingle();
 
-      const pmgSource = ev.extendedProperties?.private?.pmg_source as ("shoot"|"deliverable"|undefined);
+      const pmgSource = ev.extendedProperties?.private?.pmg_source as ("shoot"|"deliverable"|"booking"|"crm_booking"|undefined);
       const pmgId = ev.extendedProperties?.private?.pmg_id as string | undefined;
 
       if (!syncRow && pmgSource && pmgId) {
@@ -82,6 +82,14 @@ Deno.serve(async (req) => {
       } else if (syncRow.entity_type === "deliverable") {
         await supabase.from("deliverables")
           .update({ due_at: new Date(newStart).toISOString() })
+          .eq("id", syncRow.entity_id);
+      } else if (syncRow.entity_type === "booking") {
+        await supabase.from("bookings")
+          .update({ event_at: new Date(newStart).toISOString() })
+          .eq("id", syncRow.entity_id);
+      } else if (syncRow.entity_type === "crm_booking") {
+        await supabase.from("crm_bookings")
+          .update({ shoot_date: new Date(newStart).toISOString().slice(0, 10) })
           .eq("id", syncRow.entity_id);
       }
 

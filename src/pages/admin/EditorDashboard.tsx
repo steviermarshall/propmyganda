@@ -6,6 +6,7 @@ import KpiCard from "@/components/crm/KpiCard";
 import InlineSelect from "@/components/crm/InlineSelect";
 import { useCrmAuth } from "@/hooks/use-crm-auth";
 import { logActivity } from "@/lib/crm/activity";
+import { pushToGcal } from "@/lib/crm/gcal";
 import { toast } from "sonner";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -60,6 +61,7 @@ export default function EditorDashboard() {
     const { error } = await (supabase.from("deliverables") as any).update(patch).eq("id", id);
     if (error) { toast.error("Failed"); qc.invalidateQueries({ queryKey: ["editor-queue"] }); return; }
     await logActivity(member?.id, "deliverable", id, "status_changed", { from: current, to: next });
+    pushToGcal("deliverable", id);
   }
 
   async function saveNote() {

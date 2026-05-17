@@ -10,6 +10,7 @@ import InlineSelect from "@/components/crm/InlineSelect";
 import { useCrmAuth } from "@/hooks/use-crm-auth";
 import { startOfWeek, addDaysISO, todayISO, daysSince } from "@/lib/crm/dates";
 import { logActivity } from "@/lib/crm/activity";
+import { pushToGcal } from "@/lib/crm/gcal";
 import { toast } from "sonner";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import DistroIntakeWizard from "@/components/crm/DistroIntakeWizard";
@@ -147,6 +148,9 @@ export default function MikeDashboard() {
     const { error } = await (supabase.from("crm_bookings") as any).update({ status: next }).eq("id", item.id);
     if (error) { toast.error("Move failed"); qc.invalidateQueries({ queryKey: ["mike-bookings"] }); return; }
     await logActivity(member?.id, "crm_booking", item.id, "status_changed", { from: item.status, to: next });
+    if (["booked", "shot", "delivered", "paid"].includes(next)) {
+      pushToGcal("crm_booking", item.id);
+    }
   }
 
   async function updateProspectStatus(id: string, next: string, current: string) {

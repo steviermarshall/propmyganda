@@ -113,7 +113,19 @@ export default function SharedCalendar({ accent, days = 21, filter }: Props) {
     setLoading(false);
   }
 
-  useEffect(() => { loadAll(); getGcalSettings().then(setGcal); /* eslint-disable-next-line */ }, []);
+  useEffect(() => {
+    loadAll();
+    getGcalSettings().then((s) => {
+      setGcal(s);
+      // Auto-pull if never synced or last pull was > 5 minutes ago
+      const last = s?.last_pull_at ? new Date(s.last_pull_at).getTime() : 0;
+      if (Date.now() - last > 5 * 60 * 1000) {
+        pullGcal()
+          .then(() => getGcalSettings().then(setGcal))
+          .catch(() => { /* silent — user can click Sync GCal to see the error */ });
+      }
+    });
+  /* eslint-disable-next-line */ }, []);
 
   const dayList = useMemo(() => Array.from({ length: days }, (_, i) => startOfDay(addDays(new Date(), i))), [days]);
   const countByDay = useMemo(() => {

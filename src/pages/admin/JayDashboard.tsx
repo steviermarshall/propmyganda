@@ -163,6 +163,7 @@ export default function JayDashboard() {
     const { error } = await (supabase.from("deliverables") as any).update(patch).eq("id", uploadModal.id);
     if (error) { toast.error("Failed"); qc.invalidateQueries({ queryKey: ["jay-upload-queue"] }); return; }
     await logActivity(member?.id, "deliverable", uploadModal.id, "status_changed", patch);
+    pushToGcal("deliverable", uploadModal.id);
     toast.success("Marked uploaded");
     setUploadModal(null);
     setUploadUrls({});

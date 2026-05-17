@@ -14,7 +14,7 @@ function fmtError(error: any, data: any): string {
   return error?.message ?? "Unknown error";
 }
 
-export async function pushToGcal(entity_type: "shoot" | "deliverable" | "booking", entity_id: string, opts: { delete?: boolean } = {}) {
+export async function pushToGcal(entity_type: "shoot" | "deliverable" | "booking" | "crm_booking", entity_id: string, opts: { delete?: boolean } = {}) {
   try {
     const { data, error } = await supabase.functions.invoke("gcal-push", {
       body: { entity_type, entity_id, delete: opts.delete },

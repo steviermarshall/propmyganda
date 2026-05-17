@@ -1,4 +1,4 @@
-// Push a PMG shoot or deliverable to Google Calendar.
+// Push a PMG shoot, deliverable, booking or crm_booking to Google Calendar.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { z } from "npm:zod@3";
@@ -6,7 +6,7 @@ import { z } from "npm:zod@3";
 const GATEWAY_URL = "https://connector-gateway.lovable.dev/google_calendar/calendar/v3";
 
 const BodySchema = z.object({
-  entity_type: z.enum(["shoot", "deliverable"]),
+  entity_type: z.enum(["shoot", "deliverable", "booking", "crm_booking"]),
   entity_id: z.string().uuid(),
   delete: z.boolean().optional(),
 });
@@ -87,7 +87,7 @@ Deno.serve(async (req) => {
         endISO = end.toISOString();
       }
       assignee = s.assigned_editor_id || null;
-    } else {
+    } else if (entity_type === "deliverable") {
       const { data: d } = await supabase.from("deliverables").select("*, team_members:assigned_to(name)").eq("id", entity_id).maybeSingle();
       if (!d) throw new Error("Deliverable not found");
       summary = `✂️ ${d.title || "Deliverable"}`;
@@ -103,6 +103,31 @@ Deno.serve(async (req) => {
         endISO = end.toISOString();
       }
       assignee = d.assigned_to || null;
+    } else if (entity_type === "booking") {
+      const { data: b } = await supabase.from("bookings").select("*").eq("id", entity_id).maybeSingle();
+      if (!b) throw new Error("Booking not found");
+      const label = b.artist_name || b.name || "Booking";
+      summary = `📅 ${b.service?.toUpperCase() ?? "BOOKING"} — ${label}${b.is_free ? " (free)" : ""}`;
+      description = [b.location && `📍 ${b.location}`].filter(Boolean).join("\n");
+      startISO = b.event_at || (b.event_date ? new Date(b.event_date).toISOString() : null);
+      if (startISO) {
+        const end = new Date(startISO); end.setHours(end.getHours() + 4);
+        endISO = end.toISOString();
+      }
+    } else {
+      // crm_booking
+      const { data: c } = await supabase.from("crm_bookings").select("*").eq("id", entity_id).maybeSingle();
+      if (!c) throw new Error("CRM Booking not found");
+      summary = `📋 ${c.artist_name} — ${c.status}`;
+      description = [
+        c.package && `Package: ${c.package}`,
+        c.amount_quoted && `Amount: $${c.amount_quoted}`,
+      ].filter(Boolean).join("\n");
+      startISO = c.shoot_date ? new Date(c.shoot_date).toISOString() : null;
+      if (startISO) {
+        const end = new Date(startISO); end.setHours(end.getHours() + 4);
+        endISO = end.toISOString();
+      }
     }
 
     if (!startISO) {
