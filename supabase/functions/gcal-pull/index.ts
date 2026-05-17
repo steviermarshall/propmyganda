@@ -86,21 +86,28 @@ Deno.serve(async (req) => {
     const lastPull: string | null = settings?.value?.last_pull_at || null;
     const updatedMin = lastPull || new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
-    const params = new URLSearchParams({
-      updatedMin,
-      showDeleted: "true",
-      singleEvents: "true",
-      maxResults: "250",
-    });
+    // Page through all changed events
+    const events: any[] = [];
+    let pageToken: string | undefined = undefined;
+    do {
+      const params = new URLSearchParams({
+        updatedMin,
+        showDeleted: "true",
+        singleEvents: "true",       // expand recurring events into instances
+        maxResults: "2500",
+      });
+      if (pageToken) params.set("pageToken", pageToken);
 
-    const resp = await fetch(
-      `${GCAL_BASE}/calendars/${encodeURIComponent(calendarId)}/events?${params}`,
-      { headers: { Authorization: `Bearer ${accessToken}` } },
-    );
-    const data = await resp.json();
-    if (!resp.ok) throw new Error(`Google Calendar API [${resp.status}]: ${JSON.stringify(data)}`);
+      const resp = await fetch(
+        `${GCAL_BASE}/calendars/${encodeURIComponent(calendarId)}/events?${params}`,
+        { headers: { Authorization: `Bearer ${accessToken}` } },
+      );
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(`Google Calendar API [${resp.status}]: ${JSON.stringify(data)}`);
 
-    const events = data.items || [];
+      events.push(...(data.items || []));
+      pageToken = data.nextPageToken;
+    } while (pageToken);
     let updated = 0, deleted = 0, skipped = 0;
 
     for (const ev of events) {

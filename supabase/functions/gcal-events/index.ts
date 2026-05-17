@@ -87,23 +87,32 @@ Deno.serve(async (req) => {
 
     const accessToken = await getAccessToken(SA_JSON);
 
-    const params = new URLSearchParams({
-      timeMin,
-      timeMax,
-      singleEvents: "true",
-      orderBy: "startTime",
-      maxResults: "250",
-    });
+    // Page through all events (recurring instances can easily exceed 250 per window)
+    const items: any[] = [];
+    let pageToken: string | undefined = undefined;
+    do {
+      const params = new URLSearchParams({
+        timeMin,
+        timeMax,
+        singleEvents: "true",        // expand recurring events into instances
+        orderBy: "startTime",
+        maxResults: "2500",
+      });
+      if (pageToken) params.set("pageToken", pageToken);
 
-    const resp = await fetch(
-      `${GCAL_BASE}/calendars/${encodeURIComponent(calendarId)}/events?${params}`,
-      { headers: { Authorization: `Bearer ${accessToken}` } },
-    );
-    const data = await resp.json();
-    if (!resp.ok) throw new Error(`Google Calendar API [${resp.status}]: ${JSON.stringify(data)}`);
+      const resp = await fetch(
+        `${GCAL_BASE}/calendars/${encodeURIComponent(calendarId)}/events?${params}`,
+        { headers: { Authorization: `Bearer ${accessToken}` } },
+      );
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(`Google Calendar API [${resp.status}]: ${JSON.stringify(data)}`);
+
+      items.push(...(data.items || []));
+      pageToken = data.nextPageToken;
+    } while (pageToken);
 
     // Return just the fields the UI needs
-    const events = (data.items || []).map((ev: any) => ({
+    const events = items.map((ev: any) => ({
       id: ev.id,
       summary: ev.summary || "(no title)",
       description: ev.description || null,
