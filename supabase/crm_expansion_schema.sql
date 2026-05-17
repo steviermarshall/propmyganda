@@ -225,9 +225,9 @@ BEGIN
     'sponsor_deals','sponsor_deliverables','sponsor_activities'
   ] LOOP
     EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY;', t);
-    EXECUTE format('DROP POLICY IF EXISTS %L ON public.%I;', t || '_admin_steven', t);
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I;', t || '_admin_steven', t);
     EXECUTE format(
-      'CREATE POLICY %L ON public.%I FOR ALL TO authenticated USING (public.has_crm_role(''admin'') OR public.has_crm_role(''steven'')) WITH CHECK (public.has_crm_role(''admin'') OR public.has_crm_role(''steven''));',
+      'CREATE POLICY %I ON public.%I FOR ALL TO authenticated USING (public.has_crm_role(''admin'') OR public.has_crm_role(''steven'')) WITH CHECK (public.has_crm_role(''admin'') OR public.has_crm_role(''steven''));',
       t || '_admin_steven', t
     );
   END LOOP;
