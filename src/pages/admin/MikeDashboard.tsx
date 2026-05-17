@@ -287,7 +287,16 @@ export default function MikeDashboard() {
 
       {/* Distro onboarding */}
       <section className="border border-white/10 bg-crm-surface p-6">
-        <p className="text-white/30 text-[10px] tracking-[0.3em] uppercase mb-3">Distro Onboarding</p>
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-white/30 text-[10px] tracking-[0.3em] uppercase">Distro Onboarding</p>
+          <button
+            onClick={() => setIntakeOpen(true)}
+            className="px-3 py-1.5 text-[10px] uppercase tracking-widest font-bold text-black"
+            style={{ backgroundColor: MIKE }}
+          >
+            + New Intake
+          </button>
+        </div>
         <Tabs defaultValue="jv">
           <TabsList className="bg-black border border-white/10">
             <TabsTrigger value="jv">JV Owned</TabsTrigger>
@@ -301,31 +310,56 @@ export default function MikeDashboard() {
                     <tr>
                       <th className="text-left px-2 py-2">Artist</th>
                       <th className="text-left px-2 py-2">Status</th>
+                      <th className="text-left px-2 py-2">Streaming</th>
                       <th className="text-left px-2 py-2">PMG %</th>
                       <th className="text-left px-2 py-2">Contract</th>
+                      <th className="text-left px-2 py-2"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
                     {distroArtists
                       .filter((d: any) => (side === "jv" ? d.side === "jv_owned" : d.side === "pure_service"))
-                      .map((d: any) => (
-                        <tr key={d.id}>
-                          <td className="px-2 py-2">{d.artist_name}</td>
-                          <td className="px-2 py-2">
-                            <InlineSelect
-                              value={d.onboarding_status}
-                              options={DISTRO_STATUSES}
-                              onChange={(v) => updateDistroStatus(d.id, v)}
-                            />
-                          </td>
-                          <td className="px-2 py-2 text-white/50">{d.pmg_share_percent ?? "—"}</td>
-                          <td className="px-2 py-2 text-white/50">
-                            {d.contract_url ? (
-                              <a href={d.contract_url} className="underline" target="_blank" rel="noreferrer">view</a>
-                            ) : "—"}
-                          </td>
-                        </tr>
-                      ))}
+                      .map((d: any) => {
+                        const links = streaming.filter((s: any) => s.distro_artist_id === d.id);
+                        return (
+                          <tr key={d.id}>
+                            <td className="px-2 py-2">{d.artist_name}</td>
+                            <td className="px-2 py-2">
+                              <InlineSelect
+                                value={d.onboarding_status}
+                                options={DISTRO_STATUSES}
+                                onChange={(v) => updateDistroStatus(d.id, v)}
+                              />
+                            </td>
+                            <td className="px-2 py-2">
+                              <div className="flex gap-1 flex-wrap">
+                                {links.length === 0 ? <span className="text-white/30">—</span> : links.map((l: any) => (
+                                  <a key={l.id} href={l.url} target="_blank" rel="noreferrer"
+                                    className="px-2 py-0.5 text-[9px] uppercase tracking-widest border border-white/15 hover:border-current"
+                                    style={{ color: PLATFORM_COLORS[l.platform] ?? "#888" }}
+                                  >
+                                    {l.platform}
+                                  </a>
+                                ))}
+                              </div>
+                            </td>
+                            <td className="px-2 py-2 text-white/50">{d.pmg_share_percent ?? "—"}</td>
+                            <td className="px-2 py-2 text-white/50">
+                              {d.contract_url ? (
+                                <a href={d.contract_url} className="underline" target="_blank" rel="noreferrer">view</a>
+                              ) : "—"}
+                            </td>
+                            <td className="px-2 py-2 text-right">
+                              <button
+                                onClick={() => setManageArtist(d)}
+                                className="text-[10px] uppercase tracking-widest text-white/40 hover:text-white"
+                              >
+                                Manage
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
                   </tbody>
                 </table>
               </div>
@@ -333,6 +367,137 @@ export default function MikeDashboard() {
           ))}
         </Tabs>
       </section>
+
+      <DistroIntakeWizard
+        open={intakeOpen}
+        onClose={() => setIntakeOpen(false)}
+        accent={MIKE}
+      />
+
+      <ManageDistroArtistModal
+        artist={manageArtist}
+        onClose={() => setManageArtist(null)}
+        accent={MIKE}
+      />
     </CrmLayout>
+  );
+}
+
+const PLATFORM_COLORS: Record<string, string> = {
+  spotify: "#1DB954",
+  apple: "#FA243C",
+  youtube: "#FF0000",
+  chartmetric: "#00F0FF",
+};
+
+function ManageDistroArtistModal({
+  artist, onClose, accent,
+}: {
+  artist: any;
+  onClose: () => void;
+  accent: string;
+}) {
+  const { data: members = [] } = useQuery({
+    queryKey: ["distro-members", artist?.id],
+    enabled: !!artist?.id,
+    queryFn: async () => {
+      const { data } = await (supabase.from("distro_artist_members") as any)
+        .select("*").eq("distro_artist_id", artist.id).order("is_primary", { ascending: false });
+      return data ?? [];
+    },
+  });
+  const { data: links = [] } = useQuery({
+    queryKey: ["distro-streaming", artist?.id],
+    enabled: !!artist?.id,
+    queryFn: async () => {
+      const { data } = await (supabase.from("streaming_metrics") as any)
+        .select("*").eq("distro_artist_id", artist.id);
+      return data ?? [];
+    },
+  });
+
+  return (
+    <Dialog open={!!artist} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="bg-crm-surface border-white/10 text-white font-mono max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="uppercase tracking-widest text-sm" style={{ color: accent }}>
+            {artist?.artist_name}
+          </DialogTitle>
+        </DialogHeader>
+
+        {artist?.description && (
+          <p className="text-xs text-white/60 italic">"{artist.description}"</p>
+        )}
+
+        <div className="grid grid-cols-2 gap-2 text-xs">
+          <Stat label="Side" value={artist?.side} />
+          <Stat label="Status" value={artist?.onboarding_status} />
+          <Stat label="DSP Title" value={artist?.dsp_title_approved ? "Approved" : (artist?.dsp_title_custom ?? "—")} />
+          <Stat label="PMG %" value={artist?.pmg_share_percent ?? "—"} />
+        </div>
+
+        <div>
+          <div className="text-[10px] uppercase tracking-widest text-white/40 mb-2">Members ({members.length})</div>
+          {members.length === 0 ? (
+            <p className="text-white/40 text-xs">No members on record.</p>
+          ) : (
+            <div className="space-y-1">
+              {members.map((m: any) => (
+                <div key={m.id} className="border border-white/10 bg-black/30 p-2 text-xs">
+                  <div className="flex justify-between">
+                    <div>
+                      <span className="font-bold">{[m.first_name, m.last_name].filter(Boolean).join(" ") || "—"}</span>
+                      {m.stage_name && <span className="text-white/40"> "{m.stage_name}"</span>}
+                      {m.is_primary && <span className="ml-2 text-[9px] uppercase tracking-widest px-1.5 py-0.5 border border-current" style={{ color: accent }}>Primary</span>}
+                    </div>
+                    <span className="text-white/40 uppercase tracking-widest text-[10px]">{m.role}</span>
+                  </div>
+                  <div className="text-white/50 text-[11px] mt-1">
+                    {(m.pro_affiliation === "other" ? m.pro_other : m.pro_affiliation) || "no PRO"}
+                    {m.ipi_number ? ` · IPI ${m.ipi_number}` : ""}
+                  </div>
+                  {(m.distro_email || m.agreements_email) && (
+                    <div className="text-white/40 text-[11px]">
+                      {m.distro_email && <>📧 {m.distro_email} </>}
+                      {m.agreements_email && <>· 📄 {m.agreements_email}</>}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div>
+          <div className="text-[10px] uppercase tracking-widest text-white/40 mb-2">Streaming</div>
+          {links.length === 0 ? (
+            <p className="text-white/40 text-xs">No links.</p>
+          ) : (
+            <div className="space-y-1">
+              {links.map((l: any) => (
+                <div key={l.id} className="flex justify-between items-center text-xs">
+                  <a href={l.url} target="_blank" rel="noreferrer"
+                    className="underline truncate" style={{ color: PLATFORM_COLORS[l.platform] ?? "#888" }}>
+                    {l.platform} ↗
+                  </a>
+                  <span className="text-white/40">
+                    {l.monthly_listeners ? `${l.monthly_listeners.toLocaleString()} listeners` : ""}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: any }) {
+  return (
+    <div className="border border-white/10 bg-black/30 p-2">
+      <div className="text-[9px] uppercase tracking-widest text-white/40">{label}</div>
+      <div className="text-white/80 mt-1">{value ?? "—"}</div>
+    </div>
   );
 }
