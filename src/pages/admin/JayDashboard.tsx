@@ -202,6 +202,7 @@ export default function JayDashboard() {
 
   return (
     <CrmLayout title="Jay's Dashboard" accent={JAY} quickAdd="shoot">
+      <SharedCalendar accent={JAY} />
       <section>
         <p className="text-white/30 text-[10px] tracking-[0.3em] uppercase mb-4">This Week</p>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
