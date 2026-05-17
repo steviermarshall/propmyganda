@@ -80,6 +80,7 @@ export function crmRoleToDashboardPath(role: CrmRole | null): string {
     case "mike":   return "/admin/mike";
     case "steven": return "/admin/steven";
     case "jay":    return "/admin/jay";
+    case "editor": return "/admin/editor";
     default:       return "/auth/login";
   }
 }
