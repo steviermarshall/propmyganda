@@ -75,11 +75,12 @@ export function useCrmAuth(): CrmAuthState {
 }
 
 export function crmRoleToDashboardPath(role: CrmRole | null): string {
-  switch (role) {
+  switch (role as string | null) {
     case "admin":  return "/admin/stevie";
     case "mike":   return "/admin/mike";
     case "steven": return "/admin/steven";
     case "jay":    return "/admin/jay";
+    case "editor": return "/admin/editor";
     default:       return "/auth/login";
   }
 }

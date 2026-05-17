@@ -1,10 +1,9 @@
 import { Navigate } from "react-router-dom";
-import type { CrmRole } from "@/integrations/supabase/types";
 import { useCrmAuth } from "@/hooks/use-crm-auth";
 
 interface Props {
   children: React.ReactNode;
-  allowedRoles?: CrmRole[];
+  allowedRoles?: string[];
 }
 
 export default function CrmProtectedRoute({ children, allowedRoles }: Props) {
@@ -20,7 +19,7 @@ export default function CrmProtectedRoute({ children, allowedRoles }: Props) {
 
   if (!session) return <Navigate to="/auth/login" replace />;
 
-  if (allowedRoles && crmRole && !allowedRoles.includes(crmRole)) {
+  if (allowedRoles && crmRole && !allowedRoles.includes(crmRole as string)) {
     return <Navigate to="/auth/login" replace />;
   }
 
