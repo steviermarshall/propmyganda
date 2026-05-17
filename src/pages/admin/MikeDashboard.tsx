@@ -126,6 +126,19 @@ export default function MikeDashboard() {
     },
   });
 
+  const distroIds = distroArtists.map((d: any) => d.id);
+
+  const { data: streaming = [] } = useQuery({
+    queryKey: ["mike-streaming", distroIds.join(",")],
+    enabled: distroIds.length > 0,
+    queryFn: async () => {
+      const { data } = await (supabase.from("streaming_metrics") as any)
+        .select("*").in("distro_artist_id", distroIds);
+      return data ?? [];
+    },
+  });
+
+
   async function moveBooking(item: any, next: string) {
     qc.setQueryData(["mike-bookings"], (old: any[] = []) =>
       old.map((r) => (r.id === item.id ? { ...r, status: next } : r)));
