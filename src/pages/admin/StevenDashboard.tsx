@@ -228,7 +228,25 @@ export default function StevenDashboard() {
         </TabsContent>
 
         {/* Brands */}
-        <TabsContent value="brands" className="mt-3">
+        <TabsContent value="brands" className="mt-3 space-y-2">
+          <div className="flex gap-3 flex-wrap">
+            <FilterChips label="Tier" value={brandFilter.tier ?? null}
+              onChange={(v) => setBrandFilter({ ...brandFilter, tier: v ?? undefined })}
+              options={[
+                { value: "tier_1", label: "T1" },
+                { value: "tier_2", label: "T2" },
+                { value: "tier_3", label: "T3" },
+              ]} accent={STEVEN} />
+            <FilterChips label="Status" value={brandFilter.status ?? null}
+              onChange={(v) => setBrandFilter({ ...brandFilter, status: v ?? undefined })}
+              options={[
+                { value: "cold", label: "Cold" },
+                { value: "prospecting", label: "Prospecting" },
+                { value: "pitched", label: "Pitched" },
+                { value: "negotiating", label: "Negotiating" },
+                { value: "active", label: "Active" },
+              ]} accent={STEVEN} />
+          </div>
           <div className="border border-white/10 bg-crm-surface overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-black/40 text-[9px] uppercase tracking-widest text-white/40">
@@ -243,7 +261,9 @@ export default function StevenDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {brands.map((b: any) => (
+                {brands
+                  .filter((b: any) => (!brandFilter.tier || b.tier === brandFilter.tier) && (!brandFilter.status || b.status === brandFilter.status))
+                  .map((b: any) => (
                   <tr key={b.id} className="border-t border-white/5 hover:bg-black/30">
                     <td className="p-2 font-bold">{b.name}{b.parent_company && <span className="text-white/40 text-[10px] block">↳ {b.parent_company}</span>}</td>
                     <td className="p-2 text-white/70">{b.industry ?? "—"}</td>
@@ -400,5 +420,46 @@ export default function StevenDashboard() {
       <SponsorDealModal open={dealOpen} onClose={() => { setDealOpen(false); setFocusBrand(undefined); }} brandId={focusBrand} />
       <SponsorActivityModal open={activityOpen} onClose={() => setActivityOpen(false)} />
     </CrmLayout>
+  );
+}
+
+function FilterChips({
+  label, value, onChange, options, accent,
+}: {
+  label: string;
+  value: string | null;
+  onChange: (v: string | null) => void;
+  options: { value: string; label: string }[];
+  accent: string;
+}) {
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      <span className="text-[10px] uppercase tracking-widest text-white/40">{label}</span>
+      <button
+        onClick={() => onChange(null)}
+        className={`px-2 py-1 text-[10px] uppercase tracking-widest border ${
+          !value ? "bg-white text-black border-white" : "border-white/20 text-white/50 hover:text-white"
+        }`}
+      >
+        All
+      </button>
+      {options.map((o) => {
+        const active = value === o.value;
+        return (
+          <button
+            key={o.value}
+            onClick={() => onChange(active ? null : o.value)}
+            className="px-2 py-1 text-[10px] uppercase tracking-widest border"
+            style={
+              active
+                ? { backgroundColor: accent, color: "#000", borderColor: accent }
+                : { borderColor: "rgba(255,255,255,0.2)", color: "rgba(255,255,255,0.5)" }
+            }
+          >
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
   );
 }
