@@ -98,6 +98,13 @@ export default function CrmLayout({ children, title, accent, quickAdd, onQuickAd
           onOpenChange={setQuickAddOpen}
         />
       ) : null}
+      <BookingSheet
+        open={freeArtistOpen}
+        onOpenChange={setFreeArtistOpen}
+        initialService="artist"
+        free
+        servicesAllowed={["artist"]}
+      />
     </div>
   );
 }
