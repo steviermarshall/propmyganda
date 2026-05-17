@@ -46,11 +46,13 @@ INSERT INTO public.team_members (name, role, email) VALUES
   ('Jay',      'jay',    'jay@propmyganda.com')
 ON CONFLICT DO NOTHING;
 
+DROP POLICY IF EXISTS "tm_admin_all" ON public.team_members;
 CREATE POLICY "tm_admin_all" ON public.team_members
   FOR ALL USING (
     EXISTS (SELECT 1 FROM public.team_members t WHERE t.auth_user_id = auth.uid() AND t.role = 'admin')
   );
 
+DROP POLICY IF EXISTS "tm_self_read" ON public.team_members;
 CREATE POLICY "tm_self_read" ON public.team_members
   FOR SELECT USING (auth_user_id = auth.uid());
 
@@ -76,24 +78,28 @@ CREATE TABLE IF NOT EXISTS public.crm_bookings (
 
 ALTER TABLE public.crm_bookings ENABLE ROW LEVEL SECURITY;
 
+DROP TRIGGER IF EXISTS crm_bookings_updated_at ON public.crm_bookings;
 CREATE TRIGGER crm_bookings_updated_at
   BEFORE UPDATE ON public.crm_bookings
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
-CREATE INDEX crm_bookings_status_idx   ON public.crm_bookings (status);
-CREATE INDEX crm_bookings_assigned_idx ON public.crm_bookings (assigned_to);
+CREATE INDEX IF NOT EXISTS crm_bookings_status_idx   ON public.crm_bookings (status);
+CREATE INDEX IF NOT EXISTS crm_bookings_assigned_idx ON public.crm_bookings (assigned_to);
 
+DROP POLICY IF EXISTS "crm_bookings_admin_all" ON public.crm_bookings;
 CREATE POLICY "crm_bookings_admin_all" ON public.crm_bookings
   FOR ALL USING (
     EXISTS (SELECT 1 FROM public.team_members WHERE auth_user_id = auth.uid() AND role = 'admin')
   );
 
+DROP POLICY IF EXISTS "crm_bookings_mike_all" ON public.crm_bookings;
 CREATE POLICY "crm_bookings_mike_all" ON public.crm_bookings
   FOR ALL USING (
     EXISTS (SELECT 1 FROM public.team_members WHERE auth_user_id = auth.uid() AND role = 'mike')
   );
 
 -- Jay needs read access to bookings linked to his shoots
+DROP POLICY IF EXISTS "crm_bookings_jay_read" ON public.crm_bookings;
 CREATE POLICY "crm_bookings_jay_read" ON public.crm_bookings
   FOR SELECT USING (
     EXISTS (SELECT 1 FROM public.team_members WHERE auth_user_id = auth.uid() AND role = 'jay')
@@ -126,18 +132,21 @@ CREATE TABLE IF NOT EXISTS public.artist_prospects (
 
 ALTER TABLE public.artist_prospects ENABLE ROW LEVEL SECURITY;
 
+DROP TRIGGER IF EXISTS artist_prospects_updated_at ON public.artist_prospects;
 CREATE TRIGGER artist_prospects_updated_at
   BEFORE UPDATE ON public.artist_prospects
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
-CREATE INDEX artist_prospects_status_idx   ON public.artist_prospects (outreach_status);
-CREATE INDEX artist_prospects_followup_idx ON public.artist_prospects (next_followup_date);
+CREATE INDEX IF NOT EXISTS artist_prospects_status_idx   ON public.artist_prospects (outreach_status);
+CREATE INDEX IF NOT EXISTS artist_prospects_followup_idx ON public.artist_prospects (next_followup_date);
 
+DROP POLICY IF EXISTS "artist_prospects_admin_all" ON public.artist_prospects;
 CREATE POLICY "artist_prospects_admin_all" ON public.artist_prospects
   FOR ALL USING (
     EXISTS (SELECT 1 FROM public.team_members WHERE auth_user_id = auth.uid() AND role = 'admin')
   );
 
+DROP POLICY IF EXISTS "artist_prospects_mike_all" ON public.artist_prospects;
 CREATE POLICY "artist_prospects_mike_all" ON public.artist_prospects
   FOR ALL USING (
     EXISTS (SELECT 1 FROM public.team_members WHERE auth_user_id = auth.uid() AND role = 'mike')
@@ -165,18 +174,21 @@ CREATE TABLE IF NOT EXISTS public.distro_artists (
 
 ALTER TABLE public.distro_artists ENABLE ROW LEVEL SECURITY;
 
+DROP TRIGGER IF EXISTS distro_artists_updated_at ON public.distro_artists;
 CREATE TRIGGER distro_artists_updated_at
   BEFORE UPDATE ON public.distro_artists
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
-CREATE INDEX distro_artists_status_idx ON public.distro_artists (onboarding_status);
-CREATE INDEX distro_artists_side_idx   ON public.distro_artists (side);
+CREATE INDEX IF NOT EXISTS distro_artists_status_idx ON public.distro_artists (onboarding_status);
+CREATE INDEX IF NOT EXISTS distro_artists_side_idx   ON public.distro_artists (side);
 
+DROP POLICY IF EXISTS "distro_artists_admin_all" ON public.distro_artists;
 CREATE POLICY "distro_artists_admin_all" ON public.distro_artists
   FOR ALL USING (
     EXISTS (SELECT 1 FROM public.team_members WHERE auth_user_id = auth.uid() AND role = 'admin')
   );
 
+DROP POLICY IF EXISTS "distro_artists_mike_all" ON public.distro_artists;
 CREATE POLICY "distro_artists_mike_all" ON public.distro_artists
   FOR ALL USING (
     EXISTS (SELECT 1 FROM public.team_members WHERE auth_user_id = auth.uid() AND role = 'mike')
@@ -198,8 +210,9 @@ CREATE TABLE IF NOT EXISTS public.royalty_payments (
 
 ALTER TABLE public.royalty_payments ENABLE ROW LEVEL SECURITY;
 
-CREATE INDEX royalty_payments_artist_idx ON public.royalty_payments (artist_id, period_month DESC);
+CREATE INDEX IF NOT EXISTS royalty_payments_artist_idx ON public.royalty_payments (artist_id, period_month DESC);
 
+DROP POLICY IF EXISTS "royalty_payments_admin_all" ON public.royalty_payments;
 CREATE POLICY "royalty_payments_admin_all" ON public.royalty_payments
   FOR ALL USING (
     EXISTS (SELECT 1 FROM public.team_members WHERE auth_user_id = auth.uid() AND role IN ('admin', 'mike'))
@@ -231,19 +244,22 @@ CREATE TABLE IF NOT EXISTS public.sponsor_pipeline (
 
 ALTER TABLE public.sponsor_pipeline ENABLE ROW LEVEL SECURITY;
 
+DROP TRIGGER IF EXISTS sponsor_pipeline_updated_at ON public.sponsor_pipeline;
 CREATE TRIGGER sponsor_pipeline_updated_at
   BEFORE UPDATE ON public.sponsor_pipeline
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
-CREATE INDEX sponsor_pipeline_stage_idx    ON public.sponsor_pipeline (stage);
-CREATE INDEX sponsor_pipeline_category_idx ON public.sponsor_pipeline (category);
-CREATE INDEX sponsor_pipeline_followup_idx ON public.sponsor_pipeline (next_followup_date);
+CREATE INDEX IF NOT EXISTS sponsor_pipeline_stage_idx    ON public.sponsor_pipeline (stage);
+CREATE INDEX IF NOT EXISTS sponsor_pipeline_category_idx ON public.sponsor_pipeline (category);
+CREATE INDEX IF NOT EXISTS sponsor_pipeline_followup_idx ON public.sponsor_pipeline (next_followup_date);
 
+DROP POLICY IF EXISTS "sponsor_pipeline_admin_all" ON public.sponsor_pipeline;
 CREATE POLICY "sponsor_pipeline_admin_all" ON public.sponsor_pipeline
   FOR ALL USING (
     EXISTS (SELECT 1 FROM public.team_members WHERE auth_user_id = auth.uid() AND role = 'admin')
   );
 
+DROP POLICY IF EXISTS "sponsor_pipeline_steven_all" ON public.sponsor_pipeline;
 CREATE POLICY "sponsor_pipeline_steven_all" ON public.sponsor_pipeline
   FOR ALL USING (
     EXISTS (SELECT 1 FROM public.team_members WHERE auth_user_id = auth.uid() AND role = 'steven')
@@ -271,14 +287,16 @@ CREATE TABLE IF NOT EXISTS public.store_orders (
 
 ALTER TABLE public.store_orders ENABLE ROW LEVEL SECURITY;
 
-CREATE INDEX store_orders_status_idx  ON public.store_orders (fulfillment_status);
-CREATE INDEX store_orders_ordered_idx ON public.store_orders (ordered_at DESC);
+CREATE INDEX IF NOT EXISTS store_orders_status_idx  ON public.store_orders (fulfillment_status);
+CREATE INDEX IF NOT EXISTS store_orders_ordered_idx ON public.store_orders (ordered_at DESC);
 
+DROP POLICY IF EXISTS "store_orders_admin_all" ON public.store_orders;
 CREATE POLICY "store_orders_admin_all" ON public.store_orders
   FOR ALL USING (
     EXISTS (SELECT 1 FROM public.team_members WHERE auth_user_id = auth.uid() AND role = 'admin')
   );
 
+DROP POLICY IF EXISTS "store_orders_steven_all" ON public.store_orders;
 CREATE POLICY "store_orders_steven_all" ON public.store_orders
   FOR ALL USING (
     EXISTS (SELECT 1 FROM public.team_members WHERE auth_user_id = auth.uid() AND role = 'steven')
@@ -307,18 +325,21 @@ CREATE TABLE IF NOT EXISTS public.media_agency_projects (
 
 ALTER TABLE public.media_agency_projects ENABLE ROW LEVEL SECURITY;
 
+DROP TRIGGER IF EXISTS media_agency_projects_updated_at ON public.media_agency_projects;
 CREATE TRIGGER media_agency_projects_updated_at
   BEFORE UPDATE ON public.media_agency_projects
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
-CREATE INDEX media_agency_status_idx ON public.media_agency_projects (status);
+CREATE INDEX IF NOT EXISTS media_agency_status_idx ON public.media_agency_projects (status);
 
+DROP POLICY IF EXISTS "media_agency_admin_all" ON public.media_agency_projects;
 CREATE POLICY "media_agency_admin_all" ON public.media_agency_projects
   FOR ALL USING (
     EXISTS (SELECT 1 FROM public.team_members WHERE auth_user_id = auth.uid() AND role = 'admin')
   );
 
 -- Jay needs read for production scheduling
+DROP POLICY IF EXISTS "media_agency_jay_read" ON public.media_agency_projects;
 CREATE POLICY "media_agency_jay_read" ON public.media_agency_projects
   FOR SELECT USING (
     EXISTS (SELECT 1 FROM public.team_members WHERE auth_user_id = auth.uid() AND role = 'jay')
@@ -345,23 +366,27 @@ CREATE TABLE IF NOT EXISTS public.shoots (
 
 ALTER TABLE public.shoots ENABLE ROW LEVEL SECURITY;
 
+DROP TRIGGER IF EXISTS shoots_updated_at ON public.shoots;
 CREATE TRIGGER shoots_updated_at
   BEFORE UPDATE ON public.shoots
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
-CREATE INDEX shoots_date_idx   ON public.shoots (shoot_date DESC);
-CREATE INDEX shoots_status_idx ON public.shoots (status);
+CREATE INDEX IF NOT EXISTS shoots_date_idx   ON public.shoots (shoot_date DESC);
+CREATE INDEX IF NOT EXISTS shoots_status_idx ON public.shoots (status);
 
+DROP POLICY IF EXISTS "shoots_admin_all" ON public.shoots;
 CREATE POLICY "shoots_admin_all" ON public.shoots
   FOR ALL USING (
     EXISTS (SELECT 1 FROM public.team_members WHERE auth_user_id = auth.uid() AND role = 'admin')
   );
 
+DROP POLICY IF EXISTS "shoots_jay_all" ON public.shoots;
 CREATE POLICY "shoots_jay_all" ON public.shoots
   FOR ALL USING (
     EXISTS (SELECT 1 FROM public.team_members WHERE auth_user_id = auth.uid() AND role = 'jay')
   );
 
+DROP POLICY IF EXISTS "shoots_mike_read" ON public.shoots;
 CREATE POLICY "shoots_mike_read" ON public.shoots
   FOR SELECT USING (
     EXISTS (SELECT 1 FROM public.team_members WHERE auth_user_id = auth.uid() AND role = 'mike')
@@ -385,18 +410,21 @@ CREATE TABLE IF NOT EXISTS public.deliverables (
 
 ALTER TABLE public.deliverables ENABLE ROW LEVEL SECURITY;
 
+DROP TRIGGER IF EXISTS deliverables_updated_at ON public.deliverables;
 CREATE TRIGGER deliverables_updated_at
   BEFORE UPDATE ON public.deliverables
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
-CREATE INDEX deliverables_shoot_idx  ON public.deliverables (shoot_id);
-CREATE INDEX deliverables_status_idx ON public.deliverables (status);
+CREATE INDEX IF NOT EXISTS deliverables_shoot_idx  ON public.deliverables (shoot_id);
+CREATE INDEX IF NOT EXISTS deliverables_status_idx ON public.deliverables (status);
 
+DROP POLICY IF EXISTS "deliverables_admin_all" ON public.deliverables;
 CREATE POLICY "deliverables_admin_all" ON public.deliverables
   FOR ALL USING (
     EXISTS (SELECT 1 FROM public.team_members WHERE auth_user_id = auth.uid() AND role = 'admin')
   );
 
+DROP POLICY IF EXISTS "deliverables_jay_all" ON public.deliverables;
 CREATE POLICY "deliverables_jay_all" ON public.deliverables
   FOR ALL USING (
     EXISTS (SELECT 1 FROM public.team_members WHERE auth_user_id = auth.uid() AND role = 'jay')
@@ -426,17 +454,20 @@ CREATE TABLE IF NOT EXISTS public.articles (
 
 ALTER TABLE public.articles ENABLE ROW LEVEL SECURITY;
 
+DROP TRIGGER IF EXISTS articles_updated_at ON public.articles;
 CREATE TRIGGER articles_updated_at
   BEFORE UPDATE ON public.articles
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
-CREATE INDEX articles_status_idx ON public.articles (status);
+CREATE INDEX IF NOT EXISTS articles_status_idx ON public.articles (status);
 
+DROP POLICY IF EXISTS "articles_admin_all" ON public.articles;
 CREATE POLICY "articles_admin_all" ON public.articles
   FOR ALL USING (
     EXISTS (SELECT 1 FROM public.team_members WHERE auth_user_id = auth.uid() AND role = 'admin')
   );
 
+DROP POLICY IF EXISTS "articles_mike_all" ON public.articles;
 CREATE POLICY "articles_mike_all" ON public.articles
   FOR ALL USING (
     EXISTS (SELECT 1 FROM public.team_members WHERE auth_user_id = auth.uid() AND role = 'mike')
@@ -456,11 +487,13 @@ CREATE TABLE IF NOT EXISTS public.newsletter_subscribers (
 
 ALTER TABLE public.newsletter_subscribers ENABLE ROW LEVEL SECURITY;
 
-CREATE INDEX newsletter_subs_active_idx ON public.newsletter_subscribers (is_active);
+CREATE INDEX IF NOT EXISTS newsletter_subs_active_idx ON public.newsletter_subscribers (is_active);
 
+DROP POLICY IF EXISTS "newsletter_subs_insert_anon" ON public.newsletter_subscribers;
 CREATE POLICY "newsletter_subs_insert_anon" ON public.newsletter_subscribers
   FOR INSERT WITH CHECK (true);
 
+DROP POLICY IF EXISTS "newsletter_subs_admin_all" ON public.newsletter_subscribers;
 CREATE POLICY "newsletter_subs_admin_all" ON public.newsletter_subscribers
   FOR ALL USING (
     EXISTS (SELECT 1 FROM public.team_members WHERE auth_user_id = auth.uid() AND role = 'admin')
@@ -480,6 +513,7 @@ CREATE TABLE IF NOT EXISTS public.newsletter_sends (
 
 ALTER TABLE public.newsletter_sends ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "newsletter_sends_admin_all" ON public.newsletter_sends;
 CREATE POLICY "newsletter_sends_admin_all" ON public.newsletter_sends
   FOR ALL USING (
     EXISTS (SELECT 1 FROM public.team_members WHERE auth_user_id = auth.uid() AND role = 'admin')
@@ -503,14 +537,16 @@ CREATE TABLE IF NOT EXISTS public.weekly_kpi_snapshots (
 
 ALTER TABLE public.weekly_kpi_snapshots ENABLE ROW LEVEL SECURITY;
 
-CREATE INDEX kpi_snapshots_week_idx   ON public.weekly_kpi_snapshots (week_ending DESC);
-CREATE INDEX kpi_snapshots_member_idx ON public.weekly_kpi_snapshots (team_member_id);
+CREATE INDEX IF NOT EXISTS kpi_snapshots_week_idx   ON public.weekly_kpi_snapshots (week_ending DESC);
+CREATE INDEX IF NOT EXISTS kpi_snapshots_member_idx ON public.weekly_kpi_snapshots (team_member_id);
 
+DROP POLICY IF EXISTS "kpi_snapshots_admin_all" ON public.weekly_kpi_snapshots;
 CREATE POLICY "kpi_snapshots_admin_all" ON public.weekly_kpi_snapshots
   FOR ALL USING (
     EXISTS (SELECT 1 FROM public.team_members WHERE auth_user_id = auth.uid() AND role = 'admin')
   );
 
+DROP POLICY IF EXISTS "kpi_snapshots_member_read" ON public.weekly_kpi_snapshots;
 CREATE POLICY "kpi_snapshots_member_read" ON public.weekly_kpi_snapshots
   FOR SELECT USING (
     team_member_id IN (SELECT id FROM public.team_members WHERE auth_user_id = auth.uid())
@@ -538,20 +574,23 @@ CREATE TABLE IF NOT EXISTS public.activity_log (
 
 ALTER TABLE public.activity_log ENABLE ROW LEVEL SECURITY;
 
-CREATE INDEX activity_log_entity_idx  ON public.activity_log (entity_type, entity_id);
-CREATE INDEX activity_log_member_idx  ON public.activity_log (team_member_id, created_at DESC);
-CREATE INDEX activity_log_created_idx ON public.activity_log (created_at DESC);
+CREATE INDEX IF NOT EXISTS activity_log_entity_idx  ON public.activity_log (entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS activity_log_member_idx  ON public.activity_log (team_member_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS activity_log_created_idx ON public.activity_log (created_at DESC);
 
+DROP POLICY IF EXISTS "activity_log_admin_all" ON public.activity_log;
 CREATE POLICY "activity_log_admin_all" ON public.activity_log
   FOR ALL USING (
     EXISTS (SELECT 1 FROM public.team_members WHERE auth_user_id = auth.uid() AND role = 'admin')
   );
 
+DROP POLICY IF EXISTS "activity_log_member_read" ON public.activity_log;
 CREATE POLICY "activity_log_member_read" ON public.activity_log
   FOR SELECT USING (
     team_member_id IN (SELECT id FROM public.team_members WHERE auth_user_id = auth.uid())
   );
 
+DROP POLICY IF EXISTS "activity_log_member_insert" ON public.activity_log;
 CREATE POLICY "activity_log_member_insert" ON public.activity_log
   FOR INSERT WITH CHECK (
     team_member_id IN (SELECT id FROM public.team_members WHERE auth_user_id = auth.uid())
@@ -590,9 +629,11 @@ INSERT INTO public.kpi_targets (team_member_role, metric_name, weekly_target, un
   ('admin',  'mrr_target',        50000, 'dollars', 'Monthly recurring revenue target')
 ON CONFLICT (team_member_role, metric_name) DO NOTHING;
 
+DROP POLICY IF EXISTS "kpi_targets_all_read" ON public.kpi_targets;
 CREATE POLICY "kpi_targets_all_read" ON public.kpi_targets
   FOR SELECT USING (auth.uid() IS NOT NULL);
 
+DROP POLICY IF EXISTS "kpi_targets_admin_write" ON public.kpi_targets;
 CREATE POLICY "kpi_targets_admin_write" ON public.kpi_targets
   FOR ALL USING (
     EXISTS (SELECT 1 FROM public.team_members WHERE auth_user_id = auth.uid() AND role = 'admin')
@@ -645,6 +686,7 @@ DROP POLICY IF EXISTS "tm_self_update" ON public.team_members;
 DROP POLICY IF EXISTS "tm_self_or_admin_read" ON public.team_members;
 DROP POLICY IF EXISTS "tm_self_link_update" ON public.team_members;
 
+DROP POLICY IF EXISTS "tm_self_or_admin_read" ON public.team_members;
 CREATE POLICY "tm_self_or_admin_read" ON public.team_members
   FOR SELECT
   USING (
@@ -653,6 +695,7 @@ CREATE POLICY "tm_self_or_admin_read" ON public.team_members
     OR public.has_crm_role('admin')
   );
 
+DROP POLICY IF EXISTS "tm_self_link_update" ON public.team_members;
 CREATE POLICY "tm_self_link_update" ON public.team_members
   FOR UPDATE
   USING (
@@ -666,6 +709,7 @@ CREATE POLICY "tm_self_link_update" ON public.team_members
     OR public.has_crm_role('admin')
   );
 
+DROP POLICY IF EXISTS "tm_admin_all" ON public.team_members;
 CREATE POLICY "tm_admin_all" ON public.team_members
   FOR ALL
   USING (public.has_crm_role('admin'))
@@ -709,9 +753,10 @@ ALTER TABLE public.deliverables
   ADD COLUMN IF NOT EXISTS revision_count         INTEGER DEFAULT 0,
   ADD COLUMN IF NOT EXISTS last_review_notes      TEXT;
 
-CREATE INDEX IF NOT EXISTS deliverables_assigned_idx ON public.deliverables (assigned_to);
-CREATE INDEX IF NOT EXISTS deliverables_due_idx ON public.deliverables (due_at);
+CREATE INDEX IF NOT EXISTS IF NOT EXISTS deliverables_assigned_idx ON public.deliverables (assigned_to);
+CREATE INDEX IF NOT EXISTS IF NOT EXISTS deliverables_due_idx ON public.deliverables (due_at);
 
+DROP POLICY IF EXISTS "deliverables_editor_own" ON public.deliverables;
 DROP POLICY IF EXISTS "deliverables_editor_own" ON public.deliverables;
 CREATE POLICY "deliverables_editor_own" ON public.deliverables
   FOR ALL TO authenticated
@@ -740,6 +785,7 @@ CREATE TABLE IF NOT EXISTS public.calendar_sync (
 );
 ALTER TABLE public.calendar_sync ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "calendar_sync_admin_jay" ON public.calendar_sync;
 DROP POLICY IF EXISTS "calendar_sync_admin_jay" ON public.calendar_sync;
 CREATE POLICY "calendar_sync_admin_jay" ON public.calendar_sync
   FOR ALL TO authenticated
@@ -771,8 +817,9 @@ CREATE TABLE IF NOT EXISTS public.distro_artist_members (
   agreements_email    TEXT,
   created_at          TIMESTAMPTZ DEFAULT NOW()
 );
-CREATE INDEX IF NOT EXISTS distro_members_artist_idx ON public.distro_artist_members (distro_artist_id);
+CREATE INDEX IF NOT EXISTS IF NOT EXISTS distro_members_artist_idx ON public.distro_artist_members (distro_artist_id);
 ALTER TABLE public.distro_artist_members ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "distro_members_admin_mike" ON public.distro_artist_members;
 DROP POLICY IF EXISTS "distro_members_admin_mike" ON public.distro_artist_members;
 CREATE POLICY "distro_members_admin_mike" ON public.distro_artist_members
   FOR ALL TO authenticated
@@ -790,8 +837,9 @@ CREATE TABLE IF NOT EXISTS public.streaming_metrics (
   recorded_at       TIMESTAMPTZ DEFAULT NOW(),
   notes             TEXT
 );
-CREATE INDEX IF NOT EXISTS streaming_metrics_artist_idx ON public.streaming_metrics (distro_artist_id, recorded_at DESC);
+CREATE INDEX IF NOT EXISTS IF NOT EXISTS streaming_metrics_artist_idx ON public.streaming_metrics (distro_artist_id, recorded_at DESC);
 ALTER TABLE public.streaming_metrics ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "streaming_metrics_admin_mike" ON public.streaming_metrics;
 DROP POLICY IF EXISTS "streaming_metrics_admin_mike" ON public.streaming_metrics;
 CREATE POLICY "streaming_metrics_admin_mike" ON public.streaming_metrics
   FOR ALL TO authenticated
@@ -822,8 +870,8 @@ CREATE TABLE IF NOT EXISTS public.sponsor_brands (
   created_at                TIMESTAMPTZ DEFAULT NOW(),
   updated_at                TIMESTAMPTZ DEFAULT NOW()
 );
-CREATE INDEX IF NOT EXISTS sponsor_brands_status_idx ON public.sponsor_brands (status);
-CREATE INDEX IF NOT EXISTS sponsor_brands_tier_idx   ON public.sponsor_brands (tier);
+CREATE INDEX IF NOT EXISTS IF NOT EXISTS sponsor_brands_status_idx ON public.sponsor_brands (status);
+CREATE INDEX IF NOT EXISTS IF NOT EXISTS sponsor_brands_tier_idx   ON public.sponsor_brands (tier);
 
 CREATE TABLE IF NOT EXISTS public.sponsor_contacts (
   id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -844,8 +892,8 @@ CREATE TABLE IF NOT EXISTS public.sponsor_contacts (
   birthday              DATE,
   created_at            TIMESTAMPTZ DEFAULT NOW()
 );
-CREATE INDEX IF NOT EXISTS sponsor_contacts_brand_idx ON public.sponsor_contacts (brand_id);
-CREATE INDEX IF NOT EXISTS sponsor_contacts_next_touch_idx ON public.sponsor_contacts (next_touch_at);
+CREATE INDEX IF NOT EXISTS IF NOT EXISTS sponsor_contacts_brand_idx ON public.sponsor_contacts (brand_id);
+CREATE INDEX IF NOT EXISTS IF NOT EXISTS sponsor_contacts_next_touch_idx ON public.sponsor_contacts (next_touch_at);
 
 CREATE TABLE IF NOT EXISTS public.sponsor_properties (
   id                       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -882,8 +930,8 @@ CREATE TABLE IF NOT EXISTS public.sponsor_deals (
   created_at            TIMESTAMPTZ DEFAULT NOW(),
   updated_at            TIMESTAMPTZ DEFAULT NOW()
 );
-CREATE INDEX IF NOT EXISTS sponsor_deals_brand_idx ON public.sponsor_deals (brand_id);
-CREATE INDEX IF NOT EXISTS sponsor_deals_stage_idx ON public.sponsor_deals (stage);
+CREATE INDEX IF NOT EXISTS IF NOT EXISTS sponsor_deals_brand_idx ON public.sponsor_deals (brand_id);
+CREATE INDEX IF NOT EXISTS IF NOT EXISTS sponsor_deals_stage_idx ON public.sponsor_deals (stage);
 
 CREATE TABLE IF NOT EXISTS public.sponsor_deliverables (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -895,7 +943,7 @@ CREATE TABLE IF NOT EXISTS public.sponsor_deliverables (
   recap_status    TEXT DEFAULT 'pending' CHECK (recap_status IN ('pending','in_progress','delivered','approved')),
   created_at      TIMESTAMPTZ DEFAULT NOW()
 );
-CREATE INDEX IF NOT EXISTS sponsor_deliverables_deal_idx ON public.sponsor_deliverables (deal_id);
+CREATE INDEX IF NOT EXISTS IF NOT EXISTS sponsor_deliverables_deal_idx ON public.sponsor_deliverables (deal_id);
 
 CREATE TABLE IF NOT EXISTS public.sponsor_activities (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -907,8 +955,8 @@ CREATE TABLE IF NOT EXISTS public.sponsor_activities (
   occurred_at     TIMESTAMPTZ DEFAULT NOW(),
   created_by      UUID REFERENCES public.team_members(id) ON DELETE SET NULL
 );
-CREATE INDEX IF NOT EXISTS sponsor_activities_deal_idx ON public.sponsor_activities (deal_id, occurred_at DESC);
-CREATE INDEX IF NOT EXISTS sponsor_activities_brand_idx ON public.sponsor_activities (brand_id, occurred_at DESC);
+CREATE INDEX IF NOT EXISTS IF NOT EXISTS sponsor_activities_deal_idx ON public.sponsor_activities (deal_id, occurred_at DESC);
+CREATE INDEX IF NOT EXISTS IF NOT EXISTS sponsor_activities_brand_idx ON public.sponsor_activities (brand_id, occurred_at DESC);
 
 -- RLS + admin/steven policies for all sponsor_* tables
 DO $$
@@ -929,10 +977,12 @@ END $$;
 
 -- updated_at triggers
 DROP TRIGGER IF EXISTS sponsor_brands_updated_at ON public.sponsor_brands;
+DROP TRIGGER IF EXISTS sponsor_brands_updated_at ON public.sponsor_brands;
 CREATE TRIGGER sponsor_brands_updated_at
   BEFORE UPDATE ON public.sponsor_brands
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
+DROP TRIGGER IF EXISTS sponsor_deals_updated_at ON public.sponsor_deals;
 DROP TRIGGER IF EXISTS sponsor_deals_updated_at ON public.sponsor_deals;
 CREATE TRIGGER sponsor_deals_updated_at
   BEFORE UPDATE ON public.sponsor_deals
@@ -979,6 +1029,7 @@ CREATE TABLE IF NOT EXISTS public.crm_settings (
 ALTER TABLE public.crm_settings ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "crm_settings_read" ON public.crm_settings;
+DROP POLICY IF EXISTS "crm_settings_read" ON public.crm_settings;
 CREATE POLICY "crm_settings_read" ON public.crm_settings
   FOR SELECT TO authenticated
   USING (
@@ -988,6 +1039,7 @@ CREATE POLICY "crm_settings_read" ON public.crm_settings
     OR public.has_crm_role('steven')
   );
 
+DROP POLICY IF EXISTS "crm_settings_write" ON public.crm_settings;
 DROP POLICY IF EXISTS "crm_settings_write" ON public.crm_settings;
 CREATE POLICY "crm_settings_write" ON public.crm_settings
   FOR ALL TO authenticated
