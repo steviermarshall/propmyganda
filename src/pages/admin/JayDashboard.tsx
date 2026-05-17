@@ -599,6 +599,8 @@ function GcalSyncBar({ accent, onSynced }: { accent: string; onSynced: () => voi
 
   useEffect(() => {
     getGcalSettings().then(setStatus);
+    const tick = setInterval(() => getGcalSettings().then(setStatus), 60_000);
+    return () => clearInterval(tick);
   }, []);
 
   async function syncNow() {
