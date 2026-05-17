@@ -26,6 +26,7 @@ export default function CrmLayout({ children, title, accent, quickAdd, onQuickAd
         setPaletteOpen((v) => !v);
       }
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "n") {
+        if (onQuickAddClick) { e.preventDefault(); onQuickAddClick(); return; }
         if (!quickAdd) return;
         e.preventDefault();
         setQuickAddOpen(true);
@@ -33,7 +34,7 @@ export default function CrmLayout({ children, title, accent, quickAdd, onQuickAd
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [quickAdd]);
+  }, [quickAdd, onQuickAddClick]);
 
   async function handleSignOut() {
     await supabase.auth.signOut();
