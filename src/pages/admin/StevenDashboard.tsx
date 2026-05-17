@@ -5,286 +5,385 @@ import CrmLayout from "@/components/crm/CrmLayout";
 import KpiCard from "@/components/crm/KpiCard";
 import KanbanBoard from "@/components/crm/KanbanBoard";
 import { useCrmAuth } from "@/hooks/use-crm-auth";
-import { startOfWeek, todayISO, addDaysISO, daysSince } from "@/lib/crm/dates";
+import { daysSince, todayISO } from "@/lib/crm/dates";
 import { logActivity } from "@/lib/crm/activity";
 import { toast } from "sonner";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  SponsorChooser, SponsorBrandWizard, SponsorContactModal,
+  SponsorDealModal, SponsorActivityModal,
+} from "@/components/crm/SponsorModals";
 
 const STEVEN = "#d97000";
 
-const SPONSOR_COLS = [
-  { key: "lead",            label: "Lead" },
-  { key: "pitched",         label: "Pitched" },
-  { key: "replied",         label: "Replied" },
-  { key: "discovery_call",  label: "Discovery" },
-  { key: "proposal",        label: "Proposal" },
-  { key: "closed",          label: "Closed" },
-  { key: "lost",            label: "Lost" },
+const DEAL_STAGES = [
+  { key: "intro",          label: "Intro" },
+  { key: "pitch_sent",     label: "Pitch Sent" },
+  { key: "deck_reviewed",  label: "Deck Reviewed" },
+  { key: "term_sheet",     label: "Term Sheet" },
+  { key: "contract",       label: "Contract" },
+  { key: "signed",         label: "Signed" },
+  { key: "activated",      label: "Activated" },
+  { key: "wrapped",        label: "Wrapped" },
 ];
 
-const STAGE_FOLLOWUP: Record<string, number | null> = {
-  pitched: 3, replied: 2, discovery_call: 7, proposal: 5,
-  lead: null, closed: null, lost: null,
+const TIER_COLORS: Record<string, string> = {
+  tier_1: "#F5FF00", tier_2: "#d97000", tier_3: "#666",
 };
 
 export default function StevenDashboard() {
   const qc = useQueryClient();
   const { member } = useCrmAuth();
-  const weekStart = startOfWeek().toISOString();
   const today = todayISO();
-  const [shipModal, setShipModal] = useState<{ id: string; orderNum: string | null } | null>(null);
-  const [tracking, setTracking] = useState("");
-  const [carrier, setCarrier] = useState("USPS");
 
-  const { data: kpis } = useQuery({
-    queryKey: ["steven-kpis", weekStart],
-    queryFn: async () => {
-      const [activity, orders] = await Promise.all([
-        (supabase.from("activity_log") as any).select("entity_type,action,payload,created_at")
-          .eq("entity_type", "sponsor_pipeline").gte("created_at", weekStart),
-        (supabase.from("store_orders") as any).select("fulfillment_status,shipped_at").gte("shipped_at", weekStart),
-      ]);
-      const pitches = (activity.data ?? []).filter((a: any) =>
-        a.action === "status_changed" && (a.payload as any)?.to === "pitched");
-      // Need category — fetch sponsor rows in pitches
-      const ids = pitches.map((p: any) => (p.payload as any)?.id).filter(Boolean);
-      let sponsors: any[] = [];
-      if (ids.length > 0) {
-        const { data } = await (supabase.from("sponsor_pipeline") as any).select("id,category").in("id", ids);
-        sponsors = data ?? [];
-      }
-      const catCount = (cat: string) => sponsors.filter((s: any) => s.category === cat).length;
-      const ordersFulfilled = (orders.data ?? []).filter((o: any) => o.fulfillment_status === "shipped").length;
-      return {
-        total: pitches.length,
-        brand: catCount("brand"),
-        event: catCount("event"),
-        publication: catCount("publication"),
-        ordersFulfilled,
-      };
-    },
-  });
+  const [chooserOpen, setChooserOpen] = useState(false);
+  const [brandWizOpen, setBrandWizOpen] = useState(false);
+  const [contactOpen, setContactOpen] = useState(false);
+  const [dealOpen, setDealOpen] = useState(false);
+  const [activityOpen, setActivityOpen] = useState(false);
+  const [focusBrand, setFocusBrand] = useState<string | undefined>();
 
-  const { data: dueToday = [] } = useQuery({
-    queryKey: ["steven-today", today, member?.id],
-    enabled: !!member,
+  // ---------- queries ----------
+  const { data: brands = [] } = useQuery({
+    queryKey: ["sponsor-brands"],
     queryFn: async () => {
-      const { data } = await (supabase.from("sponsor_pipeline") as any)
-        .select("*").eq("assigned_to", member!.id).eq("next_followup_date", today);
+      const { data } = await (supabase.from("sponsor_brands") as any)
+        .select("*").order("updated_at", { ascending: false });
       return data ?? [];
     },
   });
 
-  const { data: sponsors = [] } = useQuery({
-    queryKey: ["steven-sponsors"],
+  const { data: contacts = [] } = useQuery({
+    queryKey: ["sponsor-contacts"],
     queryFn: async () => {
-      const { data } = await (supabase.from("sponsor_pipeline") as any)
-        .select("*").order("updated_at", { ascending: false }).limit(300);
+      const { data } = await (supabase.from("sponsor_contacts") as any)
+        .select("*, sponsor_brands(name)").order("created_at", { ascending: false });
       return data ?? [];
     },
   });
 
-  const { data: orders = [] } = useQuery({
-    queryKey: ["steven-orders"],
+  const { data: deals = [] } = useQuery({
+    queryKey: ["sponsor-deals"],
     queryFn: async () => {
-      const { data } = await (supabase.from("store_orders") as any)
-        .select("*").in("fulfillment_status", ["to_ship", "shipped"])
-        .order("ordered_at", { ascending: true });
+      const { data } = await (supabase.from("sponsor_deals") as any)
+        .select("*, sponsor_brands(name)").order("updated_at", { ascending: false }).limit(300);
       return data ?? [];
     },
   });
 
-  async function markContacted(s: any) {
-    const patch = { last_contact_date: today, next_followup_date: addDaysISO(3) };
-    qc.setQueryData(["steven-today", today, member?.id], (old: any[] = []) => old.filter((r) => r.id !== s.id));
-    const { error } = await (supabase.from("sponsor_pipeline") as any).update(patch).eq("id", s.id);
-    if (error) { toast.error("Failed"); qc.invalidateQueries({ queryKey: ["steven-today"] }); return; }
-    await logActivity(member?.id, "sponsor_pipeline", s.id, "contacted", patch);
-    toast.success("Marked contacted");
+  const { data: deliverables = [] } = useQuery({
+    queryKey: ["sponsor-deliverables"],
+    queryFn: async () => {
+      const { data } = await (supabase.from("sponsor_deliverables") as any)
+        .select("*, sponsor_deals(*, sponsor_brands(name))")
+        .order("due_date", { ascending: true, nullsFirst: false });
+      return data ?? [];
+    },
+  });
+
+  const { data: activities = [] } = useQuery({
+    queryKey: ["sponsor-activities"],
+    queryFn: async () => {
+      const { data } = await (supabase.from("sponsor_activities") as any)
+        .select("*, sponsor_brands(name)")
+        .order("occurred_at", { ascending: false }).limit(100);
+      return data ?? [];
+    },
+  });
+
+  // ---------- derived ----------
+  const dueTouches = contacts.filter((c: any) => c.next_touch_at && c.next_touch_at.slice(0, 10) <= today);
+  const activeDeals = deals.filter((d: any) => !["wrapped", "lost"].includes(d.stage));
+  const pipelineValue = activeDeals.reduce((acc: number, d: any) => acc + Number(d.value_cents ?? 0), 0) / 100;
+  const signedThisMonth = deals.filter((d: any) =>
+    ["signed","activated","wrapped"].includes(d.stage) &&
+    d.updated_at?.slice(0, 7) === today.slice(0, 7)
+  ).length;
+  const overdueDeliverables = deliverables.filter((d: any) =>
+    !d.completed_at && d.due_date && d.due_date < today);
+
+  // ---------- actions ----------
+  async function moveDeal(item: any, next: string) {
+    qc.setQueryData(["sponsor-deals"], (old: any[] = []) =>
+      old.map((r) => r.id === item.id ? { ...r, stage: next } : r));
+    const { error } = await (supabase.from("sponsor_deals") as any)
+      .update({ stage: next }).eq("id", item.id);
+    if (error) { toast.error("Move failed"); qc.invalidateQueries({ queryKey: ["sponsor-deals"] }); return; }
+    await logActivity(member?.id, "sponsor_deal" as any, item.id, "status_changed", { from: item.stage, to: next });
   }
 
-  async function moveSponsor(item: any, next: string) {
-    const days = STAGE_FOLLOWUP[next];
-    const patch: any = { stage: next };
-    if (days !== null) patch.next_followup_date = addDaysISO(days);
-    qc.setQueryData(["steven-sponsors"], (old: any[] = []) =>
-      old.map((r) => (r.id === item.id ? { ...r, ...patch } : r)));
-    const { error } = await (supabase.from("sponsor_pipeline") as any).update(patch).eq("id", item.id);
-    if (error) { toast.error("Move failed"); qc.invalidateQueries({ queryKey: ["steven-sponsors"] }); return; }
-    await logActivity(member?.id, "sponsor_pipeline", item.id, "status_changed", { id: item.id, from: item.stage, to: next });
+  async function bumpTouch(contactId: string, days: number) {
+    const next = new Date(); next.setDate(next.getDate() + days);
+    const patch = { last_touch_at: new Date().toISOString(), next_touch_at: next.toISOString() };
+    const { error } = await (supabase.from("sponsor_contacts") as any).update(patch).eq("id", contactId);
+    if (error) { toast.error("Failed"); return; }
+    toast.success("Touch logged");
+    qc.invalidateQueries({ queryKey: ["sponsor-contacts"] });
   }
 
-  async function confirmShip() {
-    if (!shipModal) return;
-    const id = shipModal.id;
-    const patch = {
-      fulfillment_status: "shipped",
-      tracking_number: tracking || null,
-      shipping_carrier: carrier || null,
-      shipped_at: new Date().toISOString(),
-    };
-    qc.setQueryData(["steven-orders"], (old: any[] = []) =>
-      old.map((r) => (r.id === id ? { ...r, ...patch } : r)));
-    const { error } = await (supabase.from("store_orders") as any).update(patch).eq("id", id);
-    if (error) { toast.error("Failed"); qc.invalidateQueries({ queryKey: ["steven-orders"] }); return; }
-    await logActivity(member?.id, "store_order", id, "status_changed", patch);
-    toast.success("Marked shipped");
-    setShipModal(null);
-    setTracking("");
+  function handlePick(kind: "brand" | "contact" | "deal" | "activity") {
+    setChooserOpen(false);
+    setFocusBrand(undefined);
+    if (kind === "brand") setBrandWizOpen(true);
+    if (kind === "contact") setContactOpen(true);
+    if (kind === "deal") setDealOpen(true);
+    if (kind === "activity") setActivityOpen(true);
   }
-
-  const toShip = orders.filter((o: any) => o.fulfillment_status === "to_ship");
-  const shippedToday = orders.filter(
-    (o: any) => o.fulfillment_status === "shipped" && o.shipped_at?.slice(0, 10) === today
-  );
 
   return (
-    <CrmLayout title="Steven's Dashboard" accent={STEVEN} quickAdd="sponsor">
+    <CrmLayout
+      title="Steven's Dashboard"
+      accent={STEVEN}
+      quickAdd="sponsor"
+      onQuickAddClick={() => setChooserOpen(true)}
+    >
+      {/* KPIs */}
       <section>
-        <p className="text-white/30 text-[10px] tracking-[0.3em] uppercase mb-4">This Week</p>
+        <p className="text-white/30 text-[10px] tracking-[0.3em] uppercase mb-4">Pipeline Snapshot</p>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <KpiCard label="Total Pitches" value={kpis?.total ?? "—"} accent={STEVEN} />
-          <KpiCard label="Brand"         value={kpis?.brand ?? "—"} target="4 tgt" accent={STEVEN} />
-          <KpiCard label="Event"         value={kpis?.event ?? "—"} target="3 tgt" accent={STEVEN} />
-          <KpiCard label="Publication"   value={kpis?.publication ?? "—"} target="3 tgt" accent={STEVEN} />
-          <KpiCard label="Orders Shipped" value={kpis?.ordersFulfilled ?? "—"} accent={STEVEN} />
+          <KpiCard label="Active Brands" value={brands.filter((b: any) => !["dead","lapsed"].includes(b.status)).length} accent={STEVEN} />
+          <KpiCard label="Active Deals" value={activeDeals.length} accent={STEVEN} />
+          <KpiCard label="Pipeline $" value={`$${Math.round(pipelineValue).toLocaleString()}`} accent={STEVEN} />
+          <KpiCard label="Signed MTD" value={signedThisMonth} accent={STEVEN} />
+          <KpiCard label="Overdue Deliverables" value={overdueDeliverables.length} accent={STEVEN} />
         </div>
       </section>
 
-      <section className="border border-white/10 bg-crm-surface p-6">
-        <p className="text-white/30 text-[10px] tracking-[0.3em] uppercase mb-3">Follow-Ups Due Today</p>
-        {dueToday.length === 0 ? (
-          <p className="text-white/40 text-sm">No follow-ups due. You're clear.</p>
-        ) : (
-          <div className="divide-y divide-white/5">
-            {dueToday.map((s: any) => (
-              <div key={s.id} className="py-2 flex items-center justify-between">
-                <div>
-                  <div className="text-sm">{s.brand_name}</div>
-                  <div className="text-[10px] text-white/40 uppercase tracking-widest">
-                    {s.category} · {s.stage} · {daysSince(s.last_contact_date)}d since last
-                  </div>
-                </div>
-                <button onClick={() => markContacted(s)}
-                  className="px-3 py-1 text-[10px] uppercase tracking-widest font-bold text-black"
-                  style={{ backgroundColor: STEVEN }}>
-                  Contacted
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section>
-        <p className="text-white/30 text-[10px] tracking-[0.3em] uppercase mb-3">Sponsor Pipeline</p>
-        <Tabs defaultValue="brand">
-          <TabsList className="bg-black border border-white/10">
-            <TabsTrigger value="brand">Brand</TabsTrigger>
-            <TabsTrigger value="event">Event</TabsTrigger>
-            <TabsTrigger value="publication">Publication</TabsTrigger>
-          </TabsList>
-          {(["brand", "event", "publication"] as const).map((cat) => (
-            <TabsContent key={cat} value={cat} className="mt-3">
-              <KanbanBoard
-                accent={STEVEN}
-                columns={SPONSOR_COLS}
-                items={sponsors
-                  .filter((s: any) => s.category === cat)
-                  .map((s: any) => ({
-                    id: s.id, stage: s.stage, updatedAt: s.updated_at,
-                    staleStages: ["discovery_call", "proposal"], raw: s,
-                  }))}
-                onMove={(it: any, next) => moveSponsor(it.raw, next)}
-                renderCard={(it: any) => (
-                  <div className="space-y-1">
-                    <div className="text-sm font-bold">{it.raw.brand_name}</div>
-                    <div className="text-[10px] text-white/40">
-                      {it.raw.contact_name ?? "—"} · ${Number(it.raw.pitch_amount ?? 0).toLocaleString()}
-                    </div>
-                    <div className="text-[10px] text-white/30">{daysSince(it.raw.updated_at)}d in stage</div>
-                  </div>
-                )}
-              />
-            </TabsContent>
-          ))}
-        </Tabs>
-      </section>
-
+      {/* Touch reminders */}
       <section className="border border-white/10 bg-crm-surface p-6">
         <p className="text-white/30 text-[10px] tracking-[0.3em] uppercase mb-3">
-          Store Fulfillment — {toShip.length} to ship
+          Touch Reminders — {dueTouches.length} due
         </p>
-        {toShip.length === 0 ? (
-          <p className="text-white/40 text-sm">Queue clear.</p>
+        {dueTouches.length === 0 ? (
+          <p className="text-white/40 text-sm">All caught up.</p>
         ) : (
           <div className="divide-y divide-white/5">
-            {toShip.map((o: any) => (
-              <div key={o.id} className="py-2 flex items-center justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm">
-                    {o.order_number ?? o.id.slice(0, 8)} · {o.customer_name ?? "—"}
-                  </div>
-                  <div className="text-[10px] text-white/40">
-                    {o.product_name} {o.variant ? `· ${o.variant}` : ""} · ${Number(o.amount ?? 0).toLocaleString()} · {daysSince(o.ordered_at)}d ago
+            {dueTouches.slice(0, 10).map((c: any) => (
+              <div key={c.id} className="py-2 flex items-center justify-between">
+                <div>
+                  <div className="text-sm">{c.name} <span className="text-white/40">· {c.sponsor_brands?.name}</span></div>
+                  <div className="text-[10px] text-white/40 uppercase tracking-widest">
+                    {c.title ?? "—"} · {c.decision_power} · {daysSince(c.last_touch_at)}d since last
                   </div>
                 </div>
-                <button
-                  onClick={() => setShipModal({ id: o.id, orderNum: o.order_number })}
+                <button onClick={() => bumpTouch(c.id, c.touch_cadence_days ?? 30)}
                   className="px-3 py-1 text-[10px] uppercase tracking-widest font-bold text-black"
-                  style={{ backgroundColor: STEVEN }}
-                >
-                  Ship
+                  style={{ backgroundColor: STEVEN }}>
+                  Touched
                 </button>
               </div>
             ))}
           </div>
         )}
-
-        {shippedToday.length > 0 && (
-          <>
-            <p className="text-white/30 text-[10px] tracking-[0.3em] uppercase mt-6 mb-2">Shipped Today</p>
-            <div className="divide-y divide-white/5">
-              {shippedToday.map((o: any) => (
-                <div key={o.id} className="py-2 text-xs flex justify-between">
-                  <span>{o.order_number ?? o.id.slice(0, 8)} · {o.customer_name}</span>
-                  <span className="text-white/40">{o.shipping_carrier} · {o.tracking_number ?? "—"}</span>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
       </section>
 
-      <Dialog open={!!shipModal} onOpenChange={(v) => !v && setShipModal(null)}>
-        <DialogContent className="bg-crm-surface border-white/10 text-white font-mono">
-          <DialogHeader>
-            <DialogTitle className="uppercase tracking-widest text-sm" style={{ color: STEVEN }}>
-              Mark Shipped {shipModal?.orderNum ? `— ${shipModal.orderNum}` : ""}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div>
-              <label className="text-[10px] uppercase tracking-widest text-white/40">Carrier</label>
-              <select value={carrier} onChange={(e) => setCarrier(e.target.value)}
-                className="bg-black border border-white/10 text-white text-sm px-3 py-2 w-full mt-1">
-                {["USPS", "UPS", "FedEx", "DHL", "Other"].map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="text-[10px] uppercase tracking-widest text-white/40">Tracking #</label>
-              <input value={tracking} onChange={(e) => setTracking(e.target.value)}
-                className="bg-black border border-white/10 text-white text-sm px-3 py-2 w-full mt-1" />
-            </div>
-            <button onClick={confirmShip}
-              className="w-full py-2 font-bold text-black uppercase tracking-widest text-xs"
-              style={{ backgroundColor: STEVEN }}>
-              Confirm Shipment
-            </button>
+      {/* Main tabs */}
+      <Tabs defaultValue="pipeline">
+        <TabsList className="bg-black border border-white/10">
+          <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
+          <TabsTrigger value="brands">Brands ({brands.length})</TabsTrigger>
+          <TabsTrigger value="contacts">Contacts ({contacts.length})</TabsTrigger>
+          <TabsTrigger value="deals">Deals ({deals.length})</TabsTrigger>
+          <TabsTrigger value="activations">Activations</TabsTrigger>
+          <TabsTrigger value="feed">Activity</TabsTrigger>
+        </TabsList>
+
+        {/* Pipeline kanban */}
+        <TabsContent value="pipeline" className="mt-3">
+          <KanbanBoard
+            accent={STEVEN}
+            columns={DEAL_STAGES}
+            items={deals.map((d: any) => ({
+              id: d.id, stage: d.stage, updatedAt: d.updated_at, raw: d,
+            }))}
+            onMove={(it: any, next) => moveDeal(it.raw, next)}
+            renderCard={(it: any) => (
+              <div className="space-y-1">
+                <div className="text-sm font-bold">{it.raw.sponsor_brands?.name ?? "—"}</div>
+                <div className="text-[10px] text-white/40">
+                  ${Number(it.raw.value_cents ?? 0) / 100 > 0 ? (it.raw.value_cents / 100).toLocaleString() : "—"}
+                </div>
+                {it.raw.next_action && (
+                  <div className="text-[10px] text-white/50 truncate">→ {it.raw.next_action}</div>
+                )}
+                <div className="text-[10px] text-white/30">{daysSince(it.raw.updated_at)}d in stage</div>
+              </div>
+            )}
+          />
+        </TabsContent>
+
+        {/* Brands */}
+        <TabsContent value="brands" className="mt-3">
+          <div className="border border-white/10 bg-crm-surface overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-black/40 text-[9px] uppercase tracking-widest text-white/40">
+                <tr>
+                  <th className="text-left p-2">Brand</th>
+                  <th className="text-left p-2">Industry</th>
+                  <th className="text-left p-2">Tier</th>
+                  <th className="text-left p-2">Status</th>
+                  <th className="text-left p-2">Budget</th>
+                  <th className="text-left p-2">FY End</th>
+                  <th className="text-left p-2"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {brands.map((b: any) => (
+                  <tr key={b.id} className="border-t border-white/5 hover:bg-black/30">
+                    <td className="p-2 font-bold">{b.name}{b.parent_company && <span className="text-white/40 text-[10px] block">↳ {b.parent_company}</span>}</td>
+                    <td className="p-2 text-white/70">{b.industry ?? "—"}</td>
+                    <td className="p-2">
+                      <span className="text-[10px] font-bold uppercase" style={{ color: TIER_COLORS[b.tier] }}>
+                        {b.tier?.replace("tier_", "T") ?? "—"}
+                      </span>
+                    </td>
+                    <td className="p-2 text-white/70 text-xs">{b.status}</td>
+                    <td className="p-2 text-white/70">{b.annual_budget_estimate ? `$${Number(b.annual_budget_estimate).toLocaleString()}` : "—"}</td>
+                    <td className="p-2 text-white/70">{b.fiscal_year_end_month ? `M${b.fiscal_year_end_month}` : "—"}</td>
+                    <td className="p-2 text-right">
+                      <button onClick={() => { setFocusBrand(b.id); setDealOpen(true); }}
+                        className="text-[10px] uppercase tracking-widest text-white/60 hover:text-white">+ Deal</button>
+                      <button onClick={() => { setFocusBrand(b.id); setContactOpen(true); }}
+                        className="text-[10px] uppercase tracking-widest text-white/60 hover:text-white ml-3">+ Contact</button>
+                    </td>
+                  </tr>
+                ))}
+                {brands.length === 0 && (
+                  <tr><td colSpan={7} className="p-6 text-center text-white/40 text-sm">No brands yet. Hit + to add one.</td></tr>
+                )}
+              </tbody>
+            </table>
           </div>
-        </DialogContent>
-      </Dialog>
+        </TabsContent>
+
+        {/* Contacts */}
+        <TabsContent value="contacts" className="mt-3">
+          <div className="border border-white/10 bg-crm-surface overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-black/40 text-[9px] uppercase tracking-widest text-white/40">
+                <tr>
+                  <th className="text-left p-2">Name</th>
+                  <th className="text-left p-2">Brand</th>
+                  <th className="text-left p-2">Title</th>
+                  <th className="text-left p-2">Power</th>
+                  <th className="text-left p-2">Email</th>
+                  <th className="text-left p-2">Next Touch</th>
+                </tr>
+              </thead>
+              <tbody>
+                {contacts.map((c: any) => (
+                  <tr key={c.id} className="border-t border-white/5 hover:bg-black/30">
+                    <td className="p-2 font-bold">{c.name}</td>
+                    <td className="p-2 text-white/70">{c.sponsor_brands?.name ?? "—"}</td>
+                    <td className="p-2 text-white/70">{c.title ?? "—"}</td>
+                    <td className="p-2 text-white/70 text-[10px] uppercase">{c.decision_power ?? "—"}</td>
+                    <td className="p-2 text-white/70 text-xs">{c.email ?? "—"}</td>
+                    <td className="p-2 text-white/70 text-xs">{c.next_touch_at?.slice(0, 10) ?? "—"}</td>
+                  </tr>
+                ))}
+                {contacts.length === 0 && (
+                  <tr><td colSpan={6} className="p-6 text-center text-white/40 text-sm">No contacts yet.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </TabsContent>
+
+        {/* Deals */}
+        <TabsContent value="deals" className="mt-3">
+          <div className="border border-white/10 bg-crm-surface overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-black/40 text-[9px] uppercase tracking-widest text-white/40">
+                <tr>
+                  <th className="text-left p-2">Brand</th>
+                  <th className="text-left p-2">Stage</th>
+                  <th className="text-left p-2">Value</th>
+                  <th className="text-left p-2">Start</th>
+                  <th className="text-left p-2">End</th>
+                  <th className="text-left p-2">Next Action</th>
+                  <th className="text-left p-2">Due</th>
+                </tr>
+              </thead>
+              <tbody>
+                {deals.map((d: any) => (
+                  <tr key={d.id} className="border-t border-white/5 hover:bg-black/30">
+                    <td className="p-2 font-bold">{d.sponsor_brands?.name ?? "—"}</td>
+                    <td className="p-2 text-[10px] uppercase tracking-widest" style={{ color: STEVEN }}>{d.stage}</td>
+                    <td className="p-2 text-white/70">{d.value_cents ? `$${(d.value_cents / 100).toLocaleString()}` : "—"}</td>
+                    <td className="p-2 text-white/70 text-xs">{d.start_date ?? "—"}</td>
+                    <td className="p-2 text-white/70 text-xs">{d.end_date ?? "—"}</td>
+                    <td className="p-2 text-white/70 text-xs truncate max-w-[200px]">{d.next_action ?? "—"}</td>
+                    <td className="p-2 text-white/70 text-xs">{d.next_action_due ?? "—"}</td>
+                  </tr>
+                ))}
+                {deals.length === 0 && (
+                  <tr><td colSpan={7} className="p-6 text-center text-white/40 text-sm">No deals yet.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </TabsContent>
+
+        {/* Activations / deliverables */}
+        <TabsContent value="activations" className="mt-3">
+          <div className="border border-white/10 bg-crm-surface p-4">
+            {deliverables.length === 0 ? (
+              <p className="text-white/40 text-sm">No deliverables yet. Add them inside a deal.</p>
+            ) : (
+              <div className="divide-y divide-white/5">
+                {deliverables.map((d: any) => {
+                  const overdue = !d.completed_at && d.due_date && d.due_date < today;
+                  return (
+                    <div key={d.id} className="py-2 flex items-center justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm">{d.description}</div>
+                        <div className="text-[10px] text-white/40">
+                          {d.sponsor_deals?.sponsor_brands?.name ?? "—"} ·
+                          {" "}due {d.due_date ?? "—"} · {d.recap_status}
+                        </div>
+                      </div>
+                      <span className={`text-[10px] uppercase tracking-widest ${overdue ? "text-red-400" : "text-white/50"}`}>
+                        {d.completed_at ? "done" : overdue ? "overdue" : "open"}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </TabsContent>
+
+        {/* Activity Feed */}
+        <TabsContent value="feed" className="mt-3">
+          <div className="border border-white/10 bg-crm-surface p-4">
+            {activities.length === 0 ? (
+              <p className="text-white/40 text-sm">Nothing logged yet.</p>
+            ) : (
+              <div className="divide-y divide-white/5">
+                {activities.map((a: any) => (
+                  <div key={a.id} className="py-2">
+                    <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-white/40">
+                      <span style={{ color: STEVEN }}>{a.activity_type}</span>
+                      <span>·</span>
+                      <span>{a.sponsor_brands?.name ?? "—"}</span>
+                      <span>·</span>
+                      <span>{new Date(a.occurred_at).toLocaleString()}</span>
+                    </div>
+                    <div className="text-sm text-white/80 mt-1">{a.summary}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      {/* Modals */}
+      <SponsorChooser open={chooserOpen} onClose={() => setChooserOpen(false)} onPick={handlePick} />
+      <SponsorBrandWizard open={brandWizOpen} onClose={() => setBrandWizOpen(false)} />
+      <SponsorContactModal open={contactOpen} onClose={() => { setContactOpen(false); setFocusBrand(undefined); }} brandId={focusBrand} />
+      <SponsorDealModal open={dealOpen} onClose={() => { setDealOpen(false); setFocusBrand(undefined); }} brandId={focusBrand} />
+      <SponsorActivityModal open={activityOpen} onClose={() => setActivityOpen(false)} />
     </CrmLayout>
   );
 }
