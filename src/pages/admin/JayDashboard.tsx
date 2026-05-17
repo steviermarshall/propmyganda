@@ -332,6 +332,9 @@ export default function JayDashboard() {
                                   )}
                                   {d.filmed_at && <span className="text-white/30">filmed {daysSince(d.filmed_at)}d ago</span>}
                                   {d.revision_count > 0 && <span className="text-white/30">rev {d.revision_count}</span>}
+                                  {syncErrors[d.id] && (
+                                    <span className="text-amber-400" title={syncErrors[d.id]}>⚠ gcal</span>
+                                  )}
                                 </div>
                                 {d.objective && <div className="text-[10px] text-white/50 mt-1 italic">"{d.objective}"</div>}
                               </div>
