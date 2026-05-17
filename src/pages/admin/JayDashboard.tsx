@@ -84,6 +84,19 @@ export default function JayDashboard() {
     },
   });
 
+  // Sync errors map (entity_id -> last_error) for inline chips
+  const { data: syncErrors = {} } = useQuery({
+    queryKey: ["jay-sync-errors"],
+    queryFn: async () => {
+      const { data } = await (supabase.from("calendar_sync") as any)
+        .select("entity_id, last_error").eq("entity_type", "deliverable").not("last_error", "is", null);
+      const map: Record<string, string> = {};
+      (data ?? []).forEach((r: any) => { if (r.last_error) map[r.entity_id] = r.last_error; });
+      return map;
+    },
+    refetchInterval: 60_000,
+  });
+
   const { data: uploadQueue = [] } = useQuery({
     queryKey: ["jay-upload-queue"],
     queryFn: async () => {
