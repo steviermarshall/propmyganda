@@ -68,7 +68,7 @@ export default function StevenDashboard() {
     queryKey: ["sponsor-deals"],
     queryFn: async () => {
       const { data } = await (supabase.from("sponsor_deals") as any)
-        .select("*, sponsor_brands(name)").order("updated_at", { ascending: false }).limit(300);
+        .select("*, sponsor_brands(name, tier)").order("updated_at", { ascending: false }).limit(300);
       return data ?? [];
     },
   });
