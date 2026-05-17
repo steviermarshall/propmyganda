@@ -170,6 +170,8 @@ export default function StevieDashboard() {
         ))}
       </nav>
 
+      <SharedCalendar accent={STEVIE} />
+
       {/* MRR */}
       <section className="border border-white/10 bg-crm-surface p-6">
         <p className="text-white/30 text-[10px] tracking-[0.3em] uppercase mb-4">
