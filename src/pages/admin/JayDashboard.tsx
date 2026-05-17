@@ -218,7 +218,7 @@ export default function JayDashboard() {
       }} />
 
       {/* Tab bar */}
-      <div className="border-b border-white/10 flex gap-1 overflow-x-auto">
+      <div className="border-b border-white/10 flex gap-1 overflow-x-auto items-center">
         {TABS.map((t) => (
           <button
             key={t.id}
@@ -233,6 +233,12 @@ export default function JayDashboard() {
             {t.label}{t.count != null ? ` · ${t.count}` : ""}
           </button>
         ))}
+        <a
+          href="/admin/reports/deliverables"
+          className="ml-auto px-3 py-2 text-[10px] uppercase tracking-widest text-white/40 hover:text-white whitespace-nowrap"
+        >
+          Reports →
+        </a>
       </div>
 
       {tab === "calendar" && (
