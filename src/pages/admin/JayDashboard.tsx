@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import CrmLayout from "@/components/crm/CrmLayout";
+import SharedCalendar from "@/components/crm/SharedCalendar";
 import KpiCard from "@/components/crm/KpiCard";
 import InlineSelect from "@/components/crm/InlineSelect";
 import { useCrmAuth } from "@/hooks/use-crm-auth";
