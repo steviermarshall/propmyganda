@@ -576,3 +576,52 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     </div>
   );
 }
+
+function GcalSyncBar({ accent, onSynced }: { accent: string; onSynced: () => void }) {
+  const [status, setStatus] = useState<{ calendar_id: string; last_pull_at: string | null } | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    getGcalSettings().then(setStatus);
+  }, []);
+
+  async function syncNow() {
+    setBusy(true);
+    try {
+      const r = await pullGcal();
+      toast.success(`Synced · ${r.updated} updated, ${r.skipped} skipped`);
+      setStatus(await getGcalSettings());
+      onSynced();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Sync failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const last = status?.last_pull_at ? new Date(status.last_pull_at) : null;
+  const ago = last ? Math.round((Date.now() - last.getTime()) / 60000) : null;
+
+  return (
+    <div className="flex items-center justify-between border border-white/10 bg-black/40 px-4 py-2">
+      <div className="flex items-center gap-3 text-[10px] uppercase tracking-widest">
+        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: accent }} />
+        <span className="text-white/60">Google Calendar</span>
+        <span className="text-white/30">·</span>
+        <span className="text-white/40">{status?.calendar_id ?? "primary"}</span>
+        <span className="text-white/30">·</span>
+        <span className="text-white/40">
+          {ago == null ? "never synced" : ago < 1 ? "just now" : `${ago}m ago`}
+        </span>
+      </div>
+      <button
+        onClick={syncNow}
+        disabled={busy}
+        className="px-3 py-1 text-[10px] uppercase tracking-widest font-bold text-black disabled:opacity-50"
+        style={{ backgroundColor: accent }}
+      >
+        {busy ? "Syncing…" : "Sync now"}
+      </button>
+    </div>
+  );
+}
