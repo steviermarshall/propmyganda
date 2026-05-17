@@ -4,13 +4,22 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
-type Service = "security" | "dj" | "venue" | "promoter" | "event_recap" | "artist" | "bartender";
-type BookingInsert = Database["public"]["Tables"]["bookings"]["Insert"];
+type Service = "security" | "dj" | "venue" | "promoter" | "event_recap" | "artist" | "bartender" | "jv" | "distro";
+type BookingInsert = Database["public"]["Tables"]["bookings"]["Insert"] & {
+  partner_name?: string; deal_type?: string; revenue_split?: string;
+  artist_name?: string; release_title?: string; release_date?: string;
+  platforms?: string; marketing_budget?: string;
+  is_free?: boolean; event_at?: string;
+};
 
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   initialService?: Service;
+  /** Pre-mark this booking as free (used for in-CRM artist quick add). */
+  free?: boolean;
+  /** Hide non-applicable tabs (e.g. show only JV + Distro for Mike's quick add). */
+  servicesAllowed?: Service[];
 }
 
 const WEBHOOK = import.meta.env.VITE_BOOKING_WEBHOOK_URL as string | undefined;
