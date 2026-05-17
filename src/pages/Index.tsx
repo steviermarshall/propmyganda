@@ -1,9 +1,11 @@
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import PMGScene from "@/components/webgl/PMGScene";
+import WebGLBoundary from "@/components/webgl/WebGLBoundary";
 import Marquee from "@/components/Marquee";
 import ScrollReveal from "@/components/webgl/ScrollReveal";
 import pmgLogo from "@/assets/pmg-logo-clean.png";
+import SEO from "@/components/SEO";
 import { useAuth } from "@/hooks/use-auth";
 
 const Index = () => {
@@ -17,17 +19,31 @@ const Index = () => {
 
   return (
     <div className="bg-background text-foreground">
+      <SEO
+        title="PROPMYGANDA — Independent Music & Distribution"
+        description="PMG is an independent music, content and distribution company based in Brooklyn, NY. 100% independent."
+        path="/"
+      />
+      <h1 className="sr-only">PROPMYGANDA — Independent music, content, and distribution</h1>
       {/* WebGL Hero */}
       <section className="relative h-screen w-full overflow-hidden">
         <div className="absolute inset-0">
-          <PMGScene />
+          <WebGLBoundary
+            fallback={
+              <div className="absolute inset-0 flex items-center justify-center bg-black">
+                <img src={pmgLogo} alt="PMG" className="h-20 md:h-32 w-auto opacity-90" />
+              </div>
+            }
+          >
+            <PMGScene />
+          </WebGLBoundary>
         </div>
 
         {/* Overlay UI */}
         <div className="pointer-events-none absolute inset-0 flex flex-col justify-between p-6 md:p-10 z-[60]">
           <div className="flex justify-between items-center text-[10px] md:text-xs tracking-[0.3em] uppercase text-white/80 pointer-events-auto relative z-[60]">
             <Link to="/" aria-label="PMG home" className="flex items-center">
-              <img src={pmgLogo} alt="PMG" className="h-6 md:h-8 w-auto" />
+              <img src={pmgLogo} alt="PMG logo — independent music distribution" className="h-6 md:h-8 w-auto" />
             </Link>
             <Link
               to="/auth/login"

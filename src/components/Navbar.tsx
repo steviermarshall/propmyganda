@@ -45,7 +45,7 @@ const Navbar = () => {
             <span aria-hidden className="w-6" />
           ) : (
             <Link to="/" className="flex items-center" aria-label="PMG home">
-              <img src={pmgLogo} alt="PMG" className="h-6 md:h-8 w-auto" />
+              <img src={pmgLogo} alt="PMG logo — independent music distribution" className="h-6 md:h-8 w-auto" />
             </Link>
           )}
 

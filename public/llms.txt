@@ -1,0 +1,16 @@
+# PROPMYGANDA (PMG)
+
+> Independent music, content, and distribution company based in Brooklyn, NY. 100% independent — distribution, content, and culture.
+
+PMG delivers music to all major DSPs, builds content campaigns around releases, runs the Nonstop NY events series, and publishes editorial on independent music and culture.
+
+## Pages
+
+- [Home](/): Overview of PMG, the manifesto, and pillars.
+- [Records / Artists](/artists): The PMG roster of independent artists.
+- [Distribution](/distribution): Digital distribution, marketing, sync, and catalog services. Apply here.
+- [Events](/events): Nonstop NY upcoming and past shows.
+- [Publication](/publication): Editorial on business, artists, culture, milestones, industry.
+- [Store](/store): Official PMG and artist merchandise.
+- [Propworld](/propworld): Interactive 3D world.
+- [Contact](/contact): Reach the PMG team in Brooklyn, NY.

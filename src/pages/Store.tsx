@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { products } from "@/lib/data";
 import Marquee from "@/components/Marquee";
 import ScrollReveal from "@/components/webgl/ScrollReveal";
+import SEO from "@/components/SEO";
 
 const filters = ["All", "Music", "Clothing", "Accessories"];
 
@@ -14,6 +15,11 @@ const Store = () => {
 
   return (
     <div className="bg-background">
+      <SEO
+        title="Store — PMG Official Merchandise | PROPMYGANDA"
+        description="Official PMG and artist merchandise. Music, apparel, and accessories. Ships worldwide."
+        path="/store"
+      />
 
       {/* Hero */}
       <div className="bg-black text-white pt-32 pb-0 overflow-hidden">

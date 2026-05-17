@@ -5,6 +5,7 @@ import Marquee from "@/components/Marquee";
 import ScrollReveal from "@/components/webgl/ScrollReveal";
 import BookingSheet from "@/components/BookingSheet";
 import InstagramFeed from "@/components/InstagramFeed";
+import SEO from "@/components/SEO";
 
 type Event = Database["public"]["Tables"]["events"]["Row"];
 type IgPost = Database["public"]["Tables"]["instagram_posts"]["Row"];
@@ -194,8 +195,33 @@ export default function Events() {
   );
   const [hero, ...rest] = upcoming;
 
+  const eventJsonLd = upcoming.map((ev) => ({
+    "@context": "https://schema.org",
+    "@type": "Event",
+    name: ev.title,
+    startDate: ev.event_date,
+    eventStatus: "https://schema.org/EventScheduled",
+    eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+    location: ev.venue
+      ? {
+          "@type": "Place",
+          name: ev.venue,
+          address: ev.city ?? undefined,
+        }
+      : undefined,
+    image: ev.flyer_url ?? undefined,
+    description: ev.description ?? undefined,
+    url: ev.ticket_url ?? undefined,
+  }));
+
   return (
     <div className="bg-background">
+      <SEO
+        title="Events — Nonstop NY Shows | PMG"
+        description="Upcoming and past Nonstop NY events presented by PROPMYGANDA. Brooklyn-rooted independent music, shows, and culture."
+        path="/events"
+        jsonLd={eventJsonLd.length > 0 ? eventJsonLd : undefined}
+      />
       {/* Page header */}
       <div className="bg-primary text-primary-foreground pt-32 pb-12 px-8 md:px-16">
         <p className="text-[9px] tracking-[0.5em] uppercase text-primary-foreground/40 mb-3">Nonstop NY</p>

@@ -1,6 +1,7 @@
 import { Suspense, lazy, useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import CosmicHUD from "@/components/propworld/CosmicHUD";
+import SEO from "@/components/SEO";
 
 // ─── Game HUD ────────────────────────────────────────────────────────────────
 
@@ -119,6 +120,12 @@ const Propworld = () => {
 
   return (
     <main className="relative h-screen w-screen overflow-hidden bg-[#02060a] text-white select-none" style={{ WebkitUserSelect: 'none', WebkitTouchCallout: 'none' } as React.CSSProperties}>
+      <SEO
+        title="Propworld — Interactive 3D Experience | PMG"
+        description="Step into Propworld, PMG's interactive 3D space combining a cosmic game and social room."
+        path="/propworld"
+      />
+      <h1 className="sr-only">Propworld — PMG interactive 3D experience</h1>
       {/* Full-screen 3D scene */}
       <div className="absolute inset-0">
         <Suspense fallback={<div className="w-full h-full bg-[#02060a]" />}>

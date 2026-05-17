@@ -32,6 +32,14 @@ import DistributionDashboard from "./pages/dashboard/DistributionDashboard";
 import MarketingDashboard from "./pages/dashboard/MarketingDashboard";
 import SponsorsDashboard from "./pages/dashboard/SponsorsDashboard";
 
+import CrmProtectedRoute from "@/components/dashboard/CrmProtectedRoute";
+import StevieDashboard from "./pages/admin/StevieDashboard";
+import MikeDashboard from "./pages/admin/MikeDashboard";
+import StevenDashboard from "./pages/admin/StevenDashboard";
+import JayDashboard from "./pages/admin/JayDashboard";
+import EditorDashboard from "./pages/admin/EditorDashboard";
+import DeliverablesReport from "./pages/admin/DeliverablesReport";
+
 const queryClient = new QueryClient();
 
 const PublicLayout = ({ children }: { children: React.ReactNode }) => {
@@ -50,19 +58,29 @@ const PublicLayout = ({ children }: { children: React.ReactNode }) => {
 const AppRoutes = () => {
   const location = useLocation();
   const isDash = location.pathname.startsWith("/dashboard");
+  const isAdmin = location.pathname.startsWith("/admin");
   const isAuth = location.pathname.startsWith("/auth");
 
-  if (isDash || isAuth) {
+  if (isDash || isAdmin || isAuth) {
     return (
       <Routes location={location}>
         <Route path="/auth/login"    element={<Login />} />
         <Route path="/auth/callback" element={<Callback />} />
 
+        {/* Legacy public-site dashboards */}
         <Route path="/dashboard" element={<ProtectedRoute><DashboardRoot /></ProtectedRoute>} />
         <Route path="/dashboard/admin"        element={<ProtectedRoute allowedRoles={["admin"]}><AdminDashboard /></ProtectedRoute>} />
         <Route path="/dashboard/distribution" element={<ProtectedRoute allowedRoles={["admin","distribution"]}><DistributionDashboard /></ProtectedRoute>} />
         <Route path="/dashboard/marketing"    element={<ProtectedRoute allowedRoles={["admin","marketing"]}><MarketingDashboard /></ProtectedRoute>} />
         <Route path="/dashboard/sponsorships" element={<ProtectedRoute allowedRoles={["admin","sponsorships"]}><SponsorsDashboard /></ProtectedRoute>} />
+
+        {/* CRM team dashboards */}
+        <Route path="/admin/stevie" element={<CrmProtectedRoute allowedRoles={["admin"]}><StevieDashboard /></CrmProtectedRoute>} />
+        <Route path="/admin/mike"   element={<CrmProtectedRoute allowedRoles={["admin","mike"]}><MikeDashboard /></CrmProtectedRoute>} />
+        <Route path="/admin/steven" element={<CrmProtectedRoute allowedRoles={["admin","steven"]}><StevenDashboard /></CrmProtectedRoute>} />
+        <Route path="/admin/jay"    element={<CrmProtectedRoute allowedRoles={["admin","jay"]}><JayDashboard /></CrmProtectedRoute>} />
+        <Route path="/admin/editor" element={<CrmProtectedRoute allowedRoles={["admin","editor","jay"]}><EditorDashboard /></CrmProtectedRoute>} />
+        <Route path="/admin/reports/deliverables" element={<CrmProtectedRoute allowedRoles={["admin","jay"]}><DeliverablesReport /></CrmProtectedRoute>} />
       </Routes>
     );
   }
