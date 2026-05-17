@@ -42,6 +42,8 @@ export default function StevenDashboard() {
   const [dealOpen, setDealOpen] = useState(false);
   const [activityOpen, setActivityOpen] = useState(false);
   const [focusBrand, setFocusBrand] = useState<string | undefined>();
+  const [brandFilter, setBrandFilter] = useState<{ tier?: string; status?: string }>({});
+  const [pipelineFilter, setPipelineFilter] = useState<string | null>(null);
 
   // ---------- queries ----------
   const { data: brands = [] } = useQuery({
@@ -190,12 +192,25 @@ export default function StevenDashboard() {
 
         {/* Pipeline kanban */}
         <TabsContent value="pipeline" className="mt-3">
+          <FilterChips
+            label="Tier"
+            value={pipelineFilter}
+            onChange={setPipelineFilter}
+            options={[
+              { value: "tier_1", label: "T1" },
+              { value: "tier_2", label: "T2" },
+              { value: "tier_3", label: "T3" },
+            ]}
+            accent={STEVEN}
+          />
           <KanbanBoard
             accent={STEVEN}
             columns={DEAL_STAGES}
-            items={deals.map((d: any) => ({
-              id: d.id, stage: d.stage, updatedAt: d.updated_at, raw: d,
-            }))}
+            items={deals
+              .filter((d: any) => !pipelineFilter || d.sponsor_brands?.tier === pipelineFilter)
+              .map((d: any) => ({
+                id: d.id, stage: d.stage, updatedAt: d.updated_at, raw: d,
+              }))}
             onMove={(it: any, next) => moveDeal(it.raw, next)}
             renderCard={(it: any) => (
               <div className="space-y-1">
