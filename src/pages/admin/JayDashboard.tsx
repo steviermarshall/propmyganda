@@ -9,6 +9,8 @@ import { startOfWeek, endOfWeek, todayISO, hoursBetween, daysSince } from "@/lib
 import { logActivity } from "@/lib/crm/activity";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { pushToGcal, pullGcal, getGcalSettings } from "@/lib/crm/gcal";
+import { useEffect } from "react";
 
 const JAY = "#b366ff";
 
@@ -133,6 +135,7 @@ export default function JayDashboard() {
     if (error) { toast.error("Failed"); qc.invalidateQueries({ queryKey: ["jay-deliverables"] }); return; }
     await logActivity(member?.id, "deliverable", id, "status_changed", { from: current, to: next });
     qc.invalidateQueries({ queryKey: ["jay-all-open-deliverables"] });
+    pushToGcal("deliverable", id);
   }
 
   async function confirmUpload() {
@@ -165,6 +168,7 @@ export default function JayDashboard() {
     if (error) { toast.error(error.message); return; }
     await logActivity(member?.id, "deliverable", assignModal.id, "assigned", patch);
     toast.success("Assigned");
+    pushToGcal("deliverable", assignModal.id);
     setAssignModal(null);
     qc.invalidateQueries({ queryKey: ["jay-deliverables"] });
     qc.invalidateQueries({ queryKey: ["jay-all-open-deliverables"] });
