@@ -2,6 +2,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import CrmLayout from "@/components/crm/CrmLayout";
+import SharedCalendar from "@/components/crm/SharedCalendar";
+import BookingSheet from "@/components/BookingSheet";
 import KpiCard from "@/components/crm/KpiCard";
 import KanbanBoard from "@/components/crm/KanbanBoard";
 import InlineSelect from "@/components/crm/InlineSelect";
@@ -178,8 +180,35 @@ export default function MikeDashboard() {
     toast.success("Marked contacted");
   }
 
+  const [jvDistroOpen, setJvDistroOpen] = useState<null | "jv" | "distro">(null);
+
   return (
     <CrmLayout title="Mike's Dashboard" accent={MIKE} quickAdd="booking">
+      <SharedCalendar accent={MIKE} />
+
+      <section className="flex flex-wrap gap-2">
+        <button
+          onClick={() => setJvDistroOpen("jv")}
+          className="px-4 py-2 text-[10px] uppercase tracking-widest font-bold text-black"
+          style={{ backgroundColor: MIKE }}
+        >
+          + JV Opportunity
+        </button>
+        <button
+          onClick={() => setJvDistroOpen("distro")}
+          className="px-4 py-2 text-[10px] uppercase tracking-widest font-bold border border-white/20 text-white hover:border-white/60"
+        >
+          + Distro Opportunity
+        </button>
+      </section>
+
+      <BookingSheet
+        open={jvDistroOpen !== null}
+        onOpenChange={(v) => !v && setJvDistroOpen(null)}
+        initialService={jvDistroOpen ?? undefined}
+        servicesAllowed={["jv", "distro"]}
+      />
+
       {/* KPIs */}
       <section>
         <p className="text-white/30 text-[10px] tracking-[0.3em] uppercase mb-4">This Week</p>

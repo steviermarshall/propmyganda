@@ -1,73 +1,67 @@
-# Phase 5 — Google Calendar Two-Way Sync (Jay)
+# Calendar + Booking Expansion Plan
 
-Connect a shared "PMG Production" Google Calendar so Jay's shoots and deliverables stay in sync between the CRM and Google.
+## 1. Fix the Google Calendar edge function error
 
-## Scope
+When the "Sync now" button is clicked on Jay's dashboard, `gcal-pull` is invoked but throws (likely "GOOGLE_CALENDAR_API_KEY is not configured" or similar) because the edge function hasn't been re-deployed since the connection was linked.
 
-- One shared Google Calendar account (workspace-level connector), not per-editor.
-- Two-way sync for `shoots` and `deliverables` (those with `due_at`).
-- Color-coding per editor via Google event `colorId`.
-- Manual "Sync now" button + automatic background pull.
+**Actions**
+- Re-deploy `gcal-pull` and `gcal-push` so they pick up the new `GOOGLE_CALENDAR_API_KEY` + `LOVABLE_API_KEY` env vars.
+- Add a friendlier error path in `src/lib/crm/gcal.ts` — surface the real edge function message in the toast instead of just "Sync failed".
+- Verify the connection with the gateway `verify_credentials` endpoint as part of the sync click, so we can tell the user "reconnect Google Calendar" vs "transient error".
 
-## Architecture
+## 2. Shared full calendar on every dashboard
 
-```text
-PMG CRM  ──push──▶  Edge Fn: gcal-push  ──▶  Google Calendar API
-                          │
-                          ▼
-                   calendar_sync table
-                   (entity ↔ google_event_id)
-                          ▲
-                          │
-PMG CRM  ◀──pull──  Edge Fn: gcal-pull  ◀──  Google events.list(updatedMin)
-                   (cron every 5 min via pg_cron)
-```
+Today only Jay sees the calendar context (via the gcal sync bar + deliverables board). We will create one reusable component used by Stevie, Mike, Steven, Jay and Editors.
 
-## Steps
+**New component:** `src/components/crm/SharedCalendar.tsx`
+- Month + week view (lightweight — `react-day-picker` for month grid we already have, plus a week-strip), color-coded by source:
+  - Shoots (Jay)
+  - Deliverable due dates (Jay)
+  - Bookings — DJ / Security / Venue / Promoter / Recap / Artist / Bartender (Mike)
+  - JV / Distro opportunities (Mike) — new type, see §3
+  - Sponsor activations (Steven)
+- Click an event → side panel with details + "Open in Google Calendar" link (uses the `event_html_link` we already store in `calendar_sync`).
+- "Add to my calendar" button on every event (writes through `gcal-push`).
+- Sync-now button + last-pulled timestamp moved into this component so every dashboard gets it.
 
-1. **Connect Google Calendar** via `standard_connectors--connect` (`google_calendar`). Calendar = workspace owner's "PMG Production" calendar (the user selects/creates it; we store the calendar ID in a `crm_settings` row).
+**Wire-in**
+- Add `<SharedCalendar />` tab/section to: `StevieDashboard`, `MikeDashboard`, `StevenDashboard`, `JayDashboard`, `EditorDashboard`.
+- Each dashboard passes an `accent` color + optional `defaultFilter` (e.g. Mike defaults to bookings, Jay to shoots).
 
-2. **Schema** (`calendar_sync` already drafted in Phase 1 plan — confirm it's in `crm_expansion_schema.sql`, add if missing):
-   - `id`, `entity_type` ('shoot'|'deliverable'), `entity_id uuid`, `google_event_id text`, `google_calendar_id text`, `etag text`, `last_synced_at timestamptz`, `sync_direction text`, unique(entity_type, entity_id).
-   - New `crm_settings` key/value table for `gcal_calendar_id`, `gcal_last_pull_at`.
+## 3. Mike — add JV & Distro opportunities like a booking
 
-3. **Edge function `gcal-push`** (`supabase/functions/gcal-push/index.ts`):
-   - Input: `{ entity_type, entity_id }`.
-   - Loads the entity, builds event payload (summary, description w/ objective + notes, start/end, `colorId` derived from `assigned_to`).
-   - If `calendar_sync` row exists → `PATCH /events/{id}`; else → `POST /events` and insert sync row.
-   - Uses gateway: `https://connector-gateway.lovable.dev/google_calendar/calendar/v3/calendars/{calId}/events`.
+Today `BookingSheet` covers DJ/Security/Venue/Promoter/Recap/Artist/Bartender. We extend it so Mike (and the team) can also schedule:
+- **JV Opportunity** (joint-venture event) — fields: partner name, deal type, revenue split, event date, location, deliverables, notes.
+- **Distro Opportunity** — fields: artist, release title, release date, platforms, marketing budget, notes. (Mirrors the existing `DistroIntakeWizard` but lighter, calendar-first.)
 
-4. **Edge function `gcal-pull`** (`supabase/functions/gcal-pull/index.ts`):
-   - Reads `gcal_last_pull_at` from `crm_settings`.
-   - `GET events?updatedMin=...&showDeleted=true&singleEvents=true`.
-   - For each event: match by `google_event_id` in `calendar_sync`; update the linked shoot/deliverable (start time, title, deletion). Skip events not originating from PMG (no sync row + no `extendedProperties.private.pmg_source`).
-   - Update `gcal_last_pull_at`.
+**Schema (migration)**
+- Extend `bookings.service` enum / check constraint to include `jv` and `distro`.
+- Add nullable columns: `partner_name`, `deal_type`, `revenue_split`, `release_title`, `release_date`, `platforms`, `marketing_budget`.
 
-5. **Triggers / invocation**:
-   - DB trigger on `shoots` and `deliverables` AFTER INSERT/UPDATE → calls `gcal-push` via `pg_net` (or simpler: client-side invoke in Jay dashboard on save).
-   - Start with **client-side invoke** in Jay's "Assign Editor" + reschedule flows for v1 — simpler, no pg_net plumbing.
-   - `gcal-pull` invoked via `pg_cron` every 5 min (`SELECT cron.schedule('gcal-pull', '*/5 * * * *', $$ select net.http_post(...) $$)`).
+**UI**
+- Add two new tabs ("JV", "Distro") to `BookingSheet` with the field components above.
+- Add a "+ New" button on Mike's dashboard that opens `BookingSheet` pre-set to JV or Distro.
+- After insert, automatically `pushToGcal("booking", id)` so it shows up on the shared calendar.
 
-6. **Jay Dashboard UI** (`src/pages/admin/JayDashboard.tsx`):
-   - Header: "Google Calendar: Connected ✓ — last sync 2m ago" + **Sync now** button (invokes `gcal-pull`).
-   - When connector not linked, show a Connect CTA that triggers the connector flow (admin-only).
-   - On shoot/deliverable save → call `supabase.functions.invoke('gcal-push', { body: { entity_type, entity_id } })` then refresh.
-   - Calendar tab: badge each event with editor color matching Google's `colorId`.
+## 4. Free Artist Bookings — available to everyone
 
-7. **Failure handling**:
-   - Push failures stored in `calendar_sync.last_error`; surface as a small warning chip on the row.
-   - Pull is idempotent (matches by `google_event_id`).
+The Artist tab already exists in `BookingSheet` but is tucked inside the public site. We will expose it inside the CRM for every team role.
 
-## Out of scope for this phase
-- Per-editor personal calendars (needs per-user OAuth).
-- Push channels / webhooks for instant sync (cron is good enough for v1).
-- Chartmetric auto-fetch (Phase 7).
+**Actions**
+- Add a global "+ Book Artist (free)" quick-add button to `CrmLayout` (next to the existing QuickAddButton) — opens `BookingSheet` with `initialService="artist"` and a `free=true` flag.
+- Add `is_free BOOLEAN DEFAULT false` to `bookings`; default `true` for the in-CRM artist quick-add.
+- RLS: any authenticated team member can insert bookings (already true), so no policy change needed beyond the new column.
 
-## Deliverables
-- Connector linked + `crm_settings` row with calendar ID
-- Migration: `calendar_sync` (if not present) + `crm_settings`
-- Edge functions: `gcal-push`, `gcal-pull`
-- pg_cron schedule for `gcal-pull`
-- Jay dashboard: sync status header, Sync now button, push-on-save wiring
+## 5. Verification
 
-Reply **go** to start, or tell me what to change (e.g. skip cron, use server-side trigger instead of client invoke, sync deliverables-only).
+- Manual: open each dashboard, confirm the shared calendar renders with mixed event types.
+- Click "Sync now" → confirm success toast with counts (or actionable error).
+- Mike: create a JV and a Distro booking → confirm both appear on the calendar and in Google Calendar.
+- Any user: click "+ Book Artist (free)" → submit → confirm row in `bookings` with `service='artist'`, `is_free=true`, and a calendar event created.
+
+## Technical notes
+
+- Files created: `src/components/crm/SharedCalendar.tsx`, `src/components/crm/CalendarEventDetail.tsx`, migration file for `bookings` extensions.
+- Files edited: `src/components/BookingSheet.tsx` (new tabs + free flag), `src/lib/crm/gcal.ts` (better errors), `src/pages/admin/{Stevie,Mike,Steven,Jay,Editor}Dashboard.tsx` (mount calendar), `src/components/crm/CrmLayout.tsx` (free-artist quick-add).
+- Edge functions to re-deploy: `gcal-pull`, `gcal-push`.
+- No breaking changes to existing data.

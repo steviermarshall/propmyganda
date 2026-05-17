@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import CrmLayout from "@/components/crm/CrmLayout";
+import SharedCalendar from "@/components/crm/SharedCalendar";
 import KpiCard from "@/components/crm/KpiCard";
 import KanbanBoard from "@/components/crm/KanbanBoard";
 import StatusDot from "@/components/crm/StatusDot";
@@ -168,6 +169,8 @@ export default function StevieDashboard() {
           </a>
         ))}
       </nav>
+
+      <SharedCalendar accent={STEVIE} />
 
       {/* MRR */}
       <section className="border border-white/10 bg-crm-surface p-6">

@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import CrmLayout from "@/components/crm/CrmLayout";
+import SharedCalendar from "@/components/crm/SharedCalendar";
 import KpiCard from "@/components/crm/KpiCard";
 import KanbanBoard from "@/components/crm/KanbanBoard";
 import { useCrmAuth } from "@/hooks/use-crm-auth";
@@ -150,6 +151,8 @@ export default function StevenDashboard() {
           <KpiCard label="Overdue Deliverables" value={overdueDeliverables.length} accent={STEVEN} />
         </div>
       </section>
+
+      <SharedCalendar accent={STEVEN} />
 
       {/* Touch reminders */}
       <section className="border border-white/10 bg-crm-surface p-6">

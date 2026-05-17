@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import CrmLayout from "@/components/crm/CrmLayout";
+import SharedCalendar from "@/components/crm/SharedCalendar";
 import KpiCard from "@/components/crm/KpiCard";
 import InlineSelect from "@/components/crm/InlineSelect";
 import { useCrmAuth } from "@/hooks/use-crm-auth";
@@ -201,6 +202,7 @@ export default function JayDashboard() {
 
   return (
     <CrmLayout title="Jay's Dashboard" accent={JAY} quickAdd="shoot">
+      <SharedCalendar accent={JAY} />
       <section>
         <p className="text-white/30 text-[10px] tracking-[0.3em] uppercase mb-4">This Week</p>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
