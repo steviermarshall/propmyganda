@@ -276,8 +276,74 @@ function BartenderForm({ data, set }: { data: Partial<BookingInsert>; set: (k: k
   );
 }
 
-export default function BookingSheet({ open, onOpenChange, initialService }: Props) {
-  const [service, setService] = useState<Service>(initialService ?? "dj");
+function JvForm({ data, set }: { data: Partial<BookingInsert>; set: (k: keyof BookingInsert, v: string) => void }) {
+  return (
+    <div className="space-y-6">
+      <CommonFields data={data} set={set} />
+      <Field label="Partner Name" required>
+        <input className={inputCls} placeholder="Brand / promoter / venue" value={data.partner_name ?? ""} onChange={e => set("partner_name", e.target.value)} />
+      </Field>
+      <Field label="Deal Type">
+        <select className={selectCls} value={data.deal_type ?? ""} onChange={e => set("deal_type", e.target.value)}>
+          <option value="">Select…</option>
+          <option>Co-promotion</option>
+          <option>Revenue share</option>
+          <option>Sponsored event</option>
+          <option>Brand activation</option>
+          <option>Other</option>
+        </select>
+      </Field>
+      <Field label="Revenue Split">
+        <input className={inputCls} placeholder="e.g. 60 / 40" value={data.revenue_split ?? ""} onChange={e => set("revenue_split", e.target.value)} />
+      </Field>
+      <Field label="Notes">
+        <textarea className={inputCls} rows={3} placeholder="Goals, deliverables, contacts…" value={data.notes ?? ""} onChange={e => set("notes", e.target.value)} />
+      </Field>
+    </div>
+  );
+}
+
+function DistroForm({ data, set }: { data: Partial<BookingInsert>; set: (k: keyof BookingInsert, v: string) => void }) {
+  return (
+    <div className="space-y-6">
+      <CommonFields data={data} set={set} />
+      <Field label="Artist Name" required>
+        <input className={inputCls} placeholder="Artist or label" value={data.artist_name ?? ""} onChange={e => set("artist_name", e.target.value)} />
+      </Field>
+      <Field label="Release Title">
+        <input className={inputCls} placeholder="Single / EP / album" value={data.release_title ?? ""} onChange={e => set("release_title", e.target.value)} />
+      </Field>
+      <Field label="Release Date">
+        <input className={inputCls} type="date" value={data.release_date ?? ""} onChange={e => set("release_date", e.target.value)} />
+      </Field>
+      <Field label="Platforms">
+        <input className={inputCls} placeholder="Spotify, Apple, YouTube…" value={data.platforms ?? ""} onChange={e => set("platforms", e.target.value)} />
+      </Field>
+      <Field label="Marketing Budget">
+        <input className={inputCls} placeholder="e.g. $1,500" value={data.marketing_budget ?? ""} onChange={e => set("marketing_budget", e.target.value)} />
+      </Field>
+      <Field label="Notes">
+        <textarea className={inputCls} rows={3} placeholder="Pitch angle, goals…" value={data.notes ?? ""} onChange={e => set("notes", e.target.value)} />
+      </Field>
+    </div>
+  );
+}
+
+const ALL_TABS: { value: Service; label: string }[] = [
+  { value: "dj", label: "DJ" },
+  { value: "security", label: "Security" },
+  { value: "venue", label: "Venue" },
+  { value: "promoter", label: "Promoter" },
+  { value: "event_recap", label: "Recap" },
+  { value: "artist", label: "Artist" },
+  { value: "bartender", label: "Bar" },
+  { value: "jv", label: "JV" },
+  { value: "distro", label: "Distro" },
+];
+
+export default function BookingSheet({ open, onOpenChange, initialService, free, servicesAllowed }: Props) {
+  const tabs = servicesAllowed ? ALL_TABS.filter(t => servicesAllowed.includes(t.value)) : ALL_TABS;
+  const [service, setService] = useState<Service>(initialService ?? tabs[0]?.value ?? "dj");
   const [data, setData] = useState<Partial<BookingInsert>>({});
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
 
@@ -289,7 +355,13 @@ export default function BookingSheet({ open, onOpenChange, initialService }: Pro
     if (!data.name?.trim() || !data.email?.trim()) return;
     setStatus("loading");
     try {
-      const payload = { ...data, service, name: data.name!, email: data.email! } as BookingInsert;
+      const eventAt = data.event_date ? new Date(data.event_date).toISOString() : undefined;
+      const payload = {
+        ...data, service,
+        name: data.name!, email: data.email!,
+        is_free: free ?? false,
+        event_at: eventAt,
+      } as BookingInsert;
 
       const { error } = await supabase.from("bookings").insert(payload as never);
       if (error) throw error;
@@ -312,8 +384,14 @@ export default function BookingSheet({ open, onOpenChange, initialService }: Pro
     <Sheet open={open} onOpenChange={(v) => { onOpenChange(v); if (!v) reset(); }}>
       <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
         <SheetHeader className="mb-6">
-          <SheetTitle className="text-xl font-black uppercase tracking-tight">Book / Hire</SheetTitle>
-          <p className="text-xs text-muted-foreground tracking-wide">Select a service and fill in the details — we'll be in touch.</p>
+          <SheetTitle className="text-xl font-black uppercase tracking-tight">
+            {free ? "Book Artist — Free" : "Book / Hire"}
+          </SheetTitle>
+          <p className="text-xs text-muted-foreground tracking-wide">
+            {free
+              ? "Artist bookings are always free. Fill in the details and we'll schedule it."
+              : "Select a service and fill in the details — we'll be in touch."}
+          </p>
         </SheetHeader>
 
         {status === "success" ? (
@@ -327,16 +405,11 @@ export default function BookingSheet({ open, onOpenChange, initialService }: Pro
         ) : (
           <>
             <Tabs value={service} onValueChange={v => { setService(v as Service); setData(prev => ({ name: prev.name, email: prev.email, phone: prev.phone })); }}>
-              <TabsList className="w-full mb-8 grid grid-cols-7 h-auto p-0 bg-transparent border border-border rounded-none">
-                {([
-                  { value: "dj", label: "DJ" },
-                  { value: "security", label: "Security" },
-                  { value: "venue", label: "Venue" },
-                  { value: "promoter", label: "Promoter" },
-                  { value: "event_recap", label: "Recap" },
-                  { value: "artist", label: "Artist" },
-                  { value: "bartender", label: "Bar" },
-                ] as { value: Service; label: string }[]).map(s => (
+              <TabsList
+                className="w-full mb-8 grid h-auto p-0 bg-transparent border border-border rounded-none"
+                style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0,1fr))` }}
+              >
+                {tabs.map(s => (
                   <TabsTrigger
                     key={s.value}
                     value={s.value}
@@ -354,6 +427,8 @@ export default function BookingSheet({ open, onOpenChange, initialService }: Pro
               <TabsContent value="event_recap"><EventRecapForm data={data} set={set} /></TabsContent>
               <TabsContent value="artist"><ArtistForm data={data} set={set} /></TabsContent>
               <TabsContent value="bartender"><BartenderForm data={data} set={set} /></TabsContent>
+              <TabsContent value="jv"><JvForm data={data} set={set} /></TabsContent>
+              <TabsContent value="distro"><DistroForm data={data} set={set} /></TabsContent>
             </Tabs>
 
             {status === "error" && (
@@ -365,7 +440,7 @@ export default function BookingSheet({ open, onOpenChange, initialService }: Pro
               disabled={status === "loading" || !data.name?.trim() || !data.email?.trim()}
               className="mt-8 w-full bg-foreground text-background py-4 text-xs tracking-[0.2em] uppercase font-bold hover:opacity-80 transition-opacity disabled:opacity-40"
             >
-              {status === "loading" ? "Sending…" : "Send Request"}
+              {status === "loading" ? "Sending…" : free ? "Schedule Artist" : "Send Request"}
             </button>
           </>
         )}
