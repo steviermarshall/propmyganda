@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, addDays, startOfDay, isSameDay } from "date-fns";
-import { pullGcal, getGcalSettings } from "@/lib/crm/gcal";
+import { pullGcal, getGcalSettings, listGcalEvents } from "@/lib/crm/gcal";
 import { toast } from "sonner";
 
-type Source = "shoot" | "deliverable" | "booking" | "crm_booking";
+type Source = "shoot" | "deliverable" | "booking" | "crm_booking" | "external";
 
 interface Evt {
   id: string;
@@ -13,6 +13,7 @@ interface Evt {
   sub: string;
   at: Date;
   color: string;
+  htmlLink?: string;
 }
 
 const COLORS: Record<Source, string> = {
@@ -20,6 +21,7 @@ const COLORS: Record<Source, string> = {
   deliverable:  "#f59e0b", // amber
   booking:      "#3b82f6", // Mike blue
   crm_booking:  "#3b82f6",
+  external:     "#9ca3af", // gray — bookings from outside PMG
 };
 
 const SOURCE_LABEL: Record<Source, string> = {
@@ -27,6 +29,7 @@ const SOURCE_LABEL: Record<Source, string> = {
   deliverable: "Deliverable",
   booking: "Booking",
   crm_booking: "Pipeline",
+  external: "External",
 };
 
 interface Props {
@@ -47,7 +50,7 @@ export default function SharedCalendar({ accent, days = 21, filter }: Props) {
     const since = startOfDay(addDays(new Date(), -1)).toISOString();
     const until = addDays(new Date(), days + 7).toISOString();
 
-    const [shootsRes, delivRes, bookRes, crmRes] = await Promise.all([
+    const [shootsRes, delivRes, bookRes, crmRes, gcalEvents] = await Promise.all([
       (supabase.from("shoots") as any)
         .select("id, scheduled_at, shoot_date, title, location, status")
         .gte("scheduled_at", since).lte("scheduled_at", until).limit(200),
@@ -60,6 +63,7 @@ export default function SharedCalendar({ accent, days = 21, filter }: Props) {
       (supabase.from("crm_bookings") as any)
         .select("id, artist_name, shoot_date, status")
         .gte("shoot_date", since.slice(0, 10)).limit(200),
+      listGcalEvents(since, until),
     ]);
 
     const all: Evt[] = [];
@@ -105,6 +109,25 @@ export default function SharedCalendar({ accent, days = 21, filter }: Props) {
         id: `crm-${c.id}`, source: "crm_booking",
         title: `${c.artist_name} — pipeline`,
         sub: c.status, at: new Date(c.shoot_date), color: COLORS.crm_booking,
+      });
+    });
+
+    // External Google Calendar events (anything not created by PMG).
+    // These are real bookings made directly on the calendar — show them so
+    // nobody double-books a slot.
+    (gcalEvents ?? []).forEach((ev) => {
+      if (ev.isPmg) return; // PMG-sourced events already loaded from Supabase
+      if (!ev.start) return;
+      const at = new Date(ev.start);
+      if (isNaN(at.getTime())) return;
+      all.push({
+        id: `ext-${ev.id}`,
+        source: "external",
+        title: ev.summary,
+        sub: ev.location || "external calendar",
+        at,
+        color: COLORS.external,
+        htmlLink: ev.htmlLink,
       });
     });
 
@@ -223,24 +246,34 @@ export default function SharedCalendar({ accent, days = 21, filter }: Props) {
           <p className="text-white/30 text-sm">No events scheduled.</p>
         ) : (
           <div className="divide-y divide-white/5">
-            {dayEvents.map((e) => (
-              <div key={e.id} className="py-2 flex items-start gap-3">
-                <span className="mt-1.5 w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: e.color }} />
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm text-white truncate">{e.title}</div>
-                  <div className="text-[10px] uppercase tracking-widest text-white/40">
-                    {format(e.at, "h:mm a")} · {SOURCE_LABEL[e.source]}{e.sub ? ` · ${e.sub}` : ""}
+            {dayEvents.map((e) => {
+              const inner = (
+                <div className="py-2 flex items-start gap-3">
+                  <span className="mt-1.5 w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: e.color }} />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm text-white truncate">{e.title}</div>
+                    <div className="text-[10px] uppercase tracking-widest text-white/40">
+                      {format(e.at, "h:mm a")} · {SOURCE_LABEL[e.source]}{e.sub ? ` · ${e.sub}` : ""}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+              return e.htmlLink ? (
+                <a key={e.id} href={e.htmlLink} target="_blank" rel="noreferrer"
+                  className="block hover:bg-white/5 transition-colors">
+                  {inner}
+                </a>
+              ) : (
+                <div key={e.id}>{inner}</div>
+              );
+            })}
           </div>
         )}
       </div>
 
       {/* Legend */}
       <div className="flex flex-wrap gap-3 px-4 py-2 border-t border-white/10 text-[10px] uppercase tracking-widest text-white/50">
-        {(["shoot","deliverable","booking","crm_booking"] as Source[]).map((s) => (
+        {(["shoot","deliverable","booking","crm_booking","external"] as Source[]).map((s) => (
           <span key={s} className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[s] }} />
             {SOURCE_LABEL[s]}

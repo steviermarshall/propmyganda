@@ -52,3 +52,28 @@ export async function getGcalSettings(): Promise<{ calendar_id: string; last_pul
     .select("value").eq("key", "gcal").maybeSingle();
   return data?.value ?? null;
 }
+
+export interface GcalRawEvent {
+  id: string;
+  summary: string;
+  description: string | null;
+  location: string | null;
+  start: string;
+  end: string;
+  htmlLink: string;
+  isPmg: boolean;
+  pmgSource: string | null;
+  pmgId: string | null;
+  colorId: string | null;
+}
+
+export async function listGcalEvents(timeMin?: string, timeMax?: string): Promise<GcalRawEvent[]> {
+  const { data, error } = await supabase.functions.invoke("gcal-events", {
+    body: { timeMin, timeMax },
+  });
+  if (error) {
+    console.warn("gcal-events failed", error);
+    return [];
+  }
+  return (data?.events ?? []) as GcalRawEvent[];
+}
