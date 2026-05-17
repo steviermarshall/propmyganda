@@ -198,6 +198,12 @@ export default function JayDashboard() {
         </div>
       </section>
 
+      <GcalSyncBar accent={JAY} onSynced={() => {
+        qc.invalidateQueries({ queryKey: ["jay-shoots"] });
+        qc.invalidateQueries({ queryKey: ["jay-deliverables"] });
+        qc.invalidateQueries({ queryKey: ["jay-all-open-deliverables"] });
+      }} />
+
       {/* Tab bar */}
       <div className="border-b border-white/10 flex gap-1 overflow-x-auto">
         {TABS.map((t) => (
