@@ -1,12 +1,6 @@
--- ════════════════════════════════════════════════════════════════
--- PMG CRM — RLS FIX
--- Run this in Cloud → Database → SQL Editor if CRM dashboard routing
--- falls back to Marketing or team_members returns error 42P17.
--- ════════════════════════════════════════════════════════════════
-
--- The old policy queried public.team_members from inside a policy on
--- public.team_members, which causes:
--- infinite recursion detected in policy for relation "team_members"
+-- Fix CRM staff lookup: the previous admin policy queried team_members from
+-- inside a team_members policy, which caused Postgres error 42P17
+-- "infinite recursion detected in policy for relation team_members".
 
 CREATE OR REPLACE FUNCTION public.has_crm_role(_role text)
 RETURNS boolean
@@ -74,9 +68,3 @@ AS $$
      OR lower(coalesce(email, '')) = lower(coalesce(auth.email(), ''))
   LIMIT 1;
 $$;
-
-UPDATE public.team_members
-SET email = 'steviermarshall@gmail.com',
-    name = 'Stevie Marshall',
-    auth_user_id = '6d72ebb5-7251-47c9-89d8-e3668b4a47a1'
-WHERE role = 'admin';
