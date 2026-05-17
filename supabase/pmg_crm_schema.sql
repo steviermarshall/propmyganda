@@ -38,13 +38,21 @@ CREATE TABLE IF NOT EXISTS public.team_members (
 
 ALTER TABLE public.team_members ENABLE ROW LEVEL SECURITY;
 
--- Seed team — auth_user_id linked after each person signs up
-INSERT INTO public.team_members (name, role, email) VALUES
+-- Seed team — uses NOT EXISTS because email/name are not unique columns.
+INSERT INTO public.team_members (name, role, email)
+SELECT v.name, v.role, v.email
+FROM (VALUES
   ('Marshall', 'admin',  'marshall@propmyganda.com'),
   ('Mike',     'mike',   'mike@propmyganda.com'),
   ('Steven',   'steven', 'steven@propmyganda.com'),
   ('Jay',      'jay',    'jay@propmyganda.com')
-ON CONFLICT DO NOTHING;
+) AS v(name, role, email)
+WHERE NOT EXISTS (
+  SELECT 1
+  FROM public.team_members tm
+  WHERE tm.role = v.role
+     OR lower(coalesce(tm.email, '')) = lower(v.email)
+);
 
 DROP POLICY IF EXISTS "tm_admin_all" ON public.team_members;
 CREATE POLICY "tm_admin_all" ON public.team_members
