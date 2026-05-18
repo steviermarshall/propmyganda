@@ -1,6 +1,5 @@
 import { useParams, Link } from "react-router-dom";
 import { artists, products } from "@/lib/data";
-import { ExternalLink } from "lucide-react";
 import SEO from "@/components/SEO";
 
 const ArtistDetail = () => {
@@ -50,94 +49,77 @@ const ArtistDetail = () => {
         </div>
       </div>
 
-      {/* Bio + track player */}
+      {/* Artist info + PMG track player */}
       <section className="section-padding bg-background">
-        <div className="container-content max-w-3xl">
-          <h2 className="text-2xl font-bold uppercase tracking-wider mb-6">About</h2>
-          <p className="text-muted-foreground leading-relaxed">
-            {artist.bio ?? `${artist.name} is one of the most compelling voices in independent hip-hop. Signed to PMG, ${artist.name} continues to push the boundaries of the genre with raw lyricism and authentic storytelling rooted in the streets.`}
-          </p>
-
-          {/* Spotify track embed */}
-          {artist.spotifyTrackId && (
-            <div className="mt-10">
-              <iframe
-                src={`https://open.spotify.com/embed/track/${artist.spotifyTrackId}?utm_source=generator&theme=0`}
-                width="100%"
-                height="152"
-                frameBorder="0"
-                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                loading="eager"
-                className="rounded-none"
-              />
-            </div>
-          )}
-
-          {/* Streaming links */}
-          <div className="mt-10 flex flex-wrap gap-4">
-            {artist.spotifyArtistId && (
-              <a
-                href={`https://open.spotify.com/artist/${artist.spotifyArtistId}`}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center gap-2 border border-foreground px-5 py-3 text-xs tracking-[0.15em] uppercase font-bold hover:bg-primary hover:text-primary-foreground transition-colors"
-              >
-                Spotify <ExternalLink size={12} />
-              </a>
-            )}
-            {!artist.spotifyArtistId && (
-              ["Spotify", "Apple Music", "YouTube", "SoundCloud"].map((platform) => (
-                <a
-                  key={platform}
-                  href="#"
-                  className="flex items-center gap-2 border border-foreground px-5 py-3 text-xs tracking-[0.15em] uppercase font-bold hover:bg-primary hover:text-primary-foreground transition-colors"
-                >
-                  {platform} <ExternalLink size={12} />
-                </a>
-              ))
-            )}
-          </div>
-        </div>
-      </section>
-
-      {/* Discography — full album embed if available */}
-      <section className="section-padding bg-secondary border-t border-border">
         <div className="container-content">
-          <h2 className="text-2xl font-bold uppercase tracking-wider mb-10">Discography</h2>
-          {artist.spotifyAlbumId ? (
-            <iframe
-              src={`https://open.spotify.com/embed/album/${artist.spotifyAlbumId}?utm_source=generator&theme=0`}
-              width="100%"
-              height="380"
-              frameBorder="0"
-              allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-              loading="eager"
-            />
-          ) : (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="group cursor-pointer">
-                  <div className="aspect-square bg-primary/10 mb-3 hover-zoom">
-                    <img src={artist.image} alt={`${artist.name} — album cover artwork`} className="w-full h-full object-cover grayscale" loading="lazy" width={800} height={800} />
-                  </div>
-                  <p className="text-sm font-bold uppercase">Project {i}</p>
-                  <p className="text-xs text-muted-foreground">202{i + 2}</p>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
+
+            {/* Left: Spotify artist info embed */}
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground mb-4">Artist</p>
+              {artist.spotifyArtistId ? (
+                <iframe
+                  src={`https://open.spotify.com/embed/artist/${artist.spotifyArtistId}?utm_source=generator&theme=0`}
+                  width="100%"
+                  height="380"
+                  frameBorder="0"
+                  allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                  loading="eager"
+                />
+              ) : (
+                <div className="space-y-4">
+                  <h2 className="text-2xl font-bold uppercase tracking-wider">About</h2>
+                  <p className="text-muted-foreground leading-relaxed">
+                    {artist.bio ?? `${artist.name} is one of the most compelling voices in independent hip-hop. Signed to PMG, ${artist.name} continues to push the boundaries of the genre.`}
+                  </p>
                 </div>
-              ))}
+              )}
             </div>
-          )}
+
+            {/* Right: PMG track player */}
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground mb-4">Now Playing — PMG</p>
+              {artist.spotifyTrackId ? (
+                <iframe
+                  src={`https://open.spotify.com/embed/track/${artist.spotifyTrackId}?utm_source=generator&theme=0`}
+                  width="100%"
+                  height="380"
+                  frameBorder="0"
+                  allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                  loading="eager"
+                />
+              ) : artist.spotifyAlbumId ? (
+                <iframe
+                  src={`https://open.spotify.com/embed/album/${artist.spotifyAlbumId}?utm_source=generator&theme=0`}
+                  width="100%"
+                  height="380"
+                  frameBorder="0"
+                  allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                  loading="eager"
+                />
+              ) : (
+                <div className="aspect-square bg-secondary flex items-center justify-center">
+                  <p className="text-muted-foreground text-xs uppercase tracking-widest">Music Coming Soon</p>
+                </div>
+              )}
+              {artist.bio && !artist.spotifyArtistId && (
+                <p className="text-muted-foreground leading-relaxed mt-6 text-sm">{artist.bio}</p>
+              )}
+            </div>
+
+          </div>
         </div>
       </section>
 
       {/* Related Merch */}
       {relatedProducts.length > 0 && (
-        <section className="section-padding bg-background border-t border-border">
+        <section className="section-padding bg-secondary border-t border-border">
           <div className="container-content">
             <h2 className="text-2xl font-bold uppercase tracking-wider mb-10">Merch</h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
               {relatedProducts.map((product) => (
                 <Link to="/store" key={product.id} className="group">
-                  <div className="aspect-square bg-secondary hover-zoom">
+                  <div className="aspect-square bg-background hover-zoom">
                     <img src={product.image} alt={product.name} className="w-full h-full object-cover" loading="lazy" width={800} height={800} />
                   </div>
                   <p className="text-xs uppercase tracking-wider text-muted-foreground mt-3">{product.artist}</p>
