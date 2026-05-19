@@ -126,30 +126,65 @@ function UpcomingCard({ ev }: { ev: Event }) {
 }
 
 // ── Past event card ───────────────────────────────────────────────────────────
+function isInstagramUrl(url: string | null | undefined): boolean {
+  return !!url && /instagram\.com\/(p|reel)\//i.test(url);
+}
+
+function igEmbedUrl(url: string): string {
+  return `${url.split("?")[0].replace(/\/$/, "")}/embed/`;
+}
+
 function PastCard({ ev }: { ev: Event }) {
   const d = fmt(ev.event_date);
+  // Use ticket_url as a fallback when flyer_url is missing but it's an IG link
+  const visualUrl = ev.flyer_url ?? (isInstagramUrl(ev.ticket_url) ? ev.ticket_url : null);
+  const igEmbed = isInstagramUrl(visualUrl);
+
+  const linkHref = ev.ticket_url ?? ev.flyer_url ?? null;
+  const inner = (
+    <div className="group relative overflow-hidden border border-border/40 hover:border-border transition-colors">
+      {igEmbed ? (
+        <div className="aspect-[3/4] overflow-hidden bg-secondary relative">
+          <iframe
+            src={igEmbedUrl(visualUrl!)}
+            title={ev.title}
+            className="absolute left-0 w-full border-0"
+            style={{ top: -54, height: "calc(100% + 160px)" }}
+            scrolling="no"
+            loading="lazy"
+            allowTransparency
+          />
+        </div>
+      ) : visualUrl ? (
+        <div className="aspect-[3/4] overflow-hidden">
+          <img
+            src={visualUrl}
+            alt={ev.title}
+            className="w-full h-full object-cover grayscale opacity-60 group-hover:opacity-80 group-hover:grayscale-0 transition-all duration-500"
+          />
+        </div>
+      ) : (
+        <div className="aspect-[3/4] bg-secondary flex items-center justify-center">
+          <span className="text-6xl font-black text-border">{d.day}</span>
+        </div>
+      )}
+      <div className="p-4">
+        <p className="text-[9px] tracking-[0.3em] uppercase text-muted-foreground">{d.month} {d.year}</p>
+        <h3 className="font-black text-sm uppercase tracking-tight mt-1 line-clamp-2">{ev.title}</h3>
+        {ev.city && <p className="text-[10px] text-muted-foreground mt-0.5">{ev.city}</p>}
+      </div>
+    </div>
+  );
+
   return (
     <ScrollReveal y={20}>
-      <div className="group relative overflow-hidden border border-border/40 hover:border-border transition-colors">
-        {ev.flyer_url ? (
-          <div className="aspect-[3/4] overflow-hidden">
-            <img
-              src={ev.flyer_url}
-              alt={ev.title}
-              className="w-full h-full object-cover grayscale opacity-60 group-hover:opacity-80 group-hover:grayscale-0 transition-all duration-500"
-            />
-          </div>
-        ) : (
-          <div className="aspect-[3/4] bg-secondary flex items-center justify-center">
-            <span className="text-6xl font-black text-border">{d.day}</span>
-          </div>
-        )}
-        <div className="p-4">
-          <p className="text-[9px] tracking-[0.3em] uppercase text-muted-foreground">{d.month} {d.year}</p>
-          <h3 className="font-black text-sm uppercase tracking-tight mt-1 line-clamp-2">{ev.title}</h3>
-          {ev.city && <p className="text-[10px] text-muted-foreground mt-0.5">{ev.city}</p>}
-        </div>
-      </div>
+      {linkHref ? (
+        <a href={linkHref} target="_blank" rel="noopener noreferrer" className="block">
+          {inner}
+        </a>
+      ) : (
+        inner
+      )}
     </ScrollReveal>
   );
 }
