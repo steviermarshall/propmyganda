@@ -21,6 +21,7 @@ import Contact from "./pages/Contact";
 import Propworld from "./pages/Propworld";
 import Events from "./pages/Events";
 import Publication from "./pages/Publication";
+import PublicationDetail from "./pages/PublicationDetail";
 import NotFound from "./pages/NotFound";
 
 import Login from "./pages/auth/Login";
@@ -98,7 +99,8 @@ const AppRoutes = () => {
           <Route path="/propworld"     element={<Propworld />} />
           <Route path="/contact"       element={<Contact />} />
           <Route path="/events"        element={<Events />} />
-          <Route path="/publication"   element={<Publication />} />
+          <Route path="/publication"        element={<Publication />} />
+          <Route path="/publication/:slug"  element={<PublicationDetail />} />
           <Route path="*"              element={<NotFound />} />
         </Routes>
       </PublicLayout>
