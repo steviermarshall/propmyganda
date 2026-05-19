@@ -59,12 +59,15 @@ const ArtistDetail = () => {
               <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground mb-4">Artist</p>
               {artist.spotifyArtistId ? (
                 <iframe
-                  src={`https://open.spotify.com/embed/artist/${artist.spotifyArtistId}?utm_source=generator&theme=0`}
+                  data-testid="embed-iframe"
+                  style={{ borderRadius: "12px" }}
+                  src={`https://open.spotify.com/embed/artist/${artist.spotifyArtistId}?utm_source=generator`}
                   width="100%"
-                  height="380"
+                  height="352"
                   frameBorder="0"
+                  allowFullScreen
                   allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                  loading="eager"
+                  loading="lazy"
                 />
               ) : (
                 <div className="space-y-4">
@@ -81,12 +84,14 @@ const ArtistDetail = () => {
               <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground mb-4">Now Playing — PMG</p>
               {artist.spotifyTrackId ? (
                 <iframe
-                  src={`https://open.spotify.com/embed/track/${artist.spotifyTrackId}?utm_source=generator&theme=0`}
+                  style={{ borderRadius: "12px" }}
+                  src={`https://open.spotify.com/embed/track/${artist.spotifyTrackId}?utm_source=generator`}
                   width="100%"
-                  height="380"
+                  height="352"
                   frameBorder="0"
+                  allowFullScreen
                   allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                  loading="eager"
+                  loading="lazy"
                 />
               ) : artist.spotifyAlbumId ? (
                 <iframe
