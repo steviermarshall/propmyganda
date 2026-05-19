@@ -124,7 +124,9 @@ export default function Artists() {
                 We've put artists in front of millions. If you're serious about your music, we're serious about your story.
               </p>
               <a
-                href="/distribution"
+                href="https://docs.google.com/forms/d/1dXl9gqipbr_dqlHaEP4XLhOs1Q3ruVAPSST_khyfcPg/viewform"
+                target="_blank"
+                rel="noreferrer"
                 className="inline-flex items-center gap-3 text-xs tracking-[0.2em] uppercase font-bold text-electric border border-electric px-6 py-3 hover:bg-electric hover:text-black transition-colors"
               >
                 Work With PMG <span>→</span>
