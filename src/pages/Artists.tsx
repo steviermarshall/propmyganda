@@ -11,11 +11,11 @@ const zoe = artists.find((a) => a.id === "zoe") as typeof artists[0] & {
 
 // Paste your reel URLs here (tap ••• → Copy Link on each reel)
 const REEL_URLS: string[] = [
-  // "https://www.instagram.com/reel/XXXXXXXXXXX/",
-  // "https://www.instagram.com/reel/XXXXXXXXXXX/",
-  // "https://www.instagram.com/reel/XXXXXXXXXXX/",
-  // "https://www.instagram.com/reel/XXXXXXXXXXX/",
-  // "https://www.instagram.com/reel/XXXXXXXXXXX/",
+  "https://www.instagram.com/reel/DXwwAHiuWc5/",
+  "https://www.instagram.com/reel/DN8r0-XDnF1/",
+  "https://www.instagram.com/reel/DRfP-MLic1P/",
+  "https://www.instagram.com/reel/DYZ8fcauiaw/",
+  "https://www.instagram.com/reel/DWRy8FEiUCD/",
 ];
 
 function InstagramReels() {
