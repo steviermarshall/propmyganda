@@ -1,5 +1,5 @@
 export type UserRole = "admin" | "distribution" | "marketing" | "sponsorships";
-export type CrmRole = "admin" | "mike" | "steven" | "jay";
+export type CrmRole = "admin" | "mike" | "steven" | "jay" | "editor";
 
 export type Database = {
   public: {
@@ -133,11 +133,12 @@ export type Database = {
       bookings: {
         Row: {
           id: string;
-          service: "security" | "dj" | "venue" | "promoter" | "event_recap" | "artist" | "bartender";
+          service: "security" | "dj" | "venue" | "promoter" | "event_recap" | "artist" | "bartender" | "jv" | "distro";
           name: string;
           email: string;
           phone: string | null;
           event_date: string | null;
+          event_at: string | null;
           location: string | null;
           notes: string | null;
           set_length: string | null;
@@ -151,6 +152,16 @@ export type Database = {
           marketing_goals: string | null;
           indoor_outdoor: string | null;
           expected_attendance: string | null;
+          is_free: boolean;
+          created_by: string | null;
+          partner_name: string | null;
+          deal_type: string | null;
+          revenue_split: string | null;
+          artist_name: string | null;
+          release_title: string | null;
+          release_date: string | null;
+          platforms: string | null;
+          marketing_budget: string | null;
           created_at: string;
         };
         Insert: Omit<Database["public"]["Tables"]["bookings"]["Row"], "id" | "created_at">;
@@ -246,6 +257,7 @@ export type Database = {
           status: "inquiry" | "quoted" | "booked" | "shot" | "delivered" | "paid" | "dead";
           stripe_deposit_paid: boolean;
           shoot_date: string | null;
+          shoot_at: string | null;
           source: "inbound" | "outbound" | "repeat" | null;
           notes: string | null;
           assigned_to: string | null;
@@ -391,6 +403,10 @@ export type Database = {
           status: "scheduled" | "filming" | "edit" | "review" | "delivered";
           notes: string | null;
           shooter: string | null;
+          scheduled_at: string | null;
+          duration_hours: number | null;
+          assigned_editor_id: string | null;
+          title: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -408,6 +424,14 @@ export type Database = {
           edited_by: string | null;
           filmed_at: string | null;
           delivered_at: string | null;
+          assigned_to: string | null;
+          objective: string | null;
+          editor_notes: string | null;
+          expected_runtime_sec: number | null;
+          due_at: string | null;
+          priority: "low" | "med" | "high" | null;
+          revision_count: number;
+          last_review_notes: string | null;
           updated_at: string;
         };
         Insert: Omit<Database["public"]["Tables"]["deliverables"]["Row"], "id" | "updated_at">;
@@ -501,6 +525,185 @@ export type Database = {
         };
         Insert: Omit<Database["public"]["Tables"]["kpi_targets"]["Row"], "id">;
         Update: Partial<Database["public"]["Tables"]["kpi_targets"]["Insert"]>;
+      };
+      calendar_sync: {
+        Row: {
+          id: string;
+          entity_type: "shoot" | "deliverable" | "booking" | "crm_booking";
+          entity_id: string;
+          google_event_id: string;
+          google_calendar_id: string;
+          last_synced_at: string | null;
+          sync_direction: "push" | "pull" | "both" | null;
+          etag: string | null;
+          last_error: string | null;
+          event_html_link: string | null;
+        };
+        Insert: Omit<Database["public"]["Tables"]["calendar_sync"]["Row"], "id">;
+        Update: Partial<Database["public"]["Tables"]["calendar_sync"]["Insert"]>;
+      };
+      crm_settings: {
+        Row: {
+          key: string;
+          value: Record<string, unknown>;
+          updated_at: string | null;
+        };
+        Insert: Omit<Database["public"]["Tables"]["crm_settings"]["Row"], never>;
+        Update: Partial<Database["public"]["Tables"]["crm_settings"]["Insert"]>;
+      };
+      distro_artist_members: {
+        Row: {
+          id: string;
+          distro_artist_id: string;
+          member_role: "artist" | "producer";
+          is_primary: boolean;
+          first_name: string;
+          last_name: string;
+          stage_name: string | null;
+          pro_affiliation: "BMI" | "ASCAP" | "SESAC" | "other" | "none" | null;
+          pro_other: string | null;
+          ipi_number: string | null;
+          distro_email: string | null;
+          agreements_email: string | null;
+          created_at: string;
+        };
+        Insert: Omit<Database["public"]["Tables"]["distro_artist_members"]["Row"], "id" | "created_at">;
+        Update: Partial<Database["public"]["Tables"]["distro_artist_members"]["Insert"]>;
+      };
+      streaming_metrics: {
+        Row: {
+          id: string;
+          distro_artist_id: string;
+          platform: "spotify" | "apple" | "youtube" | "chartmetric" | "tiktok";
+          url: string | null;
+          monthly_listeners: number | null;
+          followers: number | null;
+          streams_30d: number | null;
+          recorded_at: string;
+          notes: string | null;
+        };
+        Insert: Omit<Database["public"]["Tables"]["streaming_metrics"]["Row"], "id">;
+        Update: Partial<Database["public"]["Tables"]["streaming_metrics"]["Insert"]>;
+      };
+      sponsor_brands: {
+        Row: {
+          id: string;
+          name: string;
+          parent_company: string | null;
+          industry: string | null;
+          logo_url: string | null;
+          brand_colors: unknown[];
+          brand_guidelines_url: string | null;
+          hq_location: string | null;
+          regions: string[];
+          annual_budget_estimate: number | null;
+          fiscal_year_end_month: number | null;
+          target_demo: Record<string, unknown>;
+          previous_sponsorships: string[];
+          activation_style: string[];
+          status: "cold" | "prospecting" | "pitched" | "negotiating" | "active" | "lapsed" | "dead";
+          tier: "tier_1" | "tier_2" | "tier_3";
+          source: string | null;
+          owner_id: string | null;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database["public"]["Tables"]["sponsor_brands"]["Row"], "id" | "created_at" | "updated_at">;
+        Update: Partial<Database["public"]["Tables"]["sponsor_brands"]["Insert"]>;
+      };
+      sponsor_contacts: {
+        Row: {
+          id: string;
+          brand_id: string;
+          name: string;
+          title: string | null;
+          department: string | null;
+          email: string | null;
+          phone: string | null;
+          linkedin_url: string | null;
+          decision_power: "gatekeeper" | "influencer" | "signer" | null;
+          reports_to_contact_id: string | null;
+          last_touch_at: string | null;
+          next_touch_at: string | null;
+          touch_cadence_days: number | null;
+          comms_preference: string | null;
+          personal_notes: string | null;
+          birthday: string | null;
+          created_at: string;
+        };
+        Insert: Omit<Database["public"]["Tables"]["sponsor_contacts"]["Row"], "id" | "created_at">;
+        Update: Partial<Database["public"]["Tables"]["sponsor_contacts"]["Insert"]>;
+      };
+      sponsor_properties: {
+        Row: {
+          id: string;
+          name: string;
+          property_type: "artist" | "tour" | "event" | "series" | "drop" | "other" | null;
+          audience_size: number | null;
+          demo_breakdown: Record<string, unknown>;
+          geo_split: Record<string, unknown>;
+          engagement_metrics: Record<string, unknown>;
+          inventory: unknown[];
+          rate_card: Record<string, unknown>;
+          exclusivity_restrictions: string | null;
+          created_at: string;
+        };
+        Insert: Omit<Database["public"]["Tables"]["sponsor_properties"]["Row"], "id" | "created_at">;
+        Update: Partial<Database["public"]["Tables"]["sponsor_properties"]["Insert"]>;
+      };
+      sponsor_deals: {
+        Row: {
+          id: string;
+          brand_id: string;
+          contact_id: string | null;
+          property_id: string | null;
+          stage: "intro" | "pitch_sent" | "deck_reviewed" | "term_sheet" | "contract" | "signed" | "activated" | "wrapped" | "lost";
+          value_cents: number | null;
+          payment_terms: string | null;
+          payment_schedule: unknown[];
+          exclusivity_terms: string | null;
+          start_date: string | null;
+          end_date: string | null;
+          renewal_window: string | null;
+          renewal_probability: number | null;
+          owner_id: string | null;
+          next_action: string | null;
+          next_action_due: string | null;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database["public"]["Tables"]["sponsor_deals"]["Row"], "id" | "created_at" | "updated_at">;
+        Update: Partial<Database["public"]["Tables"]["sponsor_deals"]["Insert"]>;
+      };
+      sponsor_deliverables: {
+        Row: {
+          id: string;
+          deal_id: string;
+          description: string;
+          due_date: string | null;
+          completed_at: string | null;
+          proof_urls: string[];
+          recap_status: "pending" | "in_progress" | "delivered" | "approved";
+          created_at: string;
+        };
+        Insert: Omit<Database["public"]["Tables"]["sponsor_deliverables"]["Row"], "id" | "created_at">;
+        Update: Partial<Database["public"]["Tables"]["sponsor_deliverables"]["Insert"]>;
+      };
+      sponsor_activities: {
+        Row: {
+          id: string;
+          deal_id: string | null;
+          contact_id: string | null;
+          brand_id: string | null;
+          activity_type: "email" | "call" | "meeting" | "proposal" | "note" | "other";
+          summary: string;
+          occurred_at: string;
+          created_by: string | null;
+        };
+        Insert: Omit<Database["public"]["Tables"]["sponsor_activities"]["Row"], "id">;
+        Update: Partial<Database["public"]["Tables"]["sponsor_activities"]["Insert"]>;
       };
     };
     Views: Record<string, never>;

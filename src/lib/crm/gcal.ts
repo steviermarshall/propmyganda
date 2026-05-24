@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 function fmtError(error: any, data: any): string {
   // supabase.functions.invoke returns FunctionsHttpError with `context`
@@ -22,7 +23,12 @@ export async function pushToGcal(entity_type: "shoot" | "deliverable" | "booking
     if (error) throw new Error(fmtError(error, data));
     return data;
   } catch (e) {
-    console.warn("gcal-push failed (non-fatal)", e);
+    const msg = e instanceof Error ? e.message : "Unknown error";
+    console.warn("gcal-push failed (non-fatal)", msg);
+    toast.warning(`Calendar sync failed: ${msg}`, {
+      duration: 8000,
+      description: "Data was saved. Check Supabase Function secrets if this persists.",
+    });
     return null;
   }
 }
