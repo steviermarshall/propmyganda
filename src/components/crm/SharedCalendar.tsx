@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, type UseQueryOptions } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
   format, addDays, startOfDay, isSameDay, isSameMonth,
@@ -47,16 +47,16 @@ async function fetchCalendarData(month: Date): Promise<Evt[]> {
   const sinceDate = since.slice(0, 10);
 
   const [shootsRes, delivRes, bookRes, crmRes, gcalEvents] = await Promise.all([
-    (supabase.from("shoots") as any)
+    supabase.from("shoots")
       .select("id, shoot_date, scheduled_at, artist_name, location, status")
       .gte("shoot_date", sinceDate).lte("shoot_date", until.slice(0, 10)).limit(500),
-    (supabase.from("deliverables") as any)
+    supabase.from("deliverables")
       .select("id, format, due_at, status")
       .gte("due_at", since).lte("due_at", until).limit(500),
-    (supabase.from("bookings") as any)
+    supabase.from("bookings")
       .select("id, service, name, artist_name, event_date, event_at, location, is_free")
       .limit(500),
-    (supabase.from("crm_bookings") as any)
+    supabase.from("crm_bookings")
       .select("id, artist_name, shoot_date, status")
       .gte("shoot_date", sinceDate).limit(500),
     listGcalEvents(since, until),
@@ -64,7 +64,7 @@ async function fetchCalendarData(month: Date): Promise<Evt[]> {
 
   const all: Evt[] = [];
 
-  (shootsRes.data ?? []).forEach((s: any) => {
+  (shootsRes.data ?? []).forEach((s) => {
     const raw = s.scheduled_at || s.shoot_date;
     if (!raw) return;
     const at = new Date(raw);
@@ -77,7 +77,7 @@ async function fetchCalendarData(month: Date): Promise<Evt[]> {
     });
   });
 
-  (delivRes.data ?? []).forEach((d: any) => {
+  (delivRes.data ?? []).forEach((d) => {
     if (!d.due_at) return;
     all.push({
       id: `deliv-${d.id}`, source: "deliverable",
@@ -87,7 +87,7 @@ async function fetchCalendarData(month: Date): Promise<Evt[]> {
     });
   });
 
-  (bookRes.data ?? []).forEach((b: any) => {
+  (bookRes.data ?? []).forEach((b) => {
     const raw = b.event_at || b.event_date;
     if (!raw) return;
     const at = new Date(raw);
@@ -101,12 +101,12 @@ async function fetchCalendarData(month: Date): Promise<Evt[]> {
     });
   });
 
-  (crmRes.data ?? []).forEach((c: any) => {
+  (crmRes.data ?? []).forEach((c) => {
     if (!c.shoot_date) return;
     all.push({
       id: `crm-${c.id}`, source: "crm_booking",
       title: `${c.artist_name} — pipeline`,
-      sub: c.status, at: new Date(c.shoot_date), color: COLORS.crm_booking,
+      sub: c.status ?? "", at: new Date(c.shoot_date), color: COLORS.crm_booking,
     });
   });
 
@@ -137,7 +137,9 @@ export default function SharedCalendar({ accent, filter }: Props) {
   const [gcal, setGcal] = useState<{ calendar_id: string; last_pull_at: string | null } | null>(null);
   const [syncing, setSyncing] = useState(false);
 
-  const { data: allEvents = [], isFetching } = useQuery({
+  const queryOptions: UseQueryOptions<Evt[]> & {
+    onSuccess: () => void;
+  } = {
     queryKey: ["shared-calendar", viewMonth.toISOString()],
     queryFn: () => fetchCalendarData(viewMonth),
     staleTime: 2 * 60 * 1000,
@@ -152,9 +154,11 @@ export default function SharedCalendar({ accent, filter }: Props) {
         }
       });
     },
-  } as any);
+  };
 
-  const events = filter ? allEvents.filter((e: Evt) => filter.includes(e.source)) : allEvents;
+  const { data: allEvents = [], isFetching } = useQuery(queryOptions);
+
+  const events = filter ? allEvents.filter((e) => filter.includes(e.source)) : allEvents;
 
   const monthGrid = useMemo(() => {
     const gridStart = startOfWeek(startOfMonth(viewMonth), { weekStartsOn: 1 });
@@ -192,8 +196,8 @@ export default function SharedCalendar({ accent, filter }: Props) {
       toast.success(`Synced · ${r.updated} updated, ${r.skipped} skipped`);
       setGcal(await getGcalSettings());
       qc.invalidateQueries({ queryKey: ["shared-calendar"] });
-    } catch (e: any) {
-      toast.error(e?.message ?? "Sync failed");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Sync failed");
     } finally { setSyncing(false); }
   }
 

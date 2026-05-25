@@ -31,12 +31,12 @@ export default function PublicationDetail() {
     if (!slug) return;
     (async () => {
       setLoading(true);
-      const { data } = await (supabase.from("publications") as any)
+      const { data } = await supabase.from("publications")
         .select("*").eq("slug", slug).maybeSingle();
       setPub(data as Pub | null);
 
       if (data) {
-        const { data: rel } = await (supabase.from("publications") as any)
+        const { data: rel } = await supabase.from("publications")
           .select("*")
           .eq("category", (data as Pub).category)
           .neq("id", (data as Pub).id)

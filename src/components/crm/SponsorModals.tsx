@@ -8,6 +8,31 @@ import { useQueryClient, useQuery } from "@tanstack/react-query";
 
 const STEVEN = "#d97000";
 
+type BrandForm = {
+  name: string; parent_company: string; industry: string; logo_url: string;
+  brand_guidelines_url: string; hq_location: string;
+  regions: string; annual_budget_estimate: string; fiscal_year_end_month: string;
+  activation_style: string; previous_sponsorships: string;
+  target_age: string; target_gender: string; target_psychographics: string;
+  tier: string; status: string; source: string; notes: string;
+};
+type ContactForm = {
+  brand_id: string; name: string; title: string; department: string; email: string;
+  phone: string; linkedin_url: string; decision_power: string;
+  touch_cadence_days: string; comms_preference: string; personal_notes: string; birthday: string;
+};
+type DealForm = {
+  brand_id: string; stage: string; value: string; payment_terms: string;
+  exclusivity_terms: string; start_date: string; end_date: string;
+  renewal_window: string; renewal_probability: string;
+  next_action: string; next_action_due: string; notes: string;
+};
+type ActivityForm = {
+  brand_id: string; deal_id: string; contact_id: string;
+  activity_type: string; summary: string; occurred_at: string;
+};
+type BrandOption = { id: string; name: string | null };
+
 // ============================================================================
 // Sponsor chooser — entry point for Steven's quick-add
 // ============================================================================
@@ -63,12 +88,12 @@ const inputCls = "bg-black border border-white/10 text-white text-sm px-3 py-2 w
 // ============================================================================
 export function SponsorBrandWizard({
   open, onClose, initial,
-}: { open: boolean; onClose: () => void; initial?: any }) {
+}: { open: boolean; onClose: () => void; initial?: Partial<BrandForm> }) {
   const { member } = useCrmAuth();
   const qc = useQueryClient();
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
-  const [f, setF] = useState<any>({
+  const [f, setF] = useState<BrandForm>({
     name: "", parent_company: "", industry: "", logo_url: "",
     brand_guidelines_url: "", hq_location: "",
     regions: "", annual_budget_estimate: "", fiscal_year_end_month: "",
@@ -82,7 +107,7 @@ export function SponsorBrandWizard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initial]);
 
-  function set(k: string, v: string) { setF((p: any) => ({ ...p, [k]: v })); }
+  function set(k: keyof BrandForm, v: string) { setF((p) => ({ ...p, [k]: v })); }
 
   async function submit() {
     if (!member) return;
@@ -110,10 +135,10 @@ export function SponsorBrandWizard({
         source: f.source || null, notes: f.notes || null,
         owner_id: member.id,
       };
-      const { data, error } = await (supabase.from("sponsor_brands") as any)
+      const { data, error } = await supabase.from("sponsor_brands")
         .insert(payload).select().single();
       if (error) throw error;
-      await logActivity(member.id, "sponsor_brand" as any, data.id, "created", { name: data.name });
+      await logActivity(member.id, "sponsor_brand", data.id, "created", { name: data.name });
       toast.success("Brand created");
       qc.invalidateQueries({ queryKey: ["sponsor-brands"] });
       onClose(); setStep(1);
@@ -125,8 +150,8 @@ export function SponsorBrandWizard({
         target_age: "", target_gender: "", target_psychographics: "",
         tier: "tier_3", status: "cold", source: "", notes: "",
       });
-    } catch (e: any) {
-      toast.error(e?.message ?? "Failed");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
     } finally { setSaving(false); }
   }
 
@@ -220,9 +245,9 @@ function useBrands() {
   return useQuery({
     queryKey: ["sponsor-brands-picker"],
     queryFn: async () => {
-      const { data } = await (supabase.from("sponsor_brands") as any)
+      const { data } = await supabase.from("sponsor_brands")
         .select("id,name").order("name");
-      return data ?? [];
+      return (data ?? []) as BrandOption[];
     },
   });
 }
@@ -235,13 +260,13 @@ export function SponsorContactModal({ open, onClose, brandId }: { open: boolean;
   const qc = useQueryClient();
   const { data: brands = [] } = useBrands();
   const [saving, setSaving] = useState(false);
-  const [f, setF] = useState<any>({
+  const [f, setF] = useState<ContactForm>({
     brand_id: brandId ?? "", name: "", title: "", department: "", email: "",
     phone: "", linkedin_url: "", decision_power: "influencer",
     touch_cadence_days: "30", comms_preference: "", personal_notes: "", birthday: "",
   });
 
-  useEffect(() => { if (brandId) setF((p: any) => ({ ...p, brand_id: brandId })); }, [brandId]);
+  useEffect(() => { if (brandId) setF((p) => ({ ...p, brand_id: brandId })); }, [brandId]);
 
   async function submit() {
     if (!member) return;
@@ -257,14 +282,14 @@ export function SponsorContactModal({ open, onClose, brandId }: { open: boolean;
         touch_cadence_days: f.touch_cadence_days ? Number(f.touch_cadence_days) : null,
         personal_notes: f.personal_notes || null, birthday: f.birthday || null,
       };
-      const { data, error } = await (supabase.from("sponsor_contacts") as any)
+      const { data, error } = await supabase.from("sponsor_contacts")
         .insert(payload).select().single();
       if (error) throw error;
-      await logActivity(member.id, "sponsor_contact" as any, data.id, "created", { name: data.name });
+      await logActivity(member.id, "sponsor_contact", data.id, "created", { name: data.name });
       toast.success("Contact created");
       qc.invalidateQueries({ queryKey: ["sponsor-contacts"] });
       onClose();
-    } catch (e: any) { toast.error(e?.message ?? "Failed"); }
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
     finally { setSaving(false); }
   }
 
@@ -278,7 +303,7 @@ export function SponsorContactModal({ open, onClose, brandId }: { open: boolean;
           <Field label="Brand *">
             <select className={inputCls} value={f.brand_id} onChange={(e) => setF({ ...f, brand_id: e.target.value })}>
               <option value="">— Select —</option>
-              {brands.map((b: any) => <option key={b.id} value={b.id}>{b.name}</option>)}
+              {brands.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
           </Field>
           <div className="grid grid-cols-2 gap-3">
@@ -319,14 +344,14 @@ export function SponsorDealModal({ open, onClose, brandId }: { open: boolean; on
   const qc = useQueryClient();
   const { data: brands = [] } = useBrands();
   const [saving, setSaving] = useState(false);
-  const [f, setF] = useState<any>({
+  const [f, setF] = useState<DealForm>({
     brand_id: brandId ?? "", stage: "intro", value: "", payment_terms: "",
     exclusivity_terms: "", start_date: "", end_date: "",
     renewal_window: "", renewal_probability: "",
     next_action: "", next_action_due: "", notes: "",
   });
 
-  useEffect(() => { if (brandId) setF((p: any) => ({ ...p, brand_id: brandId })); }, [brandId]);
+  useEffect(() => { if (brandId) setF((p) => ({ ...p, brand_id: brandId })); }, [brandId]);
 
   async function submit() {
     if (!member) return;
@@ -346,14 +371,14 @@ export function SponsorDealModal({ open, onClose, brandId }: { open: boolean; on
         next_action_due: f.next_action_due || null,
         notes: f.notes || null,
       };
-      const { data, error } = await (supabase.from("sponsor_deals") as any)
+      const { data, error } = await supabase.from("sponsor_deals")
         .insert(payload).select().single();
       if (error) throw error;
-      await logActivity(member.id, "sponsor_deal" as any, data.id, "created", { stage: f.stage });
+      await logActivity(member.id, "sponsor_deal", data.id, "created", { stage: f.stage });
       toast.success("Deal created");
       qc.invalidateQueries({ queryKey: ["sponsor-deals"] });
       onClose();
-    } catch (e: any) { toast.error(e?.message ?? "Failed"); }
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
     finally { setSaving(false); }
   }
 
@@ -369,7 +394,7 @@ export function SponsorDealModal({ open, onClose, brandId }: { open: boolean; on
           <Field label="Brand *">
             <select className={inputCls} value={f.brand_id} onChange={(e) => setF({ ...f, brand_id: e.target.value })}>
               <option value="">— Select —</option>
-              {brands.map((b: any) => <option key={b.id} value={b.id}>{b.name}</option>)}
+              {brands.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
           </Field>
           <div className="grid grid-cols-2 gap-3">
@@ -410,7 +435,7 @@ export function SponsorActivityModal({
   const qc = useQueryClient();
   const { data: brands = [] } = useBrands();
   const [saving, setSaving] = useState(false);
-  const [f, setF] = useState<any>({
+  const [f, setF] = useState<ActivityForm>({
     brand_id: brandId ?? "", deal_id: dealId ?? "", contact_id: contactId ?? "",
     activity_type: "email", summary: "", occurred_at: new Date().toISOString().slice(0, 16),
   });
@@ -429,13 +454,13 @@ export function SponsorActivityModal({
         occurred_at: f.occurred_at ? new Date(f.occurred_at).toISOString() : new Date().toISOString(),
         created_by: member.id,
       };
-      const { error } = await (supabase.from("sponsor_activities") as any).insert(payload);
+      const { error } = await supabase.from("sponsor_activities").insert(payload);
       if (error) throw error;
       toast.success("Activity logged");
       qc.invalidateQueries({ queryKey: ["sponsor-activities"] });
       onClose();
       setF({ ...f, summary: "" });
-    } catch (e: any) { toast.error(e?.message ?? "Failed"); }
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
     finally { setSaving(false); }
   }
 
@@ -457,7 +482,7 @@ export function SponsorActivityModal({
           <Field label="Brand">
             <select className={inputCls} value={f.brand_id} onChange={(e) => setF({ ...f, brand_id: e.target.value })}>
               <option value="">— None —</option>
-              {brands.map((b: any) => <option key={b.id} value={b.id}>{b.name}</option>)}
+              {brands.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
           </Field>
           <Field label="Summary *"><textarea className={inputCls} rows={4} value={f.summary} onChange={(e) => setF({ ...f, summary: e.target.value })} placeholder="What happened? Outcome? Next step?" /></Field>

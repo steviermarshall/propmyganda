@@ -29,21 +29,21 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
     (async () => {
       const like = `%${q}%`;
       const [prospects, bookings, sponsors, shoots] = await Promise.all([
-        (supabase.from("artist_prospects") as any).select("id,name,outreach_status").ilike("name", like).limit(5),
-        (supabase.from("crm_bookings") as any).select("id,artist_name,status").ilike("artist_name", like).limit(5),
-        (supabase.from("sponsor_pipeline") as any).select("id,brand_name,stage").ilike("brand_name", like).limit(5),
-        (supabase.from("shoots") as any).select("id,artist_name,shoot_date").ilike("artist_name", like).limit(5),
+        supabase.from("artist_prospects").select("id,name,outreach_status").ilike("name", like).limit(5),
+        supabase.from("crm_bookings").select("id,artist_name,status").ilike("artist_name", like).limit(5),
+        supabase.from("sponsor_pipeline").select("id,brand_name,stage").ilike("brand_name", like).limit(5),
+        supabase.from("shoots").select("id,artist_name,shoot_date").ilike("artist_name", like).limit(5),
       ]);
       if (cancelled) return;
       const out: SearchHit[] = [];
-      (prospects.data ?? []).forEach((r: any) =>
-        out.push({ id: r.id, label: r.name, sub: `Prospect · ${r.outreach_status}`, goto: "/admin/mike" }));
-      (bookings.data ?? []).forEach((r: any) =>
-        out.push({ id: r.id, label: r.artist_name, sub: `Booking · ${r.status}`, goto: "/admin/mike" }));
-      (sponsors.data ?? []).forEach((r: any) =>
-        out.push({ id: r.id, label: r.brand_name, sub: `Sponsor · ${r.stage}`, goto: "/admin/steven" }));
-      (shoots.data ?? []).forEach((r: any) =>
-        out.push({ id: r.id, label: r.artist_name, sub: `Shoot · ${r.shoot_date}`, goto: "/admin/jay" }));
+      (prospects.data ?? []).forEach((r) =>
+        out.push({ id: r.id, label: r.name ?? "", sub: `Prospect · ${r.outreach_status}`, goto: "/admin/mike" }));
+      (bookings.data ?? []).forEach((r) =>
+        out.push({ id: r.id, label: r.artist_name ?? "", sub: `Booking · ${r.status}`, goto: "/admin/mike" }));
+      (sponsors.data ?? []).forEach((r) =>
+        out.push({ id: r.id, label: r.brand_name ?? "", sub: `Sponsor · ${r.stage}`, goto: "/admin/steven" }));
+      (shoots.data ?? []).forEach((r) =>
+        out.push({ id: r.id, label: r.artist_name ?? "", sub: `Shoot · ${r.shoot_date}`, goto: "/admin/jay" }));
       setHits(out);
     })();
     return () => { cancelled = true; };

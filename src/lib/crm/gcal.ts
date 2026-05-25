@@ -1,18 +1,20 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-function fmtError(error: any, data: any): string {
+function fmtError(error: unknown, data: unknown): string {
   // supabase.functions.invoke returns FunctionsHttpError with `context`
   // that holds the upstream Response — read its body for the real reason.
-  if (data?.error) return String(data.error);
-  if (error?.context?.response) {
+  const d = data as { error?: unknown } | null;
+  const e = error as { context?: { response?: unknown; body?: unknown }; message?: string } | null;
+  if (d?.error) return String(d.error);
+  if (e?.context?.response) {
     try {
       // best-effort sync read of the cached body
-      const body = (error.context as any).body;
+      const body = e.context.body;
       if (body) return typeof body === "string" ? body : JSON.stringify(body);
     } catch { /* ignore */ }
   }
-  return error?.message ?? "Unknown error";
+  return e?.message ?? "Unknown error";
 }
 
 export async function pushToGcal(entity_type: "shoot" | "deliverable" | "booking" | "crm_booking", entity_id: string, opts: { delete?: boolean } = {}) {
@@ -39,7 +41,7 @@ export async function pullGcal() {
     // Try to extract the real upstream error message
     let detail = error.message;
     try {
-      const ctx: any = (error as any).context;
+      const ctx = (error as { context?: { json?: () => Promise<{ error?: string }>; text?: () => Promise<string> } }).context;
       if (ctx?.json) {
         const j = await ctx.json();
         if (j?.error) detail = j.error;
@@ -54,9 +56,9 @@ export async function pullGcal() {
 }
 
 export async function getGcalSettings(): Promise<{ calendar_id: string; last_pull_at: string | null } | null> {
-  const { data } = await (supabase.from("crm_settings") as any)
+  const { data } = await supabase.from("crm_settings")
     .select("value").eq("key", "gcal").maybeSingle();
-  return data?.value ?? null;
+  return (data?.value as { calendar_id: string; last_pull_at: string | null } | undefined) ?? null;
 }
 
 export interface GcalRawEvent {

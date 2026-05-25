@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import CrmLayout from "@/components/crm/CrmLayout";
 import KpiCard from "@/components/crm/KpiCard";
 
@@ -19,6 +20,12 @@ const STATUS_COLOR: Record<Status, string> = {
 
 type Range = "7d" | "30d" | "90d" | "all";
 
+type TeamMember = Database["public"]["Tables"]["team_members"]["Row"];
+type DeliverableRow = Pick<
+  Database["public"]["Tables"]["deliverables"]["Row"],
+  "id" | "title" | "status" | "priority" | "assigned_to" | "due_at" | "filmed_at" | "delivered_at" | "format" | "shoot_id" | "updated_at"
+>;
+
 export default function DeliverablesReport() {
   const [range, setRange] = useState<Range>("30d");
   const [statusFilter, setStatusFilter] = useState<Status | "all">("all");
@@ -27,7 +34,7 @@ export default function DeliverablesReport() {
   const { data: members = [] } = useQuery({
     queryKey: ["report-members"],
     queryFn: async () => {
-      const { data } = await (supabase.from("team_members") as any)
+      const { data } = await supabase.from("team_members")
         .select("id,name,role").order("name");
       return data ?? [];
     },
@@ -36,26 +43,25 @@ export default function DeliverablesReport() {
   const { data: deliverables = [], isLoading } = useQuery({
     queryKey: ["report-deliverables", range],
     queryFn: async () => {
-      let q: any = (supabase.from("deliverables") as any)
-        .select("id,title,status,priority,assigned_to,due_at,filmed_at,delivered_at,format,shoot_id,updated_at")
-        .order("due_at", { ascending: true, nullsFirst: false });
+      let q = supabase.from("deliverables")
+        .select("id,title,status,priority,assigned_to,due_at,filmed_at,delivered_at,format,shoot_id,updated_at");
       if (range !== "all") {
         const days = range === "7d" ? 7 : range === "30d" ? 30 : 90;
         const since = new Date(Date.now() - days * 86400000).toISOString();
         q = q.gte("updated_at", since);
       }
-      const { data } = await q;
+      const { data } = await q.order("due_at", { ascending: true, nullsFirst: false });
       return data ?? [];
     },
   });
 
   const memberMap = useMemo(() => {
-    const m = new Map<string, any>();
-    members.forEach((x: any) => m.set(x.id, x));
+    const m = new Map<string, Pick<TeamMember, "id" | "name" | "role">>();
+    members.forEach((x) => m.set(x.id, x));
     return m;
   }, [members]);
 
-  const filtered = useMemo(() => deliverables.filter((d: any) => {
+  const filtered = useMemo(() => deliverables.filter((d) => {
     if (statusFilter !== "all" && d.status !== statusFilter) return false;
     if (assigneeFilter !== "all") {
       if (assigneeFilter === "unassigned" ? d.assigned_to : d.assigned_to !== assigneeFilter) return false;
@@ -66,9 +72,9 @@ export default function DeliverablesReport() {
   // KPIs
   const kpis = useMemo(() => {
     const total = filtered.length;
-    const open = filtered.filter((d: any) => !["uploaded", "published"].includes(d.status)).length;
-    const overdue = filtered.filter((d: any) => d.due_at && new Date(d.due_at) < new Date() && !["uploaded","published"].includes(d.status)).length;
-    const delivered = filtered.filter((d: any) => d.delivered_at).length;
+    const open = filtered.filter((d) => !["uploaded", "published"].includes(d.status ?? "")).length;
+    const overdue = filtered.filter((d) => d.due_at && new Date(d.due_at) < new Date() && !["uploaded","published"].includes(d.status ?? "")).length;
+    const delivered = filtered.filter((d) => d.delivered_at).length;
     return { total, open, overdue, delivered };
   }, [filtered]);
 
@@ -76,23 +82,23 @@ export default function DeliverablesReport() {
   const byStatus = useMemo(() => {
     const counts: Record<string, number> = {};
     STATUSES.forEach(s => (counts[s] = 0));
-    filtered.forEach((d: any) => { counts[d.status] = (counts[d.status] || 0) + 1; });
+    filtered.forEach((d) => { if (d.status) counts[d.status] = (counts[d.status] || 0) + 1; });
     return counts;
   }, [filtered]);
 
   // By assignee
   const byAssignee = useMemo(() => {
     const rows = new Map<string, { name: string; total: number; open: number; overdue: number; delivered: number; byStatus: Record<string, number> }>();
-    filtered.forEach((d: any) => {
+    filtered.forEach((d) => {
       const key = d.assigned_to || "__unassigned";
       const name = d.assigned_to ? (memberMap.get(d.assigned_to)?.name ?? "Unknown") : "Unassigned";
       if (!rows.has(key)) rows.set(key, { name, total: 0, open: 0, overdue: 0, delivered: 0, byStatus: {} });
       const r = rows.get(key)!;
       r.total++;
-      if (!["uploaded","published"].includes(d.status)) r.open++;
-      if (d.due_at && new Date(d.due_at) < new Date() && !["uploaded","published"].includes(d.status)) r.overdue++;
+      if (!["uploaded","published"].includes(d.status ?? "")) r.open++;
+      if (d.due_at && new Date(d.due_at) < new Date() && !["uploaded","published"].includes(d.status ?? "")) r.overdue++;
       if (d.delivered_at) r.delivered++;
-      r.byStatus[d.status] = (r.byStatus[d.status] || 0) + 1;
+      if (d.status) r.byStatus[d.status] = (r.byStatus[d.status] || 0) + 1;
     });
     return Array.from(rows.values()).sort((a, b) => b.total - a.total);
   }, [filtered, memberMap]);
@@ -102,7 +108,7 @@ export default function DeliverablesReport() {
 
   function exportCsv() {
     const headers = ["title", "status", "priority", "assignee", "due_at", "filmed_at", "delivered_at", "format"];
-    const rows = filtered.map((d: any) => [
+    const rows = filtered.map((d) => [
       d.title || "",
       d.status,
       d.priority || "",
@@ -113,7 +119,7 @@ export default function DeliverablesReport() {
       d.format || "",
     ]);
     const csv = [headers, ...rows]
-      .map(r => r.map((c: any) => `"${String(c).replace(/"/g, '""')}"`).join(","))
+      .map(r => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
       .join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -135,7 +141,7 @@ export default function DeliverablesReport() {
           ))}
         </div>
 
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)}
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as Status | "all")}
           className="bg-crm-surface border border-white/10 px-3 py-1.5 text-xs">
           <option value="all">All statuses</option>
           {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
@@ -145,7 +151,7 @@ export default function DeliverablesReport() {
           className="bg-crm-surface border border-white/10 px-3 py-1.5 text-xs">
           <option value="all">All assignees</option>
           <option value="unassigned">Unassigned</option>
-          {members.map((m: any) => <option key={m.id} value={m.id}>{m.name}</option>)}
+          {members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
         </select>
 
         <button onClick={exportCsv}
@@ -237,8 +243,8 @@ export default function DeliverablesReport() {
               </tr>
             </thead>
             <tbody>
-              {filtered.slice(0, 200).map((d: any) => {
-                const overdue = d.due_at && new Date(d.due_at) < new Date() && !["uploaded","published"].includes(d.status);
+              {filtered.slice(0, 200).map((d) => {
+                const overdue = d.due_at && new Date(d.due_at) < new Date() && !["uploaded","published"].includes(d.status ?? "");
                 return (
                   <tr key={d.id} className="border-b border-white/5 hover:bg-white/[0.02]">
                     <td className="px-4 py-2 truncate max-w-[280px]">{d.title || <span className="text-white/30">{d.format}</span>}</td>

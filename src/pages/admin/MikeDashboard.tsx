@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import CrmLayout from "@/components/crm/CrmLayout";
 import SharedCalendar from "@/components/crm/SharedCalendar";
 import BookingSheet from "@/components/BookingSheet";
@@ -17,6 +18,21 @@ import DistroIntakeWizard from "@/components/crm/DistroIntakeWizard";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const MIKE = "#00F0FF";
+
+type DistroArtist = Database["public"]["Tables"]["distro_artists"]["Row"];
+type CrmBooking = Database["public"]["Tables"]["crm_bookings"]["Row"];
+type ArtistProspect = Database["public"]["Tables"]["artist_prospects"]["Row"];
+type StreamingMetric = Database["public"]["Tables"]["streaming_metrics"]["Row"];
+
+type TodayItem =
+  | (Pick<ArtistProspect, "id" | "name" | "outreach_status" | "last_contact_date" | "next_followup_date"> & {
+      kind: "prospect"; display: string | null; sub: string | null;
+    })
+  | {
+      id: string; brand_name: string | null; stage: string | null;
+      last_contact_date: string | null; next_followup_date: string | null;
+      kind: "sponsor"; display: string | null; sub: string | null;
+    };
 
 const BOOKING_COLS = [
   { key: "inquiry",   label: "Inquiry" },
@@ -55,27 +71,27 @@ export default function MikeDashboard() {
   const { member } = useCrmAuth();
   const weekStart = startOfWeek().toISOString();
   const [intakeOpen, setIntakeOpen] = useState(false);
-  const [manageArtist, setManageArtist] = useState<any | null>(null);
+  const [manageArtist, setManageArtist] = useState<DistroArtist | null>(null);
 
   // KPIs
   const { data: kpis } = useQuery({
     queryKey: ["mike-kpis", weekStart],
     queryFn: async () => {
       const [bookings, prospects, distro, articles, paid] = await Promise.all([
-        (supabase.from("crm_bookings") as any).select("status,updated_at,amount_quoted").gte("updated_at", weekStart),
-        (supabase.from("activity_log") as any).select("id,entity_type,action,payload,created_at")
+        supabase.from("crm_bookings").select("status,updated_at,amount_quoted").gte("updated_at", weekStart),
+        supabase.from("activity_log").select("id,entity_type,action,payload,created_at")
           .eq("entity_type", "artist_prospect").gte("created_at", weekStart),
-        (supabase.from("distro_artists") as any).select("onboarding_status,onboarded_at").gte("onboarded_at", weekStart),
-        (supabase.from("articles") as any).select("status,created_at").gte("created_at", weekStart),
-        (supabase.from("crm_bookings") as any).select("amount_quoted,status,updated_at").eq("status", "paid").gte("updated_at", weekStart),
+        supabase.from("distro_artists").select("onboarding_status,onboarded_at").gte("onboarded_at", weekStart),
+        supabase.from("articles").select("status,created_at").gte("created_at", weekStart),
+        supabase.from("crm_bookings").select("amount_quoted,status,updated_at").eq("status", "paid").gte("updated_at", weekStart),
       ]);
-      const bookingsClosed = (bookings.data ?? []).filter((b: any) =>
-        ["paid", "delivered"].includes(b.status)).length;
-      const outreach = (prospects.data ?? []).filter((a: any) =>
-        a.action === "status_changed" && (a.payload as any)?.to === "pitched").length;
-      const onboarded = (distro.data ?? []).filter((d: any) => d.onboarding_status === "live").length;
-      const articlesWritten = (articles.data ?? []).filter((a: any) => a.status !== "ai_drafted").length;
-      const revenue = (paid.data ?? []).reduce((acc: number, r: any) => acc + Number(r.amount_quoted ?? 0), 0);
+      const bookingsClosed = (bookings.data ?? []).filter((b) =>
+        ["paid", "delivered"].includes(b.status ?? "")).length;
+      const outreach = (prospects.data ?? []).filter((a) =>
+        a.action === "status_changed" && (a.payload as { to?: string } | null)?.to === "pitched").length;
+      const onboarded = (distro.data ?? []).filter((d) => d.onboarding_status === "live").length;
+      const articlesWritten = (articles.data ?? []).filter((a) => a.status !== "ai_drafted").length;
+      const revenue = (paid.data ?? []).reduce((acc: number, r) => acc + Number(r.amount_quoted ?? 0), 0);
       return { bookingsClosed, outreach, onboarded, articlesWritten, revenue };
     },
   });
@@ -87,15 +103,15 @@ export default function MikeDashboard() {
     enabled: !!member,
     queryFn: async () => {
       const [pros, spons] = await Promise.all([
-        (supabase.from("artist_prospects") as any).select("id,name,outreach_status,last_contact_date,next_followup_date")
+        supabase.from("artist_prospects").select("id,name,outreach_status,last_contact_date,next_followup_date")
           .eq("assigned_to", member!.id).eq("next_followup_date", today),
-        (supabase.from("sponsor_pipeline") as any).select("id,brand_name,stage,last_contact_date,next_followup_date")
+        supabase.from("sponsor_pipeline").select("id,brand_name,stage,last_contact_date,next_followup_date")
           .eq("assigned_to", member!.id).eq("next_followup_date", today),
       ]);
       return [
-        ...(pros.data ?? []).map((r: any) => ({ ...r, kind: "prospect", display: r.name, sub: r.outreach_status })),
-        ...(spons.data ?? []).map((r: any) => ({ ...r, kind: "sponsor",  display: r.brand_name, sub: r.stage })),
-      ];
+        ...(pros.data ?? []).map((r) => ({ ...r, kind: "prospect" as const, display: r.name, sub: r.outreach_status })),
+        ...(spons.data ?? []).map((r) => ({ ...r, kind: "sponsor" as const,  display: r.brand_name, sub: r.stage })),
+      ] satisfies TodayItem[];
     },
   });
 
@@ -103,7 +119,7 @@ export default function MikeDashboard() {
   const { data: bookings = [] } = useQuery({
     queryKey: ["mike-bookings"],
     queryFn: async () => {
-      const { data } = await (supabase.from("crm_bookings") as any)
+      const { data } = await supabase.from("crm_bookings")
         .select("*").order("updated_at", { ascending: false }).limit(200);
       return data ?? [];
     },
@@ -113,7 +129,7 @@ export default function MikeDashboard() {
   const { data: prospects = [] } = useQuery({
     queryKey: ["mike-prospects"],
     queryFn: async () => {
-      const { data } = await (supabase.from("artist_prospects") as any)
+      const { data } = await supabase.from("artist_prospects")
         .select("*").order("fit_score", { ascending: false, nullsFirst: false }).limit(100);
       return data ?? [];
     },
@@ -123,29 +139,29 @@ export default function MikeDashboard() {
   const { data: distroArtists = [] } = useQuery({
     queryKey: ["mike-distro"],
     queryFn: async () => {
-      const { data } = await (supabase.from("distro_artists") as any)
+      const { data } = await supabase.from("distro_artists")
         .select("*").order("updated_at", { ascending: false });
       return data ?? [];
     },
   });
 
-  const distroIds = distroArtists.map((d: any) => d.id);
+  const distroIds = distroArtists.map((d) => d.id);
 
   const { data: streaming = [] } = useQuery({
     queryKey: ["mike-streaming", distroIds.join(",")],
     enabled: distroIds.length > 0,
     queryFn: async () => {
-      const { data } = await (supabase.from("streaming_metrics") as any)
+      const { data } = await supabase.from("streaming_metrics")
         .select("*").in("distro_artist_id", distroIds);
       return data ?? [];
     },
   });
 
 
-  async function moveBooking(item: any, next: string) {
-    qc.setQueryData(["mike-bookings"], (old: any[] = []) =>
+  async function moveBooking(item: CrmBooking, next: string) {
+    qc.setQueryData(["mike-bookings"], (old: CrmBooking[] = []) =>
       old.map((r) => (r.id === item.id ? { ...r, status: next } : r)));
-    const { error } = await (supabase.from("crm_bookings") as any).update({ status: next }).eq("id", item.id);
+    const { error } = await supabase.from("crm_bookings").update({ status: next }).eq("id", item.id);
     if (error) { toast.error("Move failed"); qc.invalidateQueries({ queryKey: ["mike-bookings"] }); return; }
     await logActivity(member?.id, "crm_booking", item.id, "status_changed", { from: item.status, to: next });
     if (["booked", "shot", "delivered", "paid"].includes(next)) {
@@ -155,30 +171,31 @@ export default function MikeDashboard() {
 
   async function updateProspectStatus(id: string, next: string, current: string) {
     const days = PROSPECT_FOLLOWUP[next];
-    const patch: any = { outreach_status: next, last_contact_date: todayISO() };
+    const patch: Partial<ArtistProspect> = { outreach_status: next, last_contact_date: todayISO() };
     if (days !== null) patch.next_followup_date = addDaysISO(days);
-    qc.setQueryData(["mike-prospects"], (old: any[] = []) =>
+    qc.setQueryData(["mike-prospects"], (old: ArtistProspect[] = []) =>
       old.map((r) => (r.id === id ? { ...r, ...patch } : r)));
-    const { error } = await (supabase.from("artist_prospects") as any).update(patch).eq("id", id);
+    const { error } = await supabase.from("artist_prospects").update(patch).eq("id", id);
     if (error) { toast.error("Update failed"); qc.invalidateQueries({ queryKey: ["mike-prospects"] }); return; }
     await logActivity(member?.id, "artist_prospect", id, "status_changed", { from: current, to: next });
   }
 
   async function updateDistroStatus(id: string, next: string) {
-    qc.setQueryData(["mike-distro"], (old: any[] = []) =>
+    qc.setQueryData(["mike-distro"], (old: DistroArtist[] = []) =>
       old.map((r) => (r.id === id ? { ...r, onboarding_status: next } : r)));
-    const { error } = await (supabase.from("distro_artists") as any).update({ onboarding_status: next }).eq("id", id);
+    const { error } = await supabase.from("distro_artists").update({ onboarding_status: next }).eq("id", id);
     if (error) { toast.error("Update failed"); qc.invalidateQueries({ queryKey: ["mike-distro"] }); return; }
     await logActivity(member?.id, "distro_artist", id, "status_changed", { to: next });
   }
 
-  async function tapTodayItem(it: any) {
+  async function tapTodayItem(it: TodayItem) {
     // bump follow-up by 3 days, set last_contact_date = today
     const patch = { last_contact_date: todayISO(), next_followup_date: addDaysISO(3) };
-    const table = it.kind === "prospect" ? "artist_prospects" : "sponsor_pipeline";
-    qc.setQueryData(["mike-today", today, member?.id], (old: any[] = []) =>
+    qc.setQueryData(["mike-today", today, member?.id], (old: TodayItem[] = []) =>
       old.filter((r) => r.id !== it.id));
-    const { error } = await (supabase.from(table) as any).update(patch).eq("id", it.id);
+    const { error } = it.kind === "prospect"
+      ? await supabase.from("artist_prospects").update(patch).eq("id", it.id)
+      : await supabase.from("sponsor_pipeline").update(patch).eq("id", it.id);
     if (error) { toast.error("Failed"); qc.invalidateQueries({ queryKey: ["mike-today"] }); return; }
     await logActivity(member?.id, it.kind === "prospect" ? "artist_prospect" : "sponsor_pipeline", it.id, "contacted", patch);
     toast.success("Marked contacted");
@@ -232,7 +249,7 @@ export default function MikeDashboard() {
           <p className="text-white/40 text-sm">Nothing due. You're clear.</p>
         ) : (
           <div className="divide-y divide-white/5">
-            {todayList.map((it: any) => (
+            {todayList.map((it) => (
               <div key={`${it.kind}-${it.id}`} className="py-2 flex items-center justify-between">
                 <div>
                   <div className="text-sm">{it.display}</div>
@@ -256,9 +273,9 @@ export default function MikeDashboard() {
         <KanbanBoard
           accent={MIKE}
           columns={BOOKING_COLS}
-          items={bookings.map((b: any) => ({ id: b.id, stage: b.status, updatedAt: b.updated_at, raw: b }))}
-          onMove={(it: any, next) => moveBooking(it.raw, next)}
-          renderCard={(it: any) => (
+          items={bookings.map((b) => ({ id: b.id, stage: b.status ?? "", updatedAt: b.updated_at, raw: b }))}
+          onMove={(it, next) => moveBooking(it.raw, next)}
+          renderCard={(it) => (
             <div className="space-y-1">
               <div className="text-sm font-bold">{it.raw.artist_name}</div>
               <div className="text-[10px] text-white/40">
@@ -290,7 +307,7 @@ export default function MikeDashboard() {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {prospects.map((p: any) => (
+              {prospects.map((p) => (
                 <tr key={p.id} className="hover:bg-white/[0.02]">
                   <td className="px-4 py-2">{p.name}</td>
                   <td className="px-4 py-2 text-white/50">{p.ig_handle ?? "—"}</td>
@@ -351,9 +368,9 @@ export default function MikeDashboard() {
                   </thead>
                   <tbody className="divide-y divide-white/5">
                     {distroArtists
-                      .filter((d: any) => (side === "jv" ? d.side === "jv_owned" : d.side === "pure_service"))
-                      .map((d: any) => {
-                        const links = streaming.filter((s: any) => s.distro_artist_id === d.id);
+                      .filter((d) => (side === "jv" ? d.side === "jv_owned" : d.side === "pure_service"))
+                      .map((d) => {
+                        const links = streaming.filter((s) => s.distro_artist_id === d.id);
                         return (
                           <tr key={d.id}>
                             <td className="px-2 py-2">{d.artist_name}</td>
@@ -366,7 +383,7 @@ export default function MikeDashboard() {
                             </td>
                             <td className="px-2 py-2">
                               <div className="flex gap-1 flex-wrap">
-                                {links.length === 0 ? <span className="text-white/30">—</span> : links.map((l: any) => (
+                                {links.length === 0 ? <span className="text-white/30">—</span> : links.map((l) => (
                                   <a key={l.id} href={l.url} target="_blank" rel="noreferrer"
                                     className="px-2 py-0.5 text-[9px] uppercase tracking-widest border border-white/15 hover:border-current"
                                     style={{ color: PLATFORM_COLORS[l.platform] ?? "#888" }}
@@ -426,7 +443,7 @@ const PLATFORM_COLORS: Record<string, string> = {
 function ManageDistroArtistModal({
   artist, onClose, accent,
 }: {
-  artist: any;
+  artist: DistroArtist | null;
   onClose: () => void;
   accent: string;
 }) {
@@ -434,8 +451,8 @@ function ManageDistroArtistModal({
     queryKey: ["distro-members", artist?.id],
     enabled: !!artist?.id,
     queryFn: async () => {
-      const { data } = await (supabase.from("distro_artist_members") as any)
-        .select("*").eq("distro_artist_id", artist.id).order("is_primary", { ascending: false });
+      const { data } = await supabase.from("distro_artist_members")
+        .select("*").eq("distro_artist_id", artist!.id).order("is_primary", { ascending: false });
       return data ?? [];
     },
   });
@@ -443,8 +460,8 @@ function ManageDistroArtistModal({
     queryKey: ["distro-streaming", artist?.id],
     enabled: !!artist?.id,
     queryFn: async () => {
-      const { data } = await (supabase.from("streaming_metrics") as any)
-        .select("*").eq("distro_artist_id", artist.id);
+      const { data } = await supabase.from("streaming_metrics")
+        .select("*").eq("distro_artist_id", artist!.id);
       return data ?? [];
     },
   });
@@ -475,7 +492,7 @@ function ManageDistroArtistModal({
             <p className="text-white/40 text-xs">No members on record.</p>
           ) : (
             <div className="space-y-1">
-              {members.map((m: any) => (
+              {members.map((m) => (
                 <div key={m.id} className="border border-white/10 bg-black/30 p-2 text-xs">
                   <div className="flex justify-between">
                     <div>
@@ -507,7 +524,7 @@ function ManageDistroArtistModal({
             <p className="text-white/40 text-xs">No links.</p>
           ) : (
             <div className="space-y-1">
-              {links.map((l: any) => (
+              {links.map((l) => (
                 <div key={l.id} className="flex justify-between items-center text-xs">
                   <a href={l.url} target="_blank" rel="noreferrer"
                     className="underline truncate" style={{ color: PLATFORM_COLORS[l.platform] ?? "#888" }}>
@@ -526,7 +543,7 @@ function ManageDistroArtistModal({
   );
 }
 
-function Stat({ label, value }: { label: string; value: any }) {
+function Stat({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="border border-white/10 bg-black/30 p-2">
       <div className="text-[9px] uppercase tracking-widest text-white/40">{label}</div>

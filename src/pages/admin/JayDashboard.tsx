@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import CrmLayout from "@/components/crm/CrmLayout";
 import SharedCalendar from "@/components/crm/SharedCalendar";
 import KpiCard from "@/components/crm/KpiCard";
@@ -15,6 +16,16 @@ import { useEffect } from "react";
 import { addDays, format, startOfWeek as dfStartOfWeek } from "date-fns";
 
 const JAY = "#b366ff";
+
+type Deliverable = Database["public"]["Tables"]["deliverables"]["Row"];
+type TeamMember = Database["public"]["Tables"]["team_members"]["Row"];
+type DeliverableWithShoot = Deliverable & {
+  shoot: { artist_name: string | null; shoot_date?: string | null } | null;
+};
+type AssignForm = {
+  assigned_to: string; objective: string; notes: string;
+  priority: string; expected_runtime_minutes: string; due_at: string;
+};
 
 const DELIV_STATUSES = [
   { value: "filmed",    label: "Filmed" },
@@ -47,9 +58,9 @@ export default function JayDashboard() {
   const weekEnd = endOfWeek();
 
   const [tab, setTab] = useState<Tab>("calendar");
-  const [uploadModal, setUploadModal] = useState<any | null>(null);
+  const [uploadModal, setUploadModal] = useState<DeliverableWithShoot | null>(null);
   const [uploadUrls, setUploadUrls] = useState<Record<string, string>>({});
-  const [assignModal, setAssignModal] = useState<any | null>(null);
+  const [assignModal, setAssignModal] = useState<Deliverable | null>(null);
 
   // Calendar tab: which week to display (default = this week, Monday start)
   const [viewWeek, setViewWeek] = useState<Date>(dfStartOfWeek(new Date(), { weekStartsOn: 1 }));
@@ -59,7 +70,7 @@ export default function JayDashboard() {
   const { data: shoots = [] } = useQuery({
     queryKey: ["jay-shoots", viewWeek.toISOString()],
     queryFn: async () => {
-      const { data } = await (supabase.from("shoots") as any)
+      const { data } = await supabase.from("shoots")
         .select("*")
         .gte("shoot_date", viewWeek.toISOString().slice(0, 10))
         .lt("shoot_date", viewWeekEnd.toISOString().slice(0, 10))
@@ -68,13 +79,13 @@ export default function JayDashboard() {
     },
   });
 
-  const shootIds = shoots.map((s: any) => s.id);
+  const shootIds = shoots.map((s) => s.id);
 
   const { data: deliverables = [] } = useQuery({
     queryKey: ["jay-deliverables", shootIds.join(",")],
     enabled: shootIds.length > 0,
     queryFn: async () => {
-      const { data } = await (supabase.from("deliverables") as any)
+      const { data } = await supabase.from("deliverables")
         .select("*").in("shoot_id", shootIds);
       return data ?? [];
     },
@@ -83,10 +94,10 @@ export default function JayDashboard() {
   const { data: allOpenDeliv = [] } = useQuery({
     queryKey: ["jay-all-open-deliverables"],
     queryFn: async () => {
-      const { data } = await (supabase.from("deliverables") as any)
+      const { data } = await supabase.from("deliverables")
         .select("*, shoot:shoots(artist_name, shoot_date)")
         .in("status", ["filmed", "editing", "reviewed"]);
-      return data ?? [];
+      return (data ?? []) as DeliverableWithShoot[];
     },
   });
 
@@ -94,10 +105,10 @@ export default function JayDashboard() {
   const { data: syncErrors = {} } = useQuery({
     queryKey: ["jay-sync-errors"],
     queryFn: async () => {
-      const { data } = await (supabase.from("calendar_sync") as any)
+      const { data } = await supabase.from("calendar_sync")
         .select("entity_id, last_error").eq("entity_type", "deliverable").not("last_error", "is", null);
       const map: Record<string, string> = {};
-      (data ?? []).forEach((r: any) => { if (r.last_error) map[r.entity_id] = r.last_error; });
+      (data ?? []).forEach((r) => { if (r.last_error) map[r.entity_id] = r.last_error; });
       return map;
     },
     refetchInterval: 60_000,
@@ -106,16 +117,16 @@ export default function JayDashboard() {
   const { data: uploadQueue = [] } = useQuery({
     queryKey: ["jay-upload-queue"],
     queryFn: async () => {
-      const { data } = await (supabase.from("deliverables") as any)
+      const { data } = await supabase.from("deliverables")
         .select("*, shoot:shoots(artist_name)").eq("status", "reviewed");
-      return data ?? [];
+      return (data ?? []) as DeliverableWithShoot[];
     },
   });
 
   const { data: editors = [] } = useQuery({
     queryKey: ["jay-editors"],
     queryFn: async () => {
-      const { data } = await (supabase.from("team_members") as any)
+      const { data } = await supabase.from("team_members")
         .select("id, name, email, role")
         .in("role", ["editor", "jay"]);
       return data ?? [];
@@ -123,34 +134,34 @@ export default function JayDashboard() {
   });
 
   const editorById = useMemo(() => {
-    const m: Record<string, any> = {};
-    editors.forEach((e: any) => { m[e.id] = e; });
+    const m: Record<string, Pick<TeamMember, "id" | "name" | "email" | "role">> = {};
+    editors.forEach((e) => { m[e.id] = e; });
     return m;
   }, [editors]);
 
   // ---- KPIs
   const kpiShoots = shoots.length;
-  const kpiDeliv = deliverables.filter((d: any) =>
-    ["uploaded", "published"].includes(d.status)).length;
+  const kpiDeliv = deliverables.filter((d) =>
+    ["uploaded", "published"].includes(d.status ?? "")).length;
   const slaHours = (() => {
-    const finished = deliverables.filter((d: any) => d.delivered_at && d.filmed_at);
+    const finished = deliverables.filter((d) => d.delivered_at && d.filmed_at);
     if (!finished.length) return "—";
-    const total = finished.reduce((acc: number, d: any) =>
+    const total = finished.reduce((acc: number, d) =>
       acc + (hoursBetween(d.filmed_at, d.delivered_at) ?? 0), 0);
     return `${Math.round(total / finished.length)}h`;
   })();
-  const overdueCount = allOpenDeliv.filter((d: any) =>
+  const overdueCount = allOpenDeliv.filter((d) =>
     d.due_at && new Date(d.due_at) < new Date()
   ).length;
 
   // ---- mutations
   async function updateDelivStatus(id: string, next: string, current: string) {
-    const patch: any = { status: next };
-    if (next === "filmed" && !deliverables.find((d: any) => d.id === id)?.filmed_at) patch.filmed_at = new Date().toISOString();
+    const patch: Partial<Deliverable> = { status: next };
+    if (next === "filmed" && !deliverables.find((d) => d.id === id)?.filmed_at) patch.filmed_at = new Date().toISOString();
     if (["uploaded", "published"].includes(next)) patch.delivered_at = new Date().toISOString();
-    qc.setQueryData(["jay-deliverables", shootIds.join(",")], (old: any[] = []) =>
+    qc.setQueryData(["jay-deliverables", shootIds.join(",")], (old: Deliverable[] = []) =>
       old.map((r) => (r.id === id ? { ...r, ...patch } : r)));
-    const { error } = await (supabase.from("deliverables") as any).update(patch).eq("id", id);
+    const { error } = await supabase.from("deliverables").update(patch).eq("id", id);
     if (error) { toast.error("Failed"); qc.invalidateQueries({ queryKey: ["jay-deliverables"] }); return; }
     await logActivity(member?.id, "deliverable", id, "status_changed", { from: current, to: next });
     qc.invalidateQueries({ queryKey: ["jay-all-open-deliverables"] });
@@ -164,8 +175,8 @@ export default function JayDashboard() {
       upload_urls: uploadUrls,
       delivered_at: new Date().toISOString(),
     };
-    qc.setQueryData(["jay-upload-queue"], (old: any[] = []) => old.filter((r) => r.id !== uploadModal.id));
-    const { error } = await (supabase.from("deliverables") as any).update(patch).eq("id", uploadModal.id);
+    qc.setQueryData(["jay-upload-queue"], (old: DeliverableWithShoot[] = []) => old.filter((r) => r.id !== uploadModal.id));
+    const { error } = await supabase.from("deliverables").update(patch).eq("id", uploadModal.id);
     if (error) { toast.error("Failed"); qc.invalidateQueries({ queryKey: ["jay-upload-queue"] }); return; }
     await logActivity(member?.id, "deliverable", uploadModal.id, "status_changed", patch);
     pushToGcal("deliverable", uploadModal.id);
@@ -174,9 +185,9 @@ export default function JayDashboard() {
     setUploadUrls({});
   }
 
-  async function saveAssignment(form: any) {
+  async function saveAssignment(form: AssignForm) {
     if (!assignModal) return;
-    const patch: any = {
+    const patch: Partial<Deliverable> = {
       assigned_to: form.assigned_to || null,
       objective: form.objective || null,
       notes: form.notes || null,
@@ -184,7 +195,7 @@ export default function JayDashboard() {
       expected_runtime_seconds: form.expected_runtime_minutes ? Math.round(Number(form.expected_runtime_minutes) * 60) : null,
       due_at: form.due_at ? new Date(form.due_at).toISOString() : null,
     };
-    const { error } = await (supabase.from("deliverables") as any).update(patch).eq("id", assignModal.id);
+    const { error } = await supabase.from("deliverables").update(patch).eq("id", assignModal.id);
     if (error) { toast.error(error.message); return; }
     await logActivity(member?.id, "deliverable", assignModal.id, "assigned", patch);
     toast.success("Assigned");
@@ -282,7 +293,7 @@ export default function JayDashboard() {
           <div className="grid grid-cols-7 gap-2">
             {weekDates.map((d) => {
               const iso = d.toISOString().slice(0, 10);
-              const items = shoots.filter((s: any) => s.shoot_date === iso);
+              const items = shoots.filter((s) => s.shoot_date === iso);
               const isToday = iso === new Date().toISOString().slice(0, 10);
               return (
                 <div key={iso} className="border border-white/10 bg-black/50 min-h-[200px]">
@@ -292,7 +303,7 @@ export default function JayDashboard() {
                   <div className="p-2 space-y-2">
                     {items.length === 0 ? (
                       <p className="text-white/20 text-[10px]">—</p>
-                    ) : items.map((s: any) => (
+                    ) : items.map((s) => (
                       <div key={s.id} className="border border-white/10 bg-crm-surface p-2">
                         <div className="text-xs font-bold truncate">{s.artist_name}</div>
                         <div className="text-[10px] text-white/40">{s.shoot_window ?? "—"}</div>
@@ -320,7 +331,7 @@ export default function JayDashboard() {
             <p className="text-white/40 text-sm">No shoots. Hit + to add.</p>
           ) : (
             <div className="space-y-2">
-              {shoots.map((s: any) => (
+              {shoots.map((s) => (
                 <div key={s.id} className="border border-white/5 bg-black/30 p-3 flex items-center justify-between">
                   <div>
                     <div className="text-sm font-bold">{s.artist_name}</div>
@@ -343,8 +354,8 @@ export default function JayDashboard() {
             <p className="text-white/40 text-sm">No shoots this week.</p>
           ) : (
             <div className="space-y-4">
-              {shoots.map((s: any) => {
-                const items = deliverables.filter((d: any) => d.shoot_id === s.id);
+              {shoots.map((s) => {
+                const items = deliverables.filter((d) => d.shoot_id === s.id);
                 return (
                   <div key={s.id} className="border border-white/5 bg-black/30 p-3">
                     <div className="text-sm font-bold mb-2">
@@ -354,9 +365,9 @@ export default function JayDashboard() {
                       <p className="text-white/30 text-[10px]">No deliverables yet.</p>
                     ) : (
                       <div className="space-y-2">
-                        {items.map((d: any) => {
+                        {items.map((d) => {
                           const editor = d.assigned_to ? editorById[d.assigned_to] : null;
-                          const dueLate = d.due_at && new Date(d.due_at) < new Date() && !["uploaded","published"].includes(d.status);
+                          const dueLate = d.due_at && new Date(d.due_at) < new Date() && !["uploaded","published"].includes(d.status ?? "");
                           return (
                             <div key={d.id} className="flex items-start justify-between text-xs gap-3">
                               <div className="flex-1 min-w-0">
@@ -411,9 +422,9 @@ export default function JayDashboard() {
             <p className="text-white/40 text-sm">No editors yet. Add a team_member with role='editor'.</p>
           ) : (
             <div className="grid md:grid-cols-2 gap-3">
-              {editors.map((e: any) => {
-                const load = allOpenDeliv.filter((d: any) => d.assigned_to === e.id);
-                const late = load.filter((d: any) => d.due_at && new Date(d.due_at) < new Date()).length;
+              {editors.map((e) => {
+                const load = allOpenDeliv.filter((d) => d.assigned_to === e.id);
+                const late = load.filter((d) => d.due_at && new Date(d.due_at) < new Date()).length;
                 return (
                   <div key={e.id} className="border border-white/10 bg-black/40 p-3">
                     <div className="flex items-center justify-between mb-2">
@@ -430,7 +441,7 @@ export default function JayDashboard() {
                       <p className="text-[10px] text-white/30">Idle.</p>
                     ) : (
                       <div className="space-y-1">
-                        {load.slice(0, 5).map((d: any) => (
+                        {load.slice(0, 5).map((d) => (
                           <div key={d.id} className="text-[10px] flex justify-between text-white/60">
                             <span className="truncate">{d.shoot?.artist_name} · {d.format}</span>
                             {d.due_at && (
@@ -458,7 +469,7 @@ export default function JayDashboard() {
             <p className="text-white/40 text-sm">Nothing reviewed yet.</p>
           ) : (
             <div className="divide-y divide-white/5">
-              {uploadQueue.map((d: any) => (
+              {uploadQueue.map((d) => (
                 <div key={d.id} className="py-2 flex items-center justify-between">
                   <div>
                     <div className="text-sm">{d.format}</div>
@@ -522,13 +533,16 @@ export default function JayDashboard() {
 function AssignEditorModal({
   deliverable, editors, accent, onClose, onSave,
 }: {
-  deliverable: any;
-  editors: any[];
+  deliverable: Deliverable | null;
+  editors: Pick<TeamMember, "id" | "name" | "email" | "role">[];
   accent: string;
   onClose: () => void;
-  onSave: (form: any) => Promise<void>;
+  onSave: (form: AssignForm) => Promise<void>;
 }) {
-  const [form, setForm] = useState<Record<string, string>>({});
+  const [form, setForm] = useState<AssignForm>({
+    assigned_to: "", objective: "", notes: "",
+    priority: "med", expected_runtime_minutes: "", due_at: "",
+  });
 
   // hydrate when opened
   useMemo(() => {
@@ -565,7 +579,7 @@ function AssignEditorModal({
               className="bg-black border border-white/10 text-white text-sm px-3 py-2 w-full"
             >
               <option value="">— Unassigned —</option>
-              {editors.map((e: any) => (
+              {editors.map((e) => (
                 <option key={e.id} value={e.id}>{e.name ?? e.email} ({e.role})</option>
               ))}
             </select>
@@ -653,8 +667,8 @@ function GcalSyncBar({ accent, onSynced }: { accent: string; onSynced: () => voi
       toast.success(`Synced · ${r.updated} updated, ${r.skipped} skipped`);
       setStatus(await getGcalSettings());
       onSynced();
-    } catch (e: any) {
-      toast.error(e?.message ?? "Sync failed");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Sync failed");
     } finally {
       setBusy(false);
     }
