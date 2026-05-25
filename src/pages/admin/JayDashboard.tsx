@@ -558,6 +558,9 @@ function AssignEditorModal({
         due_at: deliverable.due_at ? new Date(deliverable.due_at).toISOString().slice(0, 16) : "",
       });
     }
+    // Hydrate the form only when a different deliverable opens (id change);
+    // depending on the whole object would wipe in-progress edits.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deliverable?.id]);
 
   return (

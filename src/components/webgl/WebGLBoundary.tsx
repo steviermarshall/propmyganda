@@ -17,7 +17,6 @@ export default class WebGLBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: unknown) {
-    // eslint-disable-next-line no-console
     console.warn("WebGL scene failed, using fallback:", error);
   }
 

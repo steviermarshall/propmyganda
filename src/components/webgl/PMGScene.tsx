@@ -23,7 +23,6 @@ const LogoPlane = () => {
       setTex(t);
     };
     img.onerror = (e) => {
-      // eslint-disable-next-line no-console
       console.warn("Logo texture failed to load", e);
     };
     img.src = logo;

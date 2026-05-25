@@ -21,7 +21,10 @@ export default tseslint.config(
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
-      "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
+      // Dev-only fast-refresh hint with no production/correctness impact; it
+      // conflicts with the shadcn convention of co-exporting variants (e.g.
+      // buttonVariants) alongside components throughout src/components/ui.
+      "react-refresh/only-export-components": "off",
       "@typescript-eslint/no-unused-vars": "off",
     },
   },
