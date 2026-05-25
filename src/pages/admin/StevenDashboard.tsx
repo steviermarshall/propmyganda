@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import CrmLayout from "@/components/crm/CrmLayout";
 import SharedCalendar from "@/components/crm/SharedCalendar";
 import KpiCard from "@/components/crm/KpiCard";
@@ -16,6 +17,19 @@ import {
 } from "@/components/crm/SponsorModals";
 
 const STEVEN = "#d97000";
+
+type SponsorBrand = Database["public"]["Tables"]["sponsor_brands"]["Row"];
+type SponsorContact = Database["public"]["Tables"]["sponsor_contacts"]["Row"];
+type SponsorDeal = Database["public"]["Tables"]["sponsor_deals"]["Row"];
+type SponsorDeliverable = Database["public"]["Tables"]["sponsor_deliverables"]["Row"];
+type SponsorActivity = Database["public"]["Tables"]["sponsor_activities"]["Row"];
+
+type ContactWithBrand = SponsorContact & { sponsor_brands: { name: string | null } | null };
+type DealWithBrand = SponsorDeal & { sponsor_brands: { name: string | null; tier: string | null } | null };
+type DeliverableWithDeal = SponsorDeliverable & {
+  sponsor_deals: { sponsor_brands: { name: string | null } | null } | null;
+};
+type ActivityWithBrand = SponsorActivity & { sponsor_brands: { name: string | null } | null };
 
 const DEAL_STAGES = [
   { key: "intro",          label: "Intro" },
@@ -50,7 +64,7 @@ export default function StevenDashboard() {
   const { data: brands = [] } = useQuery({
     queryKey: ["sponsor-brands"],
     queryFn: async () => {
-      const { data } = await (supabase.from("sponsor_brands") as any)
+      const { data } = await supabase.from("sponsor_brands")
         .select("*").order("updated_at", { ascending: false });
       return data ?? [];
     },
@@ -59,66 +73,66 @@ export default function StevenDashboard() {
   const { data: contacts = [] } = useQuery({
     queryKey: ["sponsor-contacts"],
     queryFn: async () => {
-      const { data } = await (supabase.from("sponsor_contacts") as any)
+      const { data } = await supabase.from("sponsor_contacts")
         .select("*, sponsor_brands(name)").order("created_at", { ascending: false });
-      return data ?? [];
+      return (data ?? []) as ContactWithBrand[];
     },
   });
 
   const { data: deals = [] } = useQuery({
     queryKey: ["sponsor-deals"],
     queryFn: async () => {
-      const { data } = await (supabase.from("sponsor_deals") as any)
+      const { data } = await supabase.from("sponsor_deals")
         .select("*, sponsor_brands(name, tier)").order("updated_at", { ascending: false }).limit(300);
-      return data ?? [];
+      return (data ?? []) as DealWithBrand[];
     },
   });
 
   const { data: deliverables = [] } = useQuery({
     queryKey: ["sponsor-deliverables"],
     queryFn: async () => {
-      const { data } = await (supabase.from("sponsor_deliverables") as any)
+      const { data } = await supabase.from("sponsor_deliverables")
         .select("*, sponsor_deals(*, sponsor_brands(name))")
         .order("due_date", { ascending: true, nullsFirst: false });
-      return data ?? [];
+      return (data ?? []) as DeliverableWithDeal[];
     },
   });
 
   const { data: activities = [] } = useQuery({
     queryKey: ["sponsor-activities"],
     queryFn: async () => {
-      const { data } = await (supabase.from("sponsor_activities") as any)
+      const { data } = await supabase.from("sponsor_activities")
         .select("*, sponsor_brands(name)")
         .order("occurred_at", { ascending: false }).limit(100);
-      return data ?? [];
+      return (data ?? []) as ActivityWithBrand[];
     },
   });
 
   // ---------- derived ----------
-  const dueTouches = contacts.filter((c: any) => c.next_touch_at && c.next_touch_at.slice(0, 10) <= today);
-  const activeDeals = deals.filter((d: any) => !["wrapped", "lost"].includes(d.stage));
-  const pipelineValue = activeDeals.reduce((acc: number, d: any) => acc + Number(d.value_cents ?? 0), 0) / 100;
-  const signedThisMonth = deals.filter((d: any) =>
-    ["signed","activated","wrapped"].includes(d.stage) &&
+  const dueTouches = contacts.filter((c) => c.next_touch_at && c.next_touch_at.slice(0, 10) <= today);
+  const activeDeals = deals.filter((d) => !["wrapped", "lost"].includes(d.stage ?? ""));
+  const pipelineValue = activeDeals.reduce((acc: number, d) => acc + Number(d.value_cents ?? 0), 0) / 100;
+  const signedThisMonth = deals.filter((d) =>
+    ["signed","activated","wrapped"].includes(d.stage ?? "") &&
     d.updated_at?.slice(0, 7) === today.slice(0, 7)
   ).length;
-  const overdueDeliverables = deliverables.filter((d: any) =>
+  const overdueDeliverables = deliverables.filter((d) =>
     !d.completed_at && d.due_date && d.due_date < today);
 
   // ---------- actions ----------
-  async function moveDeal(item: any, next: string) {
-    qc.setQueryData(["sponsor-deals"], (old: any[] = []) =>
+  async function moveDeal(item: DealWithBrand, next: string) {
+    qc.setQueryData(["sponsor-deals"], (old: DealWithBrand[] = []) =>
       old.map((r) => r.id === item.id ? { ...r, stage: next } : r));
-    const { error } = await (supabase.from("sponsor_deals") as any)
+    const { error } = await supabase.from("sponsor_deals")
       .update({ stage: next }).eq("id", item.id);
     if (error) { toast.error("Move failed"); qc.invalidateQueries({ queryKey: ["sponsor-deals"] }); return; }
-    await logActivity(member?.id, "sponsor_deal" as any, item.id, "status_changed", { from: item.stage, to: next });
+    await logActivity(member?.id, "sponsor_deal", item.id, "status_changed", { from: item.stage, to: next });
   }
 
   async function bumpTouch(contactId: string, days: number) {
     const next = new Date(); next.setDate(next.getDate() + days);
     const patch = { last_touch_at: new Date().toISOString(), next_touch_at: next.toISOString() };
-    const { error } = await (supabase.from("sponsor_contacts") as any).update(patch).eq("id", contactId);
+    const { error } = await supabase.from("sponsor_contacts").update(patch).eq("id", contactId);
     if (error) { toast.error("Failed"); return; }
     toast.success("Touch logged");
     qc.invalidateQueries({ queryKey: ["sponsor-contacts"] });
@@ -144,7 +158,7 @@ export default function StevenDashboard() {
       <section>
         <p className="text-white/30 text-[10px] tracking-[0.3em] uppercase mb-4">Pipeline Snapshot</p>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <KpiCard label="Active Brands" value={brands.filter((b: any) => !["dead","lapsed"].includes(b.status)).length} accent={STEVEN} />
+          <KpiCard label="Active Brands" value={brands.filter((b) => !["dead","lapsed"].includes(b.status ?? "")).length} accent={STEVEN} />
           <KpiCard label="Active Deals" value={activeDeals.length} accent={STEVEN} />
           <KpiCard label="Pipeline $" value={`$${Math.round(pipelineValue).toLocaleString()}`} accent={STEVEN} />
           <KpiCard label="Signed MTD" value={signedThisMonth} accent={STEVEN} />
@@ -163,7 +177,7 @@ export default function StevenDashboard() {
           <p className="text-white/40 text-sm">All caught up.</p>
         ) : (
           <div className="divide-y divide-white/5">
-            {dueTouches.slice(0, 10).map((c: any) => (
+            {dueTouches.slice(0, 10).map((c) => (
               <div key={c.id} className="py-2 flex items-center justify-between">
                 <div>
                   <div className="text-sm">{c.name} <span className="text-white/40">· {c.sponsor_brands?.name}</span></div>
@@ -210,16 +224,16 @@ export default function StevenDashboard() {
             accent={STEVEN}
             columns={DEAL_STAGES}
             items={deals
-              .filter((d: any) => !pipelineFilter || d.sponsor_brands?.tier === pipelineFilter)
-              .map((d: any) => ({
-                id: d.id, stage: d.stage, updatedAt: d.updated_at, raw: d,
+              .filter((d) => !pipelineFilter || d.sponsor_brands?.tier === pipelineFilter)
+              .map((d) => ({
+                id: d.id, stage: d.stage ?? "", updatedAt: d.updated_at, raw: d,
               }))}
-            onMove={(it: any, next) => moveDeal(it.raw, next)}
-            renderCard={(it: any) => (
+            onMove={(it, next) => moveDeal(it.raw, next)}
+            renderCard={(it) => (
               <div className="space-y-1">
                 <div className="text-sm font-bold">{it.raw.sponsor_brands?.name ?? "—"}</div>
                 <div className="text-[10px] text-white/40">
-                  ${Number(it.raw.value_cents ?? 0) / 100 > 0 ? (it.raw.value_cents / 100).toLocaleString() : "—"}
+                  ${Number(it.raw.value_cents ?? 0) / 100 > 0 ? (Number(it.raw.value_cents) / 100).toLocaleString() : "—"}
                 </div>
                 {it.raw.next_action && (
                   <div className="text-[10px] text-white/50 truncate">→ {it.raw.next_action}</div>
@@ -265,8 +279,8 @@ export default function StevenDashboard() {
               </thead>
               <tbody>
                 {brands
-                  .filter((b: any) => (!brandFilter.tier || b.tier === brandFilter.tier) && (!brandFilter.status || b.status === brandFilter.status))
-                  .map((b: any) => (
+                  .filter((b) => (!brandFilter.tier || b.tier === brandFilter.tier) && (!brandFilter.status || b.status === brandFilter.status))
+                  .map((b) => (
                   <tr key={b.id} className="border-t border-white/5 hover:bg-black/30">
                     <td className="p-2 font-bold">{b.name}{b.parent_company && <span className="text-white/40 text-[10px] block">↳ {b.parent_company}</span>}</td>
                     <td className="p-2 text-white/70">{b.industry ?? "—"}</td>
@@ -309,7 +323,7 @@ export default function StevenDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {contacts.map((c: any) => (
+                {contacts.map((c) => (
                   <tr key={c.id} className="border-t border-white/5 hover:bg-black/30">
                     <td className="p-2 font-bold">{c.name}</td>
                     <td className="p-2 text-white/70">{c.sponsor_brands?.name ?? "—"}</td>
@@ -343,7 +357,7 @@ export default function StevenDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {deals.map((d: any) => (
+                {deals.map((d) => (
                   <tr key={d.id} className="border-t border-white/5 hover:bg-black/30">
                     <td className="p-2 font-bold">{d.sponsor_brands?.name ?? "—"}</td>
                     <td className="p-2 text-[10px] uppercase tracking-widest" style={{ color: STEVEN }}>{d.stage}</td>
@@ -369,7 +383,7 @@ export default function StevenDashboard() {
               <p className="text-white/40 text-sm">No deliverables yet. Add them inside a deal.</p>
             ) : (
               <div className="divide-y divide-white/5">
-                {deliverables.map((d: any) => {
+                {deliverables.map((d) => {
                   const overdue = !d.completed_at && d.due_date && d.due_date < today;
                   return (
                     <div key={d.id} className="py-2 flex items-center justify-between">
@@ -398,7 +412,7 @@ export default function StevenDashboard() {
               <p className="text-white/40 text-sm">Nothing logged yet.</p>
             ) : (
               <div className="divide-y divide-white/5">
-                {activities.map((a: any) => (
+                {activities.map((a) => (
                   <div key={a.id} className="py-2">
                     <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-white/40">
                       <span style={{ color: STEVEN }}>{a.activity_type}</span>

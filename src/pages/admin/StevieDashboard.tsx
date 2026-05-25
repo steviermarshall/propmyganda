@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import CrmLayout from "@/components/crm/CrmLayout";
 import SharedCalendar from "@/components/crm/SharedCalendar";
 import KpiCard from "@/components/crm/KpiCard";
@@ -11,6 +12,8 @@ import { logActivity } from "@/lib/crm/activity";
 import { toast } from "sonner";
 
 const STEVIE = "#F5FF00";
+
+type MediaAgencyProject = Database["public"]["Tables"]["media_agency_projects"]["Row"];
 const MRR_TARGET = 50000;
 
 const LANES = [
@@ -42,25 +45,25 @@ export default function StevieDashboard() {
     queryKey: ["mrr", monthStart],
     queryFn: async () => {
       const [royalty, booking, media, sponsor] = await Promise.all([
-        (supabase.from("royalty_payments") as any)
+        supabase.from("royalty_payments")
           .select("pmg_share").gte("period_month", monthStart).lt("period_month", monthEnd),
-        (supabase.from("crm_bookings") as any)
+        supabase.from("crm_bookings")
           .select("amount_quoted,status,updated_at").eq("status", "paid")
           .gte("updated_at", monthStart).lt("updated_at", monthEnd),
-        (supabase.from("media_agency_projects") as any)
+        supabase.from("media_agency_projects")
           .select("amount,status,updated_at").eq("status", "paid")
           .gte("updated_at", monthStart).lt("updated_at", monthEnd),
-        (supabase.from("sponsor_pipeline") as any)
+        supabase.from("sponsor_pipeline")
           .select("closed_amount,stage,updated_at").eq("stage", "closed")
           .gte("updated_at", monthStart).lt("updated_at", monthEnd),
       ]);
-      const sum = (rows: any[] | null, col: string) =>
-        (rows ?? []).reduce((acc, r) => acc + Number(r[col] ?? 0), 0);
+      const sum = <T,>(rows: T[] | null, get: (row: T) => number | null | undefined) =>
+        (rows ?? []).reduce((acc, r) => acc + Number(get(r) ?? 0), 0);
       return {
-        distro_jv:    sum(royalty.data, "pmg_share"),
-        booking:      sum(booking.data, "amount_quoted"),
-        media_agency: sum(media.data, "amount"),
-        sponsorships: sum(sponsor.data, "closed_amount"),
+        distro_jv:    sum(royalty.data, (r) => r.pmg_share),
+        booking:      sum(booking.data, (r) => r.amount_quoted),
+        media_agency: sum(media.data, (r) => r.amount),
+        sponsorships: sum(sponsor.data, (r) => r.closed_amount),
       };
     },
   });
@@ -73,14 +76,14 @@ export default function StevieDashboard() {
     queryKey: ["teamKpis", weekStart],
     queryFn: async () => {
       const [bookings, sponsors, shoots] = await Promise.all([
-        (supabase.from("crm_bookings") as any).select("id,status,updated_at").gte("updated_at", weekStart),
-        (supabase.from("sponsor_pipeline") as any).select("id,stage,updated_at").gte("updated_at", weekStart),
-        (supabase.from("shoots") as any).select("id,shoot_date").gte("shoot_date", weekStart.slice(0, 10)),
+        supabase.from("crm_bookings").select("id,status,updated_at").gte("updated_at", weekStart),
+        supabase.from("sponsor_pipeline").select("id,stage,updated_at").gte("updated_at", weekStart),
+        supabase.from("shoots").select("id,shoot_date").gte("shoot_date", weekStart.slice(0, 10)),
       ]);
-      const bookedThisWeek = (bookings.data ?? []).filter((r: any) =>
-        ["booked", "shot", "delivered", "paid"].includes(r.status)).length;
-      const pitchesThisWeek = (sponsors.data ?? []).filter((r: any) =>
-        ["pitched", "replied", "discovery_call", "proposal", "closed"].includes(r.stage)).length;
+      const bookedThisWeek = (bookings.data ?? []).filter((r) =>
+        ["booked", "shot", "delivered", "paid"].includes(r.status ?? "")).length;
+      const pitchesThisWeek = (sponsors.data ?? []).filter((r) =>
+        ["pitched", "replied", "discovery_call", "proposal", "closed"].includes(r.stage ?? "")).length;
       const shootsThisWeek = (shoots.data ?? []).length;
       return [
         { name: "Mike",   color: "#00F0FF", metric: "Bookings closed",   actual: bookedThisWeek,   target: 3 },
@@ -94,7 +97,7 @@ export default function StevieDashboard() {
   const { data: maProjects = [] } = useQuery({
     queryKey: ["ma-projects"],
     queryFn: async () => {
-      const { data } = await (supabase.from("media_agency_projects") as any)
+      const { data } = await supabase.from("media_agency_projects")
         .select("*").neq("status", "dead").order("updated_at", { ascending: false });
       return data ?? [];
     },
@@ -104,7 +107,7 @@ export default function StevieDashboard() {
   const { data: jvQueue = [] } = useQuery({
     queryKey: ["jv-queue"],
     queryFn: async () => {
-      const { data } = await (supabase.from("distro_artists") as any)
+      const { data } = await supabase.from("distro_artists")
         .select("*").eq("side", "jv_owned").eq("onboarding_status", "docs_pending");
       return data ?? [];
     },
@@ -114,24 +117,24 @@ export default function StevieDashboard() {
   const { data: reviewArticles = [] } = useQuery({
     queryKey: ["stevie-review"],
     queryFn: async () => {
-      const { data } = await (supabase.from("articles") as any)
+      const { data } = await supabase.from("articles")
         .select("*").eq("status", "stevie_review");
       return data ?? [];
     },
   });
 
-  async function moveMa(item: any, nextStage: string) {
-    qc.setQueryData(["ma-projects"], (old: any[] = []) =>
+  async function moveMa(item: MediaAgencyProject, nextStage: string) {
+    qc.setQueryData(["ma-projects"], (old: MediaAgencyProject[] = []) =>
       old.map((r) => (r.id === item.id ? { ...r, status: nextStage } : r)));
-    const { error } = await (supabase.from("media_agency_projects") as any)
+    const { error } = await supabase.from("media_agency_projects")
       .update({ status: nextStage }).eq("id", item.id);
     if (error) { toast.error("Move failed"); qc.invalidateQueries({ queryKey: ["ma-projects"] }); return; }
     await logActivity(member?.id, "media_agency_project", item.id, "status_changed", { from: item.status, to: nextStage });
   }
 
   async function approveJv(id: string) {
-    qc.setQueryData(["jv-queue"], (old: any[] = []) => old.filter((r) => r.id !== id));
-    const { error } = await (supabase.from("distro_artists") as any)
+    qc.setQueryData(["jv-queue"], (old: typeof jvQueue = []) => old.filter((r) => r.id !== id));
+    const { error } = await supabase.from("distro_artists")
       .update({ onboarding_status: "docs_signed" }).eq("id", id);
     if (error) { toast.error("Failed"); qc.invalidateQueries({ queryKey: ["jv-queue"] }); return; }
     await logActivity(member?.id, "distro_artist", id, "status_changed", { to: "docs_signed" });
@@ -139,8 +142,8 @@ export default function StevieDashboard() {
   }
 
   async function reviewArticle(id: string, action: "approved" | "ai_drafted") {
-    qc.setQueryData(["stevie-review"], (old: any[] = []) => old.filter((r) => r.id !== id));
-    const { error } = await (supabase.from("articles") as any)
+    qc.setQueryData(["stevie-review"], (old: typeof reviewArticles = []) => old.filter((r) => r.id !== id));
+    const { error } = await supabase.from("articles")
       .update({ status: action, approved_by: action === "approved" ? member?.id : null }).eq("id", id);
     if (error) { toast.error("Failed"); qc.invalidateQueries({ queryKey: ["stevie-review"] }); return; }
     await logActivity(member?.id, "article", id, "status_changed", { to: action });
@@ -225,11 +228,11 @@ export default function StevieDashboard() {
         <KanbanBoard
           accent={STEVIE}
           columns={PIPELINE}
-          items={maProjects.map((p: any) => ({
-            id: p.id, stage: p.status, updatedAt: p.updated_at, raw: p,
+          items={maProjects.map((p) => ({
+            id: p.id, stage: p.status ?? "", updatedAt: p.updated_at, raw: p,
           }))}
-          onMove={(it: any, next) => moveMa(it.raw, next)}
-          renderCard={(it: any) => (
+          onMove={(it, next) => moveMa(it.raw, next)}
+          renderCard={(it) => (
             <div className="space-y-1">
               <div className="text-sm font-bold">{it.raw.artist_name}</div>
               <div className="text-[10px] text-white/40">
@@ -248,7 +251,7 @@ export default function StevieDashboard() {
           <p className="text-white/40 text-sm">Nothing pending.</p>
         ) : (
           <div className="divide-y divide-white/5">
-            {jvQueue.map((a: any) => (
+            {jvQueue.map((a) => (
               <div key={a.id} className="py-2 flex items-center justify-between">
                 <div>
                   <div className="text-sm">{a.artist_name}</div>
@@ -273,7 +276,7 @@ export default function StevieDashboard() {
           <p className="text-white/40 text-sm">Inbox zero.</p>
         ) : (
           <div className="divide-y divide-white/5">
-            {reviewArticles.map((a: any) => (
+            {reviewArticles.map((a) => (
               <div key={a.id} className="py-2 flex items-center justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="text-sm truncate">{a.title}</div>

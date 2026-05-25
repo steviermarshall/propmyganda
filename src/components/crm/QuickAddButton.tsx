@@ -70,7 +70,7 @@ function QuickAddModal({
     setSaving(true);
     try {
       const payload = schema.build(fields, member.id);
-      const { data, error } = await (supabase.from(schema.table) as any)
+      const { data, error } = await supabase.from(schema.table)
         .insert(payload)
         .select()
         .single();
@@ -78,23 +78,24 @@ function QuickAddModal({
         const detail = [error.message, error.details, error.hint].filter(Boolean).join(" · ");
         throw new Error(detail || "Database insert failed");
       }
-      await logActivity(member.id, schema.entityType as any, data.id, "created", payload);
+      const inserted = data as { id: string; shoot_date?: string | null };
+      await logActivity(member.id, schema.entityType, inserted.id, "created", payload);
       if (schema.afterInsert) await schema.afterInsert(data, member.id);
 
       // Auto-push to Google Calendar for entities with a date
       if (entity === "shoot") {
-        pushToGcal("shoot", data.id);
-      } else if (entity === "booking" && data.shoot_date) {
-        pushToGcal("crm_booking", data.id);
+        pushToGcal("shoot", inserted.id);
+      } else if (entity === "booking" && inserted.shoot_date) {
+        pushToGcal("crm_booking", inserted.id);
       }
 
       toast.success(`${schema.label} created`);
       qc.invalidateQueries();
       setFields({});
       onClose();
-    } catch (err: any) {
+    } catch (err) {
       console.error("QuickAdd insert error:", err);
-      toast.error(err?.message ?? "Failed to create");
+      toast.error(err instanceof Error ? err.message : "Failed to create");
     } finally {
       setSaving(false);
     }
@@ -158,15 +159,22 @@ type Field = {
   options?: { value: string; label: string }[];
 };
 
+type QuickAddTable =
+  | "crm_bookings"
+  | "artist_prospects"
+  | "distro_artists"
+  | "sponsor_brands"
+  | "shoots";
+
 const SCHEMAS: Record<
   QuickAddEntity,
   {
     label: string;
-    table: string;
-    entityType: string;
+    table: QuickAddTable;
+    entityType: Parameters<typeof logActivity>[1];
     fields: Field[];
-    build: (f: Record<string, string>, memberId: string) => Record<string, any>;
-    afterInsert?: (row: any, memberId: string) => Promise<void>;
+    build: (f: Record<string, string>, memberId: string) => Record<string, unknown>;
+    afterInsert?: (row: unknown, memberId: string) => Promise<void>;
   }
 > = {
   booking: {
@@ -314,16 +322,17 @@ const SCHEMAS: Record<
       shooter: memberId,
     }),
     afterInsert: async (row) => {
-      const formats = row.shoot_type === "media_agency"
+      const shoot = row as { id: string; shoot_type: string };
+      const formats = shoot.shoot_type === "media_agency"
         ? ["Music Video", "Creative Content", "Short-form", "Interview"]
         : ["1 Mic Performance", "Crazy Story", "Show & Tell", "Long-form YouTube"];
       const rows = formats.map((format) => ({
-        shoot_id: row.id,
+        shoot_id: shoot.id,
         format,
         status: "filmed",
         upload_urls: {},
       }));
-      await (supabase.from("deliverables") as any).insert(rows);
+      await supabase.from("deliverables").insert(rows);
     },
   },
 };

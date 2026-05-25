@@ -28,7 +28,7 @@ function InstagramReels() {
     script.async = true;
     document.body.appendChild(script);
     script.onload = () => {
-      (window as any).instgrm?.Embeds?.process();
+      (window as { instgrm?: { Embeds?: { process?: () => void } } }).instgrm?.Embeds?.process();
     };
     return () => { document.body.removeChild(script); };
   }, []);

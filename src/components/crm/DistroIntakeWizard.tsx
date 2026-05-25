@@ -158,7 +158,7 @@ export default function DistroIntakeWizard({
     }
     setSaving(true);
     try {
-      const insertPayload: any = {
+      const insertPayload = {
         artist_name: artist.artist_name.trim(),
         artist_contact: artist.artist_contact.trim() || null,
         side: artist.side,
@@ -170,7 +170,7 @@ export default function DistroIntakeWizard({
         dsp_title_custom: artist.dsp_title_approved ? null : artist.dsp_title_custom.trim(),
         description: artist.description.trim() || null,
       };
-      const { data: created, error } = await (supabase.from("distro_artists") as any)
+      const { data: created, error } = await supabase.from("distro_artists")
         .insert(insertPayload).select().single();
       if (error) throw error;
 
@@ -194,7 +194,7 @@ export default function DistroIntakeWizard({
           is_primary: m.is_primary,
         }));
       if (memberRows.length) {
-        const { error: mErr } = await (supabase.from("distro_artist_members") as any).insert(memberRows);
+        const { error: mErr } = await supabase.from("distro_artist_members").insert(memberRows);
         if (mErr) throw mErr;
       }
 
@@ -211,7 +211,7 @@ export default function DistroIntakeWizard({
           url: r.url.trim(),
         }));
       if (streamingRows.length) {
-        const { error: sErr } = await (supabase.from("streaming_metrics") as any).insert(streamingRows);
+        const { error: sErr } = await supabase.from("streaming_metrics").insert(streamingRows);
         if (sErr) throw sErr;
       }
 
@@ -221,8 +221,8 @@ export default function DistroIntakeWizard({
       toast.success("Distro intake submitted");
       qc.invalidateQueries({ queryKey: ["mike-distro"] });
       close();
-    } catch (e: any) {
-      toast.error(e?.message ?? "Failed to submit");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to submit");
     } finally {
       setSaving(false);
     }
@@ -265,7 +265,7 @@ export default function DistroIntakeWizard({
             <FieldRow label="Side">
               <select
                 value={artist.side}
-                onChange={(e) => setArtist({ ...artist, side: e.target.value as any })}
+                onChange={(e) => setArtist({ ...artist, side: e.target.value as "jv_owned" | "pure_service" })}
                 className="bg-black border border-white/10 text-white text-sm px-3 py-2 w-full"
               >
                 <option value="pure_service">Pure Service</option>
@@ -384,7 +384,7 @@ export default function DistroIntakeWizard({
             )}
             <ReviewBlock title="Streaming">
               {(["spotify","apple","youtube","chartmetric"] as const).map((p) => {
-                const url = (artist as any)[`${p}_url`];
+                const url = (artist as Record<string, string>)[`${p}_url`];
                 return url ? <div key={p}><span className="text-white/40 uppercase tracking-widest text-[10px]">{p}</span> {url}</div> : null;
               })}
             </ReviewBlock>

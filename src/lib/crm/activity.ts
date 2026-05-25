@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 type EntityType =
   | "crm_booking" | "artist_prospect" | "distro_artist" | "royalty_payment"
   | "sponsor_pipeline" | "store_order" | "shoot" | "deliverable"
-  | "media_agency_project" | "article" | "newsletter_send";
+  | "media_agency_project" | "article" | "newsletter_send"
+  | "sponsor_brand" | "sponsor_contact" | "sponsor_deal";
 
 type Action =
   | "created" | "updated" | "status_changed" | "closed"
@@ -18,7 +19,7 @@ export async function logActivity(
 ): Promise<void> {
   if (!teamMemberId) return;
   try {
-    await (supabase.from("activity_log") as any).insert({
+    await supabase.from("activity_log").insert({
       team_member_id: teamMemberId,
       entity_type: entityType,
       entity_id: entityId,

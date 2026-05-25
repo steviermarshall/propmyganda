@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import CrmLayout from "@/components/crm/CrmLayout";
 import SharedCalendar from "@/components/crm/SharedCalendar";
 import KpiCard from "@/components/crm/KpiCard";
@@ -12,6 +13,11 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const EDITOR = "#22d3ee";
+
+type Deliverable = Database["public"]["Tables"]["deliverables"]["Row"];
+type DeliverableWithShoot = Deliverable & {
+  shoot: { artist_name: string | null; shoot_date: string | null; location: string | null } | null;
+};
 
 const STATUSES = [
   { value: "filmed",    label: "Filmed" },
@@ -30,35 +36,35 @@ const PRIORITY_COLOR: Record<string, string> = {
 export default function EditorDashboard() {
   const qc = useQueryClient();
   const { member } = useCrmAuth();
-  const [noteModal, setNoteModal] = useState<any | null>(null);
+  const [noteModal, setNoteModal] = useState<DeliverableWithShoot | null>(null);
   const [noteDraft, setNoteDraft] = useState("");
 
   const { data: items = [] } = useQuery({
     queryKey: ["editor-queue", member?.id],
     enabled: !!member?.id,
     queryFn: async () => {
-      const { data } = await (supabase.from("deliverables") as any)
+      const { data } = await supabase.from("deliverables")
         .select("*, shoot:shoots(artist_name, shoot_date, location)")
         .eq("assigned_to", member!.id)
         .order("due_at", { ascending: true, nullsFirst: false });
-      return data ?? [];
+      return (data ?? []) as DeliverableWithShoot[];
     },
   });
 
-  const open = items.filter((d: any) => !["uploaded", "published"].includes(d.status));
-  const overdue = open.filter((d: any) => d.due_at && new Date(d.due_at) < new Date()).length;
-  const completedThisWeek = items.filter((d: any) => {
+  const open = items.filter((d) => !["uploaded", "published"].includes(d.status ?? ""));
+  const overdue = open.filter((d) => d.due_at && new Date(d.due_at) < new Date()).length;
+  const completedThisWeek = items.filter((d) => {
     if (!d.delivered_at) return false;
     const sevenAgo = Date.now() - 7 * 86400000;
     return new Date(d.delivered_at).getTime() > sevenAgo;
   }).length;
 
   async function updateStatus(id: string, next: string, current: string) {
-    const patch: any = { status: next };
+    const patch: Partial<Deliverable> = { status: next };
     if (["uploaded", "published"].includes(next)) patch.delivered_at = new Date().toISOString();
-    qc.setQueryData(["editor-queue", member?.id], (old: any[] = []) =>
+    qc.setQueryData(["editor-queue", member?.id], (old: DeliverableWithShoot[] = []) =>
       old.map((r) => (r.id === id ? { ...r, ...patch } : r)));
-    const { error } = await (supabase.from("deliverables") as any).update(patch).eq("id", id);
+    const { error } = await supabase.from("deliverables").update(patch).eq("id", id);
     if (error) { toast.error("Failed"); qc.invalidateQueries({ queryKey: ["editor-queue"] }); return; }
     await logActivity(member?.id, "deliverable", id, "status_changed", { from: current, to: next });
     pushToGcal("deliverable", id);
@@ -67,7 +73,7 @@ export default function EditorDashboard() {
   async function saveNote() {
     if (!noteModal) return;
     const patch = { last_review_notes: noteDraft, revision_count: (noteModal.revision_count ?? 0) + 1 };
-    const { error } = await (supabase.from("deliverables") as any).update(patch).eq("id", noteModal.id);
+    const { error } = await supabase.from("deliverables").update(patch).eq("id", noteModal.id);
     if (error) { toast.error("Failed"); return; }
     await logActivity(member?.id, "deliverable", noteModal.id, "updated", patch);
     toast.success("Note saved");
@@ -85,7 +91,7 @@ export default function EditorDashboard() {
           <KpiCard label="Overdue"          value={overdue}               accent={EDITOR} />
           <KpiCard label="Done This Week"   value={completedThisWeek}     accent={EDITOR} />
           <KpiCard label="Avg Revisions"    value={
-            items.length ? (items.reduce((a: number, d: any) => a + (d.revision_count ?? 0), 0) / items.length).toFixed(1) : "—"
+            items.length ? (items.reduce((a: number, d) => a + (d.revision_count ?? 0), 0) / items.length).toFixed(1) : "—"
           } accent={EDITOR} />
         </div>
       </section>
@@ -98,7 +104,7 @@ export default function EditorDashboard() {
           <p className="text-white/40 text-sm">Nothing assigned. Enjoy the silence.</p>
         ) : (
           <div className="space-y-2">
-            {open.map((d: any) => {
+            {open.map((d) => {
               const dueLabel = d.due_at ? new Date(d.due_at).toLocaleString() : "—";
               const isLate = d.due_at && new Date(d.due_at) < new Date();
               return (

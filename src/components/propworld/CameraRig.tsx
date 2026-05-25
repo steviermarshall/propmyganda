@@ -232,6 +232,9 @@ export default function CameraRig({ mode: modeProp, hovered, hoverSide, isMobile
       window.removeEventListener("pointercancel", onUp);
       dom.removeEventListener("wheel", onWheel);
     };
+    // onShoot intentionally omitted: re-binding pointer listeners on every
+    // parent-supplied callback identity change would drop in-flight gestures.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gl, mode, camera, isMobile]);
 
   useEffect(() => {

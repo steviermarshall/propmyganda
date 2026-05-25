@@ -178,6 +178,8 @@ export default function AncientTree({ onEnter, onHoverChange, isMobile, variant 
       g.setIndex(kept);
     }
     return g;
+    // Static geometry built once on mount; insideDoorway is stable by design.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
 
@@ -201,6 +203,8 @@ export default function AncientTree({ onEnter, onHoverChange, isMobile, variant 
       });
     }
     return arr;
+    // Static instances built once on mount; insideDoorway is stable by design.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Major branches near the top
@@ -278,6 +282,8 @@ export default function AncientTree({ onEnter, onHoverChange, isMobile, variant 
       });
     }
     return arr;
+    // Static instances built once on mount; insideDoorway is stable by design.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useFrame((state) => {
