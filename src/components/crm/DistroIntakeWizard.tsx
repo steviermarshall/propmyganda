@@ -3,7 +3,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useCrmAuth } from "@/hooks/use-crm-auth";
-import { logActivity } from "@/lib/crm/activity";
 import { useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 
@@ -215,9 +214,6 @@ export default function DistroIntakeWizard({
         if (sErr) throw sErr;
       }
 
-      await logActivity(member.id, "distro_artist", created.id, "created", {
-        members: memberRows.length, streaming: streamingRows.length,
-      });
       toast.success("Distro intake submitted");
       qc.invalidateQueries({ queryKey: ["mike-distro"] });
       close();

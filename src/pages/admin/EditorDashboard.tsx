@@ -5,7 +5,6 @@ import SharedCalendar from "@/components/crm/SharedCalendar";
 import KpiCard from "@/components/crm/KpiCard";
 import InlineSelect from "@/components/crm/InlineSelect";
 import { useCrmAuth } from "@/hooks/use-crm-auth";
-import { logActivity } from "@/lib/crm/activity";
 import { pushToGcal } from "@/lib/crm/gcal";
 import { toast } from "sonner";
 import { useState } from "react";
@@ -60,7 +59,6 @@ export default function EditorDashboard() {
       old.map((r) => (r.id === id ? { ...r, ...patch } : r)));
     const { error } = await (supabase.from("deliverables") as any).update(patch).eq("id", id);
     if (error) { toast.error("Failed"); qc.invalidateQueries({ queryKey: ["editor-queue"] }); return; }
-    await logActivity(member?.id, "deliverable", id, "status_changed", { from: current, to: next });
     pushToGcal("deliverable", id);
   }
 
@@ -69,7 +67,6 @@ export default function EditorDashboard() {
     const patch = { last_review_notes: noteDraft, revision_count: (noteModal.revision_count ?? 0) + 1 };
     const { error } = await (supabase.from("deliverables") as any).update(patch).eq("id", noteModal.id);
     if (error) { toast.error("Failed"); return; }
-    await logActivity(member?.id, "deliverable", noteModal.id, "updated", patch);
     toast.success("Note saved");
     setNoteModal(null);
     setNoteDraft("");

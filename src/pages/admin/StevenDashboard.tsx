@@ -7,7 +7,6 @@ import KpiCard from "@/components/crm/KpiCard";
 import KanbanBoard from "@/components/crm/KanbanBoard";
 import { useCrmAuth } from "@/hooks/use-crm-auth";
 import { daysSince, todayISO } from "@/lib/crm/dates";
-import { logActivity } from "@/lib/crm/activity";
 import { toast } from "sonner";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
@@ -112,7 +111,6 @@ export default function StevenDashboard() {
     const { error } = await (supabase.from("sponsor_deals") as any)
       .update({ stage: next }).eq("id", item.id);
     if (error) { toast.error("Move failed"); qc.invalidateQueries({ queryKey: ["sponsor-deals"] }); return; }
-    await logActivity(member?.id, "sponsor_deal" as any, item.id, "status_changed", { from: item.stage, to: next });
   }
 
   async function bumpTouch(contactId: string, days: number) {

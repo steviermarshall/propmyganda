@@ -56,6 +56,38 @@ Weekly targets seeded:
 
 ---
 
+## Audit trail (activity_log) — now trigger-based
+
+As of migration `20260720_014_audit_activity_log.sql`, auditing moved from
+best-effort client-side inserts to **database triggers** — every
+INSERT / UPDATE / DELETE on CRM tables is recorded in `activity_log`
+automatically, regardless of which client or code path performed the write.
+
+Design adapted from Supabase's reference implementation:
+- Blog: "Postgres Auditing in 150 lines of SQL" — supabase.com/blog/postgres-audit
+- Extension: github.com/supabase/supa_audit
+
+Key points:
+- `public.log_crm_activity()` is a SECURITY DEFINER trigger fn; entity_type is
+  passed as trigger arg. UPDATEs log a `{column: {from, to}}` diff; changes to
+  `status` / `stage` / `outreach_status` / `onboarding_status` are logged as
+  `status_changed` with top-level `from`/`to` (keeps Mike's outreach KPI query
+  working).
+- Anonymous website writes (e.g. public bookings) log with
+  `team_member_id = NULL` → shown as "System / Public" in the UI.
+- The log is **append-only**: UPDATE/DELETE revoked, admin policy is read-only.
+- Old client-side `logActivity()` helper was removed — it silently dropped
+  events (sponsor_brand / sponsor_contact / sponsor_deal violated the old
+  CHECK constraint) and missed anything not manually instrumented.
+- Audit viewer UI: `/admin/audit` (admin-only), also reachable via ⌘K →
+  "Jump → Audit Log".
+
+**⚠️ Deploy step: paste `supabase/migrations/20260720_014_audit_activity_log.sql`
+into Cloud → Database → SQL Editor and run it (idempotent, safe to re-run).
+Until it runs, no activity is logged.**
+
+---
+
 ## Cron jobs to build (Phase 2 — after Lovable ships UI)
 
 | Job | Schedule | Description |

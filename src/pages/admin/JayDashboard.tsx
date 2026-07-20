@@ -7,7 +7,6 @@ import KpiCard from "@/components/crm/KpiCard";
 import InlineSelect from "@/components/crm/InlineSelect";
 import { useCrmAuth } from "@/hooks/use-crm-auth";
 import { startOfWeek, endOfWeek, todayISO, hoursBetween, daysSince } from "@/lib/crm/dates";
-import { logActivity } from "@/lib/crm/activity";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { pushToGcal, pullGcal, getGcalSettings } from "@/lib/crm/gcal";
@@ -152,7 +151,6 @@ export default function JayDashboard() {
       old.map((r) => (r.id === id ? { ...r, ...patch } : r)));
     const { error } = await (supabase.from("deliverables") as any).update(patch).eq("id", id);
     if (error) { toast.error("Failed"); qc.invalidateQueries({ queryKey: ["jay-deliverables"] }); return; }
-    await logActivity(member?.id, "deliverable", id, "status_changed", { from: current, to: next });
     qc.invalidateQueries({ queryKey: ["jay-all-open-deliverables"] });
     pushToGcal("deliverable", id);
   }
@@ -167,7 +165,6 @@ export default function JayDashboard() {
     qc.setQueryData(["jay-upload-queue"], (old: any[] = []) => old.filter((r) => r.id !== uploadModal.id));
     const { error } = await (supabase.from("deliverables") as any).update(patch).eq("id", uploadModal.id);
     if (error) { toast.error("Failed"); qc.invalidateQueries({ queryKey: ["jay-upload-queue"] }); return; }
-    await logActivity(member?.id, "deliverable", uploadModal.id, "status_changed", patch);
     pushToGcal("deliverable", uploadModal.id);
     toast.success("Marked uploaded");
     setUploadModal(null);
@@ -186,7 +183,6 @@ export default function JayDashboard() {
     };
     const { error } = await (supabase.from("deliverables") as any).update(patch).eq("id", assignModal.id);
     if (error) { toast.error(error.message); return; }
-    await logActivity(member?.id, "deliverable", assignModal.id, "assigned", patch);
     toast.success("Assigned");
     pushToGcal("deliverable", assignModal.id);
     setAssignModal(null);

@@ -481,7 +481,7 @@ export type Database = {
         Row: {
           id: string;
           team_member_id: string | null;
-          entity_type: "crm_booking" | "artist_prospect" | "distro_artist" | "royalty_payment" | "sponsor_pipeline" | "store_order" | "shoot" | "deliverable" | "media_agency_project" | "article" | "newsletter_send";
+          entity_type: "crm_booking" | "artist_prospect" | "distro_artist" | "royalty_payment" | "sponsor_pipeline" | "sponsor_brand" | "sponsor_contact" | "sponsor_deal" | "store_order" | "shoot" | "deliverable" | "media_agency_project" | "article" | "newsletter_send" | "booking";
           entity_id: string;
           action: "created" | "updated" | "status_changed" | "closed" | "contacted" | "pitched" | "assigned" | "deleted";
           payload: Record<string, unknown>;

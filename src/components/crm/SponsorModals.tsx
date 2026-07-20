@@ -3,7 +3,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useCrmAuth } from "@/hooks/use-crm-auth";
-import { logActivity } from "@/lib/crm/activity";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 
 const STEVEN = "#d97000";
@@ -113,7 +112,6 @@ export function SponsorBrandWizard({
       const { data, error } = await (supabase.from("sponsor_brands") as any)
         .insert(payload).select().single();
       if (error) throw error;
-      await logActivity(member.id, "sponsor_brand" as any, data.id, "created", { name: data.name });
       toast.success("Brand created");
       qc.invalidateQueries({ queryKey: ["sponsor-brands"] });
       onClose(); setStep(1);
@@ -260,7 +258,6 @@ export function SponsorContactModal({ open, onClose, brandId }: { open: boolean;
       const { data, error } = await (supabase.from("sponsor_contacts") as any)
         .insert(payload).select().single();
       if (error) throw error;
-      await logActivity(member.id, "sponsor_contact" as any, data.id, "created", { name: data.name });
       toast.success("Contact created");
       qc.invalidateQueries({ queryKey: ["sponsor-contacts"] });
       onClose();
@@ -349,7 +346,6 @@ export function SponsorDealModal({ open, onClose, brandId }: { open: boolean; on
       const { data, error } = await (supabase.from("sponsor_deals") as any)
         .insert(payload).select().single();
       if (error) throw error;
-      await logActivity(member.id, "sponsor_deal" as any, data.id, "created", { stage: f.stage });
       toast.success("Deal created");
       qc.invalidateQueries({ queryKey: ["sponsor-deals"] });
       onClose();

@@ -3,7 +3,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useCrmAuth } from "@/hooks/use-crm-auth";
-import { logActivity } from "@/lib/crm/activity";
 import { useQueryClient } from "@tanstack/react-query";
 import { addDaysISO } from "@/lib/crm/dates";
 import { pushToGcal } from "@/lib/crm/gcal";
@@ -78,7 +77,6 @@ function QuickAddModal({
         const detail = [error.message, error.details, error.hint].filter(Boolean).join(" · ");
         throw new Error(detail || "Database insert failed");
       }
-      await logActivity(member.id, schema.entityType as any, data.id, "created", payload);
       if (schema.afterInsert) await schema.afterInsert(data, member.id);
 
       // Auto-push to Google Calendar for entities with a date

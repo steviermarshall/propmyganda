@@ -7,7 +7,6 @@ import KanbanBoard from "@/components/crm/KanbanBoard";
 import StatusDot from "@/components/crm/StatusDot";
 import { startOfMonth, endOfMonth, startOfWeek, daysSince } from "@/lib/crm/dates";
 import { useCrmAuth } from "@/hooks/use-crm-auth";
-import { logActivity } from "@/lib/crm/activity";
 import { toast } from "sonner";
 
 const STEVIE = "#F5FF00";
@@ -126,7 +125,6 @@ export default function StevieDashboard() {
     const { error } = await (supabase.from("media_agency_projects") as any)
       .update({ status: nextStage }).eq("id", item.id);
     if (error) { toast.error("Move failed"); qc.invalidateQueries({ queryKey: ["ma-projects"] }); return; }
-    await logActivity(member?.id, "media_agency_project", item.id, "status_changed", { from: item.status, to: nextStage });
   }
 
   async function approveJv(id: string) {
@@ -134,7 +132,6 @@ export default function StevieDashboard() {
     const { error } = await (supabase.from("distro_artists") as any)
       .update({ onboarding_status: "docs_signed" }).eq("id", id);
     if (error) { toast.error("Failed"); qc.invalidateQueries({ queryKey: ["jv-queue"] }); return; }
-    await logActivity(member?.id, "distro_artist", id, "status_changed", { to: "docs_signed" });
     toast.success("Approved");
   }
 
@@ -143,7 +140,6 @@ export default function StevieDashboard() {
     const { error } = await (supabase.from("articles") as any)
       .update({ status: action, approved_by: action === "approved" ? member?.id : null }).eq("id", id);
     if (error) { toast.error("Failed"); qc.invalidateQueries({ queryKey: ["stevie-review"] }); return; }
-    await logActivity(member?.id, "article", id, "status_changed", { to: action });
     toast.success(action === "approved" ? "Approved" : "Rejected");
   }
 

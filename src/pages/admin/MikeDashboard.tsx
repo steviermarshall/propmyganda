@@ -9,7 +9,6 @@ import KanbanBoard from "@/components/crm/KanbanBoard";
 import InlineSelect from "@/components/crm/InlineSelect";
 import { useCrmAuth } from "@/hooks/use-crm-auth";
 import { startOfWeek, addDaysISO, todayISO, daysSince } from "@/lib/crm/dates";
-import { logActivity } from "@/lib/crm/activity";
 import { pushToGcal } from "@/lib/crm/gcal";
 import { toast } from "sonner";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -147,7 +146,6 @@ export default function MikeDashboard() {
       old.map((r) => (r.id === item.id ? { ...r, status: next } : r)));
     const { error } = await (supabase.from("crm_bookings") as any).update({ status: next }).eq("id", item.id);
     if (error) { toast.error("Move failed"); qc.invalidateQueries({ queryKey: ["mike-bookings"] }); return; }
-    await logActivity(member?.id, "crm_booking", item.id, "status_changed", { from: item.status, to: next });
     if (["booked", "shot", "delivered", "paid"].includes(next)) {
       pushToGcal("crm_booking", item.id);
     }
@@ -161,7 +159,6 @@ export default function MikeDashboard() {
       old.map((r) => (r.id === id ? { ...r, ...patch } : r)));
     const { error } = await (supabase.from("artist_prospects") as any).update(patch).eq("id", id);
     if (error) { toast.error("Update failed"); qc.invalidateQueries({ queryKey: ["mike-prospects"] }); return; }
-    await logActivity(member?.id, "artist_prospect", id, "status_changed", { from: current, to: next });
   }
 
   async function updateDistroStatus(id: string, next: string) {
@@ -169,7 +166,6 @@ export default function MikeDashboard() {
       old.map((r) => (r.id === id ? { ...r, onboarding_status: next } : r)));
     const { error } = await (supabase.from("distro_artists") as any).update({ onboarding_status: next }).eq("id", id);
     if (error) { toast.error("Update failed"); qc.invalidateQueries({ queryKey: ["mike-distro"] }); return; }
-    await logActivity(member?.id, "distro_artist", id, "status_changed", { to: next });
   }
 
   async function tapTodayItem(it: any) {
@@ -180,7 +176,6 @@ export default function MikeDashboard() {
       old.filter((r) => r.id !== it.id));
     const { error } = await (supabase.from(table) as any).update(patch).eq("id", it.id);
     if (error) { toast.error("Failed"); qc.invalidateQueries({ queryKey: ["mike-today"] }); return; }
-    await logActivity(member?.id, it.kind === "prospect" ? "artist_prospect" : "sponsor_pipeline", it.id, "contacted", patch);
     toast.success("Marked contacted");
   }
 
