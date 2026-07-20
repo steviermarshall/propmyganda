@@ -19,8 +19,9 @@ export default function CrmProtectedRoute({ children, allowedRoles }: Props) {
 
   if (!session) return <Navigate to="/auth/login" replace />;
 
-  if (allowedRoles && crmRole && !allowedRoles.includes(crmRole as string)) {
-    return <Navigate to="/auth/login" replace />;
+  // Fail closed: a required role that is missing or unmatched is denied.
+  if (allowedRoles && (!crmRole || !allowedRoles.includes(crmRole as string))) {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <>{children}</>;

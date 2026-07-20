@@ -20,7 +20,8 @@ export default function ProtectedRoute({ children, allowedRoles }: Props) {
 
   if (!session) return <Navigate to="/auth/login" replace />;
 
-  if (allowedRoles && role && !allowedRoles.includes(role)) {
+  // Fail closed: if a role is required, a missing/unmatched role is denied.
+  if (allowedRoles && (!role || !allowedRoles.includes(role))) {
     return <Navigate to="/dashboard" replace />;
   }
 

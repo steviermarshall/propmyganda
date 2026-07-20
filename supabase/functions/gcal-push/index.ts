@@ -2,11 +2,8 @@
 // Uses a Google service account — no third-party gateway required.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { z } from "npm:zod@3";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { getAccessToken } from "../_shared/google-auth.ts";
+import { corsHeaders, jsonResponse, requireTeamMember } from "../_shared/auth.ts";
 
 const GCAL_BASE = "https://www.googleapis.com/calendar/v3";
 
@@ -24,63 +21,6 @@ function colorFor(id: string | null | undefined): string {
   return String((h % 11) + 1);
 }
 
-// Exchange a service account JSON for a short-lived OAuth2 access token
-async function getAccessToken(serviceAccountJson: string): Promise<string> {
-  const sa = JSON.parse(serviceAccountJson);
-  const now = Math.floor(Date.now() / 1000);
-
-  const header = { alg: "RS256", typ: "JWT" };
-  const claim = {
-    iss: sa.client_email,
-    scope: "https://www.googleapis.com/auth/calendar",
-    aud: "https://oauth2.googleapis.com/token",
-    exp: now + 3600,
-    iat: now,
-  };
-
-  const b64url = (obj: object) =>
-    btoa(JSON.stringify(obj)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
-
-  const signingInput = `${b64url(header)}.${b64url(claim)}`;
-
-  const pemBody = sa.private_key
-    .replace(/-----BEGIN PRIVATE KEY-----/g, "")
-    .replace(/-----END PRIVATE KEY-----/g, "")
-    .replace(/\s/g, "");
-
-  const keyBytes = Uint8Array.from(atob(pemBody), (c) => c.charCodeAt(0));
-
-  const cryptoKey = await crypto.subtle.importKey(
-    "pkcs8",
-    keyBytes,
-    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-
-  const sig = await crypto.subtle.sign(
-    "RSASSA-PKCS1-v1_5",
-    cryptoKey,
-    new TextEncoder().encode(signingInput),
-  );
-
-  const jwt = `${signingInput}.${btoa(String.fromCharCode(...new Uint8Array(sig)))
-    .replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "")}`;
-
-  const tokenResp = await fetch("https://oauth2.googleapis.com/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
-      assertion: jwt,
-    }),
-  });
-
-  const tokenData = await tokenResp.json();
-  if (!tokenResp.ok) throw new Error(`OAuth token error: ${JSON.stringify(tokenData)}`);
-  return tokenData.access_token;
-}
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -88,19 +28,20 @@ Deno.serve(async (req) => {
     const SA_JSON = Deno.env.get("GOOGLE_SERVICE_ACCOUNT_JSON");
     if (!SA_JSON) throw new Error("GOOGLE_SERVICE_ACCOUNT_JSON is not configured");
 
-    const parsed = BodySchema.safeParse(await req.json());
-    if (!parsed.success) {
-      return new Response(JSON.stringify({ error: parsed.error.flatten() }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    const { entity_type, entity_id, delete: del } = parsed.data;
-
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
+
+    // Any authenticated CRM team member may sync their entities.
+    const caller = await requireTeamMember(req, supabase);
+    if (caller instanceof Response) return caller;
+
+    const parsed = BodySchema.safeParse(await req.json());
+    if (!parsed.success) {
+      return jsonResponse({ error: parsed.error.flatten() }, 400);
+    }
+    const { entity_type, entity_id, delete: del } = parsed.data;
 
     const accessToken = await getAccessToken(SA_JSON);
     const authHeaders = {

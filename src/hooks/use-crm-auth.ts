@@ -45,7 +45,10 @@ export function useCrmAuth(): CrmAuthState {
       .eq("auth_user_id", s.user.id)
       .maybeSingle();
 
-    if (!data && s.user.email) {
+    // Email-match fallback only for a VERIFIED email. Without this guard an
+    // unconfirmed signup for e.g. mike@… could auto-claim Mike's CRM role.
+    const emailVerified = !!(s.user.email_confirmed_at ?? (s.user as any).confirmed_at);
+    if (!data && s.user.email && emailVerified) {
       const res = await supabase
         .from("team_members")
         .select("*")
