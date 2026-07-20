@@ -54,6 +54,8 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
     { label: "Jump → Mike", goto: "/admin/mike" },
     { label: "Jump → Steven", goto: "/admin/steven" },
     { label: "Jump → Jay", goto: "/admin/jay" },
+    { label: "Jump → Editor Bay", goto: "/admin/editor" },
+    { label: "Jump → Deliverables Report", goto: "/admin/reports/deliverables" },
     { label: "Jump → Audit Log", goto: "/admin/audit" },
   ];
 

@@ -8,9 +8,8 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
-    hmr: {
-      overlay: false,
-    },
+    // Keep the error overlay on so dev-time runtime errors are visible
+    // instead of failing silently.
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {
