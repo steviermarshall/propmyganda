@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -137,24 +137,28 @@ export default function SharedCalendar({ accent, filter }: Props) {
   const [gcal, setGcal] = useState<{ calendar_id: string; last_pull_at: string | null } | null>(null);
   const [syncing, setSyncing] = useState(false);
 
-  const { data: allEvents = [], isFetching } = useQuery({
+  const { data: allEvents = [], isFetching, isError, isSuccess } = useQuery({
     queryKey: ["shared-calendar", viewMonth.toISOString()],
     queryFn: () => fetchCalendarData(viewMonth),
     staleTime: 2 * 60 * 1000,
-    onSuccess: () => {
-      getGcalSettings().then((s) => {
-        setGcal(s);
-        const last = s?.last_pull_at ? new Date(s.last_pull_at).getTime() : 0;
-        if (Date.now() - last > 5 * 60 * 1000) {
-          pullGcal()
-            .then(() => getGcalSettings().then(setGcal))
-            .catch(() => {});
-        }
-      });
-    },
-  } as any);
+  });
 
-  const events = filter ? allEvents.filter((e: Evt) => filter.includes(e.source)) : allEvents;
+  // react-query v5 removed the onSuccess option, so run the settings refresh +
+  // opportunistic pull as an effect once a fetch succeeds.
+  useEffect(() => {
+    if (!isSuccess) return;
+    getGcalSettings().then((s) => {
+      setGcal(s);
+      const last = s?.last_pull_at ? new Date(s.last_pull_at).getTime() : 0;
+      if (Date.now() - last > 5 * 60 * 1000) {
+        pullGcal()
+          .then(() => getGcalSettings().then(setGcal))
+          .catch(() => {});
+      }
+    });
+  }, [isSuccess, allEvents]);
+
+  const events = filter ? allEvents.filter((e) => filter.includes(e.source)) : allEvents;
 
   const monthGrid = useMemo(() => {
     const gridStart = startOfWeek(startOfMonth(viewMonth), { weekStartsOn: 1 });
@@ -215,6 +219,12 @@ export default function SharedCalendar({ accent, filter }: Props) {
           <span className="text-white/40">
             {ago == null ? "never synced" : ago < 1 ? "just now" : `${ago}m ago`}
           </span>
+          {isError && (
+            <>
+              <span className="text-white/30">·</span>
+              <span className="text-red-400">calendar failed to load</span>
+            </>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <button
