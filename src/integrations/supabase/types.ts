@@ -176,6 +176,64 @@ export type Database = {
         Insert: Omit<Database["public"]["Tables"]["distribution_applications"]["Row"], "id" | "submitted_at">;
         Update: Partial<Database["public"]["Tables"]["distribution_applications"]["Insert"]>;
       };
+      funding_applications: {
+        Row: {
+          id: string;
+          session_id: string;
+          claimed_by: string | null;
+          funding_amount: number | null;
+          use_of_funds: string | null;
+          business_name: string | null;
+          industry: string | null;
+          business_state: string | null;
+          time_in_business: string | null;
+          monthly_revenue: number | null;
+          accepts_cards: boolean | null;
+          contact_name: string | null;
+          email: string | null;
+          phone: string | null;
+          credit_score_range: string | null;
+          current_step: number;
+          completed_questions: string[];
+          status: "started" | "questions_complete" | "account_created" | "submitted" | "docs_uploaded";
+          utm_source: string | null;
+          utm_medium: string | null;
+          utm_campaign: string | null;
+          utm_content: string | null;
+          utm_term: string | null;
+          referrer: string | null;
+          landing_path: string | null;
+          underwriting_result: string | null;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+          submitted_at: string | null;
+        };
+        Insert: Partial<Omit<Database["public"]["Tables"]["funding_applications"]["Row"], "id" | "created_at" | "updated_at">> & {
+          session_id: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["funding_applications"]["Row"]>;
+      };
+      funding_events: {
+        Row: {
+          id: string;
+          application_id: string | null;
+          session_id: string;
+          event_type: string;
+          question_key: string | null;
+          payload: Record<string, unknown> | null;
+          page: string | null;
+          referrer: string | null;
+          utm_source: string | null;
+          user_agent: string | null;
+          created_at: string;
+        };
+        Insert: Omit<Database["public"]["Tables"]["funding_events"]["Row"], "id" | "created_at"> & {
+          id?: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["funding_events"]["Insert"]>;
+      };
       sponsorship_leads: {
         Row: {
           id: string;
@@ -504,7 +562,12 @@ export type Database = {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      claim_funding_application: {
+        Args: { app_id: string };
+        Returns: Database["public"]["Tables"]["funding_applications"]["Row"];
+      };
+    };
     Enums: {
       user_role: UserRole;
       crm_role: CrmRole;

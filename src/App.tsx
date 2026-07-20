@@ -24,6 +24,8 @@ import Publication from "./pages/Publication";
 import PublicationDetail from "./pages/PublicationDetail";
 import NotFound from "./pages/NotFound";
 
+import Apply from "./pages/Apply";
+
 import Login from "./pages/auth/Login";
 import Callback from "./pages/auth/Callback";
 
@@ -61,10 +63,13 @@ const AppRoutes = () => {
   const isDash = location.pathname.startsWith("/dashboard");
   const isAdmin = location.pathname.startsWith("/admin");
   const isAuth = location.pathname.startsWith("/auth");
+  const isApply = location.pathname.startsWith("/apply");
 
-  if (isDash || isAdmin || isAuth) {
+  if (isDash || isAdmin || isAuth || isApply) {
     return (
       <Routes location={location}>
+        <Route path="/apply"         element={<Apply />} />
+
         <Route path="/auth/login"    element={<Login />} />
         <Route path="/auth/callback" element={<Callback />} />
 

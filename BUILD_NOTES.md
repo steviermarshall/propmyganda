@@ -107,3 +107,50 @@ When a deal closes, post to group:
 ```
 
 Telegram bot token + chat ID stored in Supabase Vault secrets, never in code.
+
+---
+
+## Funding application wizard (1West-style flow)
+
+Migration `20260720_014_funding_applications.sql`. A multi-step funding
+application at `/apply` — 5 steps, progress bar, one question per screen,
+account gate at the end. Replicates the 1West *flow and UX pattern*, not their
+branding or copy.
+
+### Core principle: progressive save from Q1
+Every answer is written to `funding_applications` the moment it's given. A
+merchant who bails on step 3 is still a lead with a name, phone, and funding
+amount to nurture. Answers are also mirrored to `localStorage` so a refresh
+resumes the UX without needing anonymous read access to the row.
+
+### Two tables
+- **`funding_applications`** — one row per applicant. Nullable answer columns
+  (funding_amount, business_name, monthly_revenue, contact_name, …) plus funnel
+  state (`current_step`, `completed_questions`, `status`) and first-touch
+  attribution (utm_source/medium/campaign, referrer, landing_path).
+- **`funding_events`** — append-only analytics stream (page_view,
+  question_view, question_answered, step_complete, account_created, submitted).
+  This is what powers the funnel report per traffic source.
+
+### RLS design (doubles as the customer portal)
+- Anonymous applicants may **INSERT** and **UPDATE** their own row only while it
+  is *unclaimed* (`claimed_by IS NULL`). The client holds the row id.
+- At the account gate the applicant creates a passwordless account (email OTP).
+  `claim_funding_application(app_id)` — a `SECURITY DEFINER` function, the one
+  privileged `NULL → auth.uid()` transition — attaches the row to their user.
+- Once claimed, only the owner (`claimed_by = auth.uid()`) or an `admin` can
+  read/update it. Each merchant sees only their own deal.
+- `funding_events`: anyone may append; only `admin` may read.
+
+### Frontend
+- `src/lib/funding/steps.ts` — question config (one question per screen).
+- `src/lib/funding/analytics.ts` — session id + first-touch UTM capture + event
+  fire (fire-and-forget; never blocks or throws into the UI).
+- `src/hooks/use-funding-application.ts` — progressive-save controller.
+- `src/pages/Apply.tsx` + `src/components/funding/*` — the wizard UI.
+
+### Not yet wired (next steps)
+- Apply the migration to the Supabase project (`trwnqtgywfsalvismioi`).
+- Document upload step after submission (drag-and-drop → Railway processor).
+- Twilio SMS delivery + reply webhooks into the same events table.
+- The funnel report view over `funding_events` for the admin dashboard.
