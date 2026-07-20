@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react";
 import type { Session, User } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
 import type { CrmRole, Database } from "@/integrations/supabase/types";
+import { useAuthContext } from "./AuthProvider";
 
 type TeamMember = Database["public"]["Tables"]["team_members"]["Row"];
 
@@ -13,68 +12,10 @@ interface CrmAuthState {
   loading: boolean;
 }
 
+/** CRM auth. Reads from the shared AuthProvider — no per-consumer fetch. */
 export function useCrmAuth(): CrmAuthState {
-  const [session, setSession] = useState<Session | null>(null);
-  const [member, setMember] = useState<TeamMember | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      if (data.session) fetchMember(data.session);
-      else setLoading(false);
-    });
-
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, s) => {
-      setSession(s);
-      if (s) fetchMember(s);
-      else {
-        setMember(null);
-        setLoading(false);
-      }
-    });
-
-    return () => listener.subscription.unsubscribe();
-  }, []);
-
-  async function fetchMember(s: Session) {
-    // Try auth_user_id first, fall back to email match
-    let { data } = await supabase
-      .from("team_members")
-      .select("*")
-      .eq("auth_user_id", s.user.id)
-      .maybeSingle();
-
-    // Email-match fallback only for a VERIFIED email. Without this guard an
-    // unconfirmed signup for e.g. mike@… could auto-claim Mike's CRM role.
-    const emailVerified = !!(s.user.email_confirmed_at ?? (s.user as any).confirmed_at);
-    if (!data && s.user.email && emailVerified) {
-      const res = await supabase
-        .from("team_members")
-        .select("*")
-        .eq("email", s.user.email)
-        .maybeSingle();
-      data = res.data;
-
-      // Auto-link auth_user_id so future lookups are fast
-      if (data) {
-        await (supabase.from("team_members") as any)
-          .update({ auth_user_id: s.user.id })
-          .eq("id", (data as { id: string }).id);
-      }
-    }
-
-    setMember(data ?? null);
-    setLoading(false);
-  }
-
-  return {
-    session,
-    user: session?.user ?? null,
-    member,
-    crmRole: (member?.role as CrmRole) ?? null,
-    loading,
-  };
+  const { session, user, member, crmRole, loading } = useAuthContext();
+  return { session, user, member, crmRole, loading };
 }
 
 export function crmRoleToDashboardPath(role: CrmRole | null): string {
