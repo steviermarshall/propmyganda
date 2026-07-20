@@ -346,13 +346,19 @@ export default function BookingSheet({ open, onOpenChange, initialService, free,
   const [service, setService] = useState<Service>(initialService ?? tabs[0]?.value ?? "dj");
   const [data, setData] = useState<Partial<BookingInsert>>({});
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  // Honeypot: real users never fill this hidden field; bots do.
+  const [hp, setHp] = useState("");
 
   const set = (k: keyof BookingInsert, v: string) => setData(prev => ({ ...prev, [k]: v }));
 
-  const reset = () => { setData({}); setStatus("idle"); };
+  const reset = () => { setData({}); setHp(""); setStatus("idle"); };
 
   const submit = async () => {
     if (!data.name?.trim() || !data.email?.trim()) return;
+    // Basic email shape check before hitting the DB.
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email.trim())) { setStatus("error"); return; }
+    // Silently accept honeypot hits so bots don't learn they were caught.
+    if (hp) { setStatus("success"); return; }
     setStatus("loading");
     try {
       const eventAt = data.event_date ? new Date(data.event_date).toISOString() : undefined;
@@ -430,6 +436,17 @@ export default function BookingSheet({ open, onOpenChange, initialService, free,
               <TabsContent value="jv"><JvForm data={data} set={set} /></TabsContent>
               <TabsContent value="distro"><DistroForm data={data} set={set} /></TabsContent>
             </Tabs>
+
+            {/* Honeypot — hidden from users, off the tab order, ignored by AT. */}
+            <input
+              type="text"
+              tabIndex={-1}
+              autoComplete="off"
+              aria-hidden="true"
+              value={hp}
+              onChange={e => setHp(e.target.value)}
+              className="absolute left-[-9999px] w-px h-px opacity-0"
+            />
 
             {status === "error" && (
               <p className="mt-4 text-xs text-red-400">Something went wrong — please try again.</p>
