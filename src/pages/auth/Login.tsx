@@ -24,7 +24,9 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  if (!loading && session) return <Navigate to="/dashboard" replace />;
+  const returnTo = `${window.location.origin}${next ?? "/auth/callback"}`;
+
+  if (!loading && session) return <Navigate to={next ?? "/dashboard"} replace />;
 
   async function handlePassword(e: React.FormEvent) {
     e.preventDefault();
@@ -32,6 +34,7 @@ export default function Login() {
     setSubmitting(true);
     const { error: err } = await supabase.auth.signInWithPassword({ email, password });
     if (err) setError(err.message);
+    else if (next) window.location.href = next;
     setSubmitting(false);
   }
 
@@ -41,7 +44,7 @@ export default function Login() {
     setSubmitting(true);
     const { error: err } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      options: { emailRedirectTo: returnTo },
     });
     if (err) setError(err.message);
     else setSent(true);
@@ -51,7 +54,7 @@ export default function Login() {
   async function handleGoogle() {
     await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: { redirectTo: returnTo },
     });
   }
 
