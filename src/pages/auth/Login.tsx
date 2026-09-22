@@ -1,13 +1,22 @@
 import { useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import pmgLogo from "@/assets/pmg-logo-clean.png";
 
 type Mode = "magic" | "password";
 
+function safeNext(value: string | null): string | null {
+  if (!value) return null;
+  // Only allow same-origin relative paths.
+  if (!value.startsWith("/") || value.startsWith("//")) return null;
+  return value;
+}
+
 export default function Login() {
   const { session, loading } = useAuth();
+  const [searchParams] = useSearchParams();
+  const next = safeNext(searchParams.get("next"));
   const [mode, setMode] = useState<Mode>("password");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
