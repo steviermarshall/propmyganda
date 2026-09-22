@@ -1,0 +1,204 @@
+{
+  "version": 1,
+  "sdk_version": "3.0.1",
+  "path": "/functions/v1/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://trwnqtgywfsalvismioi.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "propmyganda-brand-launch",
+      "version": "0.1.0",
+      "title": "Propmyganda Brand Launch"
+    },
+    "tools": [
+      {
+        "name": "list_bookings",
+        "title": "List bookings",
+        "description": "List PMG CRM bookings in the pipeline, optionally filtered by status.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "inquiry",
+                "quoted",
+                "booked",
+                "shot",
+                "delivered",
+                "paid",
+                "dead"
+              ],
+              "description": "Only return bookings in this pipeline status."
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Maximum rows to return (default 25, max 100)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_shoots",
+        "title": "List shoots",
+        "description": "List scheduled production shoots, optionally within a date range or by status.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "from": {
+              "type": "string",
+              "description": "Earliest shoot date, as YYYY-MM-DD."
+            },
+            "to": {
+              "type": "string",
+              "description": "Latest shoot date, as YYYY-MM-DD."
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "scheduled",
+                "filming",
+                "edit",
+                "review",
+                "delivered"
+              ],
+              "description": "Only return shoots in this status."
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Maximum rows to return (default 25, max 100)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_deliverables",
+        "title": "List deliverables",
+        "description": "List edit deliverables and their current status, optionally filtered by status.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "filmed",
+                "editing",
+                "reviewed",
+                "uploaded",
+                "published"
+              ],
+              "description": "Only return deliverables in this status."
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Maximum rows to return (default 25, max 100)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_artist_prospects",
+        "title": "List artist prospects",
+        "description": "List artist outreach prospects with their fit score and outreach status.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "outreach_status": {
+              "type": "string",
+              "enum": [
+                "cold",
+                "pitched",
+                "replied",
+                "discovery_call",
+                "closed",
+                "dead"
+              ],
+              "description": "Only return prospects in this outreach status."
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Maximum rows to return (default 25, max 100)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_booking_status",
+        "title": "Update booking status",
+        "description": "Move a CRM booking to a different pipeline status.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "booking_id": {
+              "type": "string",
+              "description": "The booking id to update."
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "inquiry",
+                "quoted",
+                "booked",
+                "shot",
+                "delivered",
+                "paid",
+                "dead"
+              ],
+              "description": "The new pipeline status."
+            }
+          },
+          "required": [
+            "booking_id",
+            "status"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}

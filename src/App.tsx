@@ -40,6 +40,7 @@ import StevenDashboard from "./pages/admin/StevenDashboard";
 import JayDashboard from "./pages/admin/JayDashboard";
 import EditorDashboard from "./pages/admin/EditorDashboard";
 import DeliverablesReport from "./pages/admin/DeliverablesReport";
+import OAuthConsent from "./pages/OAuthConsent";
 
 const queryClient = new QueryClient();
 
@@ -61,10 +62,12 @@ const AppRoutes = () => {
   const isDash = location.pathname.startsWith("/dashboard");
   const isAdmin = location.pathname.startsWith("/admin");
   const isAuth = location.pathname.startsWith("/auth");
+  const isConsent = location.pathname.startsWith("/.lovable/oauth");
 
-  if (isDash || isAdmin || isAuth) {
+  if (isDash || isAdmin || isAuth || isConsent) {
     return (
       <Routes location={location}>
+        <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
         <Route path="/auth/login"    element={<Login />} />
         <Route path="/auth/callback" element={<Callback />} />
 

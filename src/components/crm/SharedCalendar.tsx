@@ -154,7 +154,8 @@ export default function SharedCalendar({ accent, filter }: Props) {
     },
   } as any);
 
-  const events = filter ? allEvents.filter((e: Evt) => filter.includes(e.source)) : allEvents;
+  const eventList = (allEvents ?? []) as Evt[];
+  const events = filter ? eventList.filter((e) => filter.includes(e.source)) : eventList;
 
   const monthGrid = useMemo(() => {
     const gridStart = startOfWeek(startOfMonth(viewMonth), { weekStartsOn: 1 });
