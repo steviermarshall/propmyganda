@@ -1,6 +1,7 @@
 import { Suspense, lazy, useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import CosmicHUD from "@/components/propworld/CosmicHUD";
+import PMGFight from "@/components/PMGFight";
 import SEO from "@/components/SEO";
 
 // ─── Game HUD ────────────────────────────────────────────────────────────────
@@ -109,10 +110,11 @@ function GameHUD() {
 
 const PropworldScene = lazy(() => import("@/components/propworld/PropworldScene"));
 
-type Mode = "forest" | "transitioning" | "theater" | "game";
+type Mode = "forest" | "transitioning" | "theater" | "game" | "fight";
 
 const Propworld = () => {
   const [mode, setMode] = useState<Mode>("forest");
+  const [sceneKey, setSceneKey] = useState(0);
 
   const handleModeChange = (m: Mode) => {
     setMode(m);
@@ -127,13 +129,34 @@ const Propworld = () => {
       />
       <h1 className="sr-only">Propworld — PMG interactive 3D experience</h1>
       {/* Full-screen 3D scene */}
-      <div className="absolute inset-0">
+      <div className={`absolute inset-0 transition-opacity duration-500 ${mode === "fight" ? "pointer-events-none opacity-0" : "opacity-100"}`}>
         <Suspense fallback={<div className="w-full h-full bg-[#02060a]" />}>
           <PropworldScene
+            key={sceneKey}
             onModeChange={handleModeChange}
           />
         </Suspense>
       </div>
+
+      <AnimatePresence>
+        {mode === "fight" && (
+          <motion.div
+            key="pmg-fight"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.45 }}
+            className="absolute inset-0 z-30 overflow-auto bg-background"
+          >
+            <PMGFight
+              onExit={() => {
+                setMode("forest");
+                setSceneKey((key) => key + 1);
+              }}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Subtle vignette overlay for legibility */}
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/60" />
@@ -155,8 +178,9 @@ const Propworld = () => {
             transition={{ duration: 0.6 }}
             className="absolute inset-0 pointer-events-none"
           >
+            <div className="absolute inset-x-0 bottom-14 grid grid-cols-3 items-end gap-2 px-4 md:gap-8 md:px-12">
             {/* Left label — THE GAME (blue) */}
-            <div className="absolute left-0 top-0 h-full w-1/2 flex flex-col items-start justify-end pb-16 pl-8 md:pl-12">
+            <div className="flex flex-col items-start">
               <p className="text-[9px] tracking-[0.45em] uppercase text-cyan-400/60 mb-2">Blue Tree</p>
               <h2 className="text-3xl md:text-4xl font-bold uppercase tracking-tight text-cyan-100/70">
                 The Game
@@ -166,8 +190,19 @@ const Propworld = () => {
               </p>
             </div>
 
+            {/* Center label — PMG FIGHT (crimson) */}
+            <div className="flex flex-col items-center text-center">
+              <p className="mb-2 text-[8px] uppercase tracking-[0.25em] text-red-400/70 md:text-[9px] md:tracking-[0.45em]">Crimson Tree</p>
+              <h2 className="font-bold uppercase text-red-100/80 text-lg md:text-4xl">
+                PMG Fight
+              </h2>
+              <p className="mt-1 hidden text-xs tracking-wide text-red-300/60 sm:block">
+                Arcade combat · Roster battle
+              </p>
+            </div>
+
             {/* Right label — THE ROOM (amber) */}
-            <div className="absolute right-0 top-0 h-full w-1/2 flex flex-col items-end justify-end pb-16 pr-8 md:pr-12 text-right">
+            <div className="flex flex-col items-end text-right">
               <p className="text-[9px] tracking-[0.45em] uppercase text-amber-400/60 mb-2">Amber Tree</p>
               <h2 className="text-3xl md:text-4xl font-bold uppercase tracking-tight text-amber-100/70">
                 The Room
@@ -175,6 +210,7 @@ const Propworld = () => {
               <p className="mt-1 text-[11px] md:text-xs text-amber-300/50 tracking-wide">
                 Social hub · Media wall
               </p>
+            </div>
             </div>
 
             {/* Center title */}
@@ -185,7 +221,7 @@ const Propworld = () => {
 
             {/* Hint */}
             <p className="absolute inset-x-0 bottom-8 text-center text-[9px] tracking-[0.35em] uppercase text-white/30">
-              Drag to look · Press an orb to enter
+              Drag to look · Press a doorway to enter
             </p>
           </motion.div>
         )}

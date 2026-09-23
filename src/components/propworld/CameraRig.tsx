@@ -4,9 +4,10 @@ import * as THREE from "three";
 import { kickables } from "./useKickables";
 
 interface Props {
-  mode: "forest" | "transitioning" | "theater" | "game";
+  mode: "forest" | "transitioning" | "theater" | "game" | "fight";
   hovered?: boolean;
-  hoverSide?: "room" | "game" | null;
+  hoverSide?: "room" | "game" | "fight" | null;
+  transitionX?: number;
   isMobile?: boolean;
   onTransitionComplete: () => void;
   onShoot?: () => void;
@@ -22,7 +23,7 @@ interface Props {
  *  - Drag (mouse or touch) to rotate around the tree manually.
  *  - Releases back to auto-orbit after a short idle.
  */
-export default function CameraRig({ mode: modeProp, hovered, hoverSide, isMobile, onTransitionComplete, onShoot }: Props) {
+export default function CameraRig({ mode: modeProp, hovered, hoverSide, transitionX = 0, isMobile, onTransitionComplete, onShoot }: Props) {
   const mode: string = modeProp;
   const { camera, gl } = useThree();
   const startTimeRef = useRef<number | null>(null);
@@ -287,7 +288,7 @@ export default function CameraRig({ mode: modeProp, hovered, hoverSide, isMobile
       persp.updateProjectionMatrix();
 
       // Pan look target toward hovered tree side
-      const panTarget = hoverSide === "room" ? 6 : hoverSide === "game" ? -6 : 0;
+      const panTarget = hoverSide === "room" ? 8 : hoverSide === "game" ? -8 : 0;
       forestTarget.current.x = THREE.MathUtils.lerp(forestTarget.current.x, panTarget, 0.03);
       camera.lookAt(forestTarget.current);
       return;
@@ -301,8 +302,8 @@ export default function CameraRig({ mode: modeProp, hovered, hoverSide, isMobile
       const e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
 
       const p0 = startPosRef.current;
-      const p1 = new THREE.Vector3(0, 2.8, 6.0);
-      const p2 = new THREE.Vector3(0, 2.8, 3.25);
+      const p1 = new THREE.Vector3(transitionX, 2.8, 6.0);
+      const p2 = new THREE.Vector3(transitionX, 2.8, 3.25);
       const p3 = new THREE.Vector3(0, 3, 4);
 
       let pos: THREE.Vector3;
@@ -339,7 +340,7 @@ export default function CameraRig({ mode: modeProp, hovered, hoverSide, isMobile
     }
 
     // Game mode: SpaceGame owns camera and input — CameraRig does nothing here
-    if (mode === "game") return;
+    if (mode === "game" || mode === "fight") return;
 
     // theater — smoothed look-around with momentum
     const idleMs = performance.now() - userInteractRef.current;

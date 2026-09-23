@@ -14,18 +14,20 @@ import TheaterInterior from "./TheaterInterior";
 import SpaceGame from "./SpaceGame";
 import CameraRig from "./CameraRig";
 
-type Mode = "forest" | "transitioning" | "theater" | "game";
+type Mode = "forest" | "transitioning" | "theater" | "game" | "fight";
 
 interface Props {
   onModeChange?: (mode: Mode) => void;
-  externalHoverSide?: "room" | "game" | null;
+  externalHoverSide?: "room" | "game" | "fight" | null;
 }
 
 export default function PropworldScene({ onModeChange, externalHoverSide }: Props) {
   const [mode, setMode] = useState<Mode>("forest");
   const [hovered, setHovered] = useState(false);
   const [gameHovered, setGameHovered] = useState(false);
-  const enterTargetRef = useRef<"theater" | "game">("theater");
+  const [fightHovered, setFightHovered] = useState(false);
+  const enterTargetRef = useRef<"theater" | "game" | "fight">("theater");
+  const transitionXRef = useRef(0);
   const shootFnRef = useRef<(() => void) | null>(null);
   const isMobile = useIsMobile();
 
@@ -74,10 +76,11 @@ export default function PropworldScene({ onModeChange, externalHoverSide }: Prop
           <>
             <Ground />
             <Forest />
-            <group position={[6, 0, 0]}>
+            <group position={[7, 0, 0]} scale={0.58}>
               <AncientTree
                 onEnter={() => {
                   enterTargetRef.current = "theater";
+                  transitionXRef.current = 7;
                   setModeAndNotify("transitioning");
                 }}
                 onHoverChange={setHovered}
@@ -85,15 +88,28 @@ export default function PropworldScene({ onModeChange, externalHoverSide }: Prop
                 variant="room"
               />
             </group>
-            <group position={[-6, 0, 0]}>
+            <group position={[-7, 0, 0]} scale={0.58}>
               <AncientTree
                 onEnter={() => {
                   enterTargetRef.current = "game";
+                  transitionXRef.current = -7;
                   setModeAndNotify("transitioning");
                 }}
                 onHoverChange={setGameHovered}
                 isMobile={isMobile}
                 variant="game"
+              />
+            </group>
+            <group position={[0, 0, -3]} scale={0.58}>
+              <AncientTree
+                onEnter={() => {
+                  enterTargetRef.current = "fight";
+                  transitionXRef.current = 0;
+                  setModeAndNotify("transitioning");
+                }}
+                onHoverChange={setFightHovered}
+                isMobile={isMobile}
+                variant="fight"
               />
             </group>
             <Fireflies count={isMobile ? 280 : 650} />
@@ -111,12 +127,13 @@ export default function PropworldScene({ onModeChange, externalHoverSide }: Prop
 
       <CameraRig
         mode={mode}
-        hovered={(hovered || gameHovered) && mode === "forest"}
+        hovered={(hovered || gameHovered || fightHovered) && mode === "forest"}
         hoverSide={
           mode === "forest"
-            ? (externalHoverSide ?? (hovered ? "room" : gameHovered ? "game" : null))
+            ? (externalHoverSide ?? (hovered ? "room" : gameHovered ? "game" : fightHovered ? "fight" : null))
             : null
         }
+        transitionX={transitionXRef.current}
         isMobile={isMobile}
         onTransitionComplete={() => setModeAndNotify(enterTargetRef.current)}
         onShoot={() => shootFnRef.current?.()}
