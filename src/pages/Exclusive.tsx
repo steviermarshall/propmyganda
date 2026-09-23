@@ -85,12 +85,6 @@ const videos = [
   { title: "Big Yavo speaks with his mother", id: "wu3HSbXf5zA" },
 ];
 
-const ExternalLink = ({ href, children }: { href: string; children: React.ReactNode }) => (
-  <a href={href} target="_blank" rel="noopener noreferrer">
-    {children}
-  </a>
-);
-
 export default function Exclusive() {
   return (
     <main className="bg-primary text-primary-foreground overflow-hidden">
@@ -119,14 +113,14 @@ export default function Exclusive() {
             <div className="mt-9 flex gap-2">
               {socialLinks.map(({ label, href, Icon }) => (
                 <Button key={label} asChild variant="ghost" size="icon" className="rounded-full text-electric hover:bg-electric hover:text-electric-foreground">
-                  <ExternalLink href={href}><Icon aria-label={label} /></ExternalLink>
+                  <a href={href} target="_blank" rel="noopener noreferrer" aria-label={label}><Icon /></a>
                 </Button>
               ))}
             </div>
           </div>
 
           <div className="mx-auto flex aspect-square w-full max-w-[410px] items-center justify-center rounded-lg bg-background p-14 md:p-20">
-            <img src={pmgLogo} alt="PROPMYGANDA" className="w-full" />
+            <img src={pmgLogo} alt="PROPMYGANDA" className="w-full invert" />
           </div>
         </div>
       </section>
@@ -208,7 +202,7 @@ export default function Exclusive() {
             ))}
           </div>
           <Button asChild variant="outline" className="mt-10 rounded-full border-primary-foreground/25 bg-transparent font-mono text-[10px] uppercase tracking-[0.16em] text-primary-foreground hover:bg-primary-foreground hover:text-primary">
-            <ExternalLink href="https://youtube.com/@propmyganda">Subscribe on YouTube</ExternalLink>
+            <a href="https://youtube.com/@propmyganda" target="_blank" rel="noopener noreferrer">Subscribe on YouTube</a>
           </Button>
         </div>
       </section>
