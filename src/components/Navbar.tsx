@@ -8,6 +8,7 @@ const navLinks = [
   { label: "Home",         path: "/" },
   { label: "Records",      path: "/artists" },
   { label: "Events",       path: "/events" },
+  { label: "Exclusive",    path: "/exclusive" },
   { label: "Distribution", path: "/distribution" },
   { label: "Publication",  path: "/publication" },
   { label: "Store",        path: "/store" },
@@ -50,7 +51,7 @@ const Navbar = () => {
           )}
 
           {/* Desktop Nav — centered to viewport */}
-          <div className="hidden md:flex items-center gap-8 fixed left-1/2 -translate-x-1/2 top-0 h-16 md:h-20">
+          <div className="hidden md:flex items-center gap-6 lg:gap-8 fixed left-1/2 -translate-x-1/2 top-0 h-16 md:h-20">
             {navLinks.map((link) => (
               <Link
                 key={link.path}
