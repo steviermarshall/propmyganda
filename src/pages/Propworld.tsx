@@ -146,7 +146,7 @@ const Propworld = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.45 }}
-            className="absolute inset-0 z-30 overflow-auto bg-background"
+            className="absolute inset-0 z-[60] overflow-auto bg-background"
           >
             <PMGFight
               onExit={() => {
