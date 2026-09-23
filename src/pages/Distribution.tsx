@@ -133,7 +133,14 @@ const Distribution = () => {
             </div>
             <div className="flex-1">
               {(() => {
-                const artist = rosterArtists[activeArtist] as typeof rosterArtists[0] & { bio?: string; albumCover?: string; spotifyAlbumId?: string };
+                const artist = rosterArtists[activeArtist] as typeof rosterArtists[0] & { bio?: string; albumCover?: string; spotifyAlbumId?: string; spotifyTrackId?: string; spotifyArtistId?: string };
+                const embedSrc = artist.spotifyAlbumId
+                  ? `https://open.spotify.com/embed/album/${artist.spotifyAlbumId}?utm_source=generator&theme=0`
+                  : artist.spotifyTrackId
+                  ? `https://open.spotify.com/embed/track/${artist.spotifyTrackId}?utm_source=generator&theme=0`
+                  : artist.spotifyArtistId
+                  ? `https://open.spotify.com/embed/artist/${artist.spotifyArtistId}?utm_source=generator&theme=0`
+                  : null;
                 return (
                   <div className="flex flex-col md:flex-row gap-8">
                     <div className="md:w-1/2 flex-shrink-0 self-start aspect-square overflow-hidden bg-secondary">
@@ -154,9 +161,9 @@ const Distribution = () => {
                           {artist.bio ?? `One of PMG's cornerstone artists. ${artist.name} embodies what it means to be 100% independent.`}
                         </p>
                       </div>
-                      {artist.spotifyAlbumId ? (
+                      {embedSrc ? (
                         <iframe
-                          src={`https://open.spotify.com/embed/album/${artist.spotifyAlbumId}?utm_source=generator&theme=0`}
+                          src={embedSrc}
                           width="100%"
                           height="380"
                           frameBorder="0"
