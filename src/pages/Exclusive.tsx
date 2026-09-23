@@ -3,10 +3,10 @@ import { Facebook, Instagram, Music2, Play, Youtube } from "lucide-react";
 import SEO from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import pmgLogo from "@/assets/pmg-logo-clean.png";
-import prideCover from "@/assets/exclusive/pride.jpg.asset.json";
-import dirtyDanCover from "@/assets/exclusive/dirty-dan.jpg.asset.json";
-import roamCover from "@/assets/exclusive/roam.jpg.asset.json";
-import inverseCover from "@/assets/exclusive/inverse.jpg.asset.json";
+import prideCover from "@/assets/exclusive/pride.jpg";
+import dirtyDanCover from "@/assets/exclusive/dirty-dan.jpg";
+import roamCover from "@/assets/exclusive/roam.jpg";
+import inverseCover from "@/assets/exclusive/inverse.jpg";
 
 const socialLinks = [
   { label: "Instagram", href: "https://www.instagram.com/propmyganda_", Icon: Instagram },
@@ -21,7 +21,7 @@ const releases = [
     title: "Pride",
     artist: "Jahballa",
     date: "Sep 17",
-    cover: prideCover.url,
+    cover: prideCover ,
     links: {
       Spotify: "https://open.spotify.com/track/2I8KpG4z6IfzBZb2wcrDmr",
       Apple: "https://music.apple.com/us/album/pride-pmg-exclusive/6802542804?i=6802542805",
@@ -36,7 +36,7 @@ const releases = [
     title: "Dirty Dan",
     artist: "JPEEZ",
     date: "Sep 17",
-    cover: dirtyDanCover.url,
+    cover: dirtyDanCover ,
     links: {
       Spotify: "https://open.spotify.com/track/5k8kd1tcdgXoUrjWBBCXGn",
       Apple: "https://music.apple.com/us/album/dirty-dan-pmg-exclusive/6802543194?i=6802543196",
@@ -51,7 +51,7 @@ const releases = [
     title: "Roam",
     artist: "Hammad",
     date: "Sep 19",
-    cover: roamCover.url,
+    cover: roamCover ,
     links: {
       Spotify: "https://open.spotify.com/track/6UoBXNEbOnh0lbFTcY0EtY",
       Apple: "https://music.apple.com/us/album/roam-pmg-exclusive/6803564780?i=6803564781",
@@ -66,7 +66,7 @@ const releases = [
     title: "The Inverse",
     artist: "Stockz",
     date: "Sep 19",
-    cover: inverseCover.url,
+    cover: inverseCover ,
     links: {
       Spotify: "https://open.spotify.com/track/2GTOG4F5hhZoUngsyZFPpq",
       Apple: "https://music.apple.com/us/album/the-inverse-pmg-exclusive/6803185608?i=6803185609",
