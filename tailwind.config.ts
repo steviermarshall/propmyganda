@@ -14,8 +14,11 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ["Inter", "Helvetica Neue", "Arial", "sans-serif"],
-        display: ["Bebas Neue", "Impact", "Arial Narrow", "sans-serif"],
+        sans: ["Barlow", "Helvetica Neue", "Arial", "sans-serif"],
+        display: ["Dirty Stains", "Rubik Dirt", "Anton", "Impact", "sans-serif"],
+        condensed: ["Anton", "Bebas Neue", "Impact", "sans-serif"],
+        grunge: ["Rubik Dirt", "Anton", "Impact", "sans-serif"],
+        drip: ["Rubik Wet Paint", "Rubik Dirt", "Impact", "sans-serif"],
         mono: ["IBM Plex Mono", "ui-monospace", "SFMono-Regular", "monospace"],
       },
       colors: {
