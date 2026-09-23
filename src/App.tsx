@@ -22,6 +22,7 @@ import Propworld from "./pages/Propworld";
 import Events from "./pages/Events";
 import Publication from "./pages/Publication";
 import PublicationDetail from "./pages/PublicationDetail";
+import Exclusive from "./pages/Exclusive";
 import NotFound from "./pages/NotFound";
 
 import Login from "./pages/auth/Login";
@@ -46,12 +47,12 @@ const queryClient = new QueryClient();
 
 const PublicLayout = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
-  const isPropworld = location.pathname === "/propworld";
+  const hideSocialDock = location.pathname === "/propworld" || location.pathname === "/exclusive";
   return (
     <>
       <Navbar />
       {children}
-      {!isPropworld && <SocialDock />}
+      {!hideSocialDock && <SocialDock />}
       <Footer />
     </>
   );
@@ -104,6 +105,7 @@ const AppRoutes = () => {
           <Route path="/events"        element={<Events />} />
           <Route path="/publication"        element={<Publication />} />
           <Route path="/publication/:slug"  element={<PublicationDetail />} />
+          <Route path="/exclusive"          element={<Exclusive />} />
           <Route path="*"              element={<NotFound />} />
         </Routes>
       </PublicLayout>
