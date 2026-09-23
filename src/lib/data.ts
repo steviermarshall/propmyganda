@@ -4,6 +4,7 @@ import artist3 from "@/assets/artist-3.jpg";
 import artist4 from "@/assets/artist-4.jpg";
 import artist5 from "@/assets/artist-5.jpg";
 import artist6 from "@/assets/artist-6.jpg";
+import pmgLogo from "@/assets/pmg-logo-clean.png";
 import productHoodie from "@/assets/product-hoodie.jpg";
 import productTee from "@/assets/product-tee.jpg";
 import productVinyl from "@/assets/product-vinyl.jpg";
@@ -15,6 +16,7 @@ export const artists = [
   { id: "max-b", name: "Max B", genre: "Hip-Hop / Wave", image: artist3 },
   { id: "chuckiee", name: "Chuckiee", genre: "Hip-Hop", image: artist4, albumCover: "https://i.scdn.co/image/ab67616d00001e028bdb869e02fbabe01eba5997", spotifyAlbumId: "09yHSWrCmaKUbyKuI31yFW", bio: "Brooklyn-bred and fully independent, Chuckiee is one of Propmyganda's most distinctive voices. His 2025 project 'i guess im the bad guy ..' marked a turning point — raw, experimental hip-hop that refuses to fit a mold. With tracks like 'angel convo' and 'BUTTON EYES!', he's building something real, on his own terms." },
   { id: "mercy-porter", name: "Mercy Porter", genre: "R&B / Hip-Hop", image: artist5 },
+  { id: "jahballa", name: "Jahballa", genre: "Hip-Hop", image: pmgLogo, bio: "Artist profile coming soon." },
   { id: "dex-osama", name: "Dex Osama", genre: "Hip-Hop", image: artist6 },
   { id: "zoe", name: "Zoe", genre: "R&B / Pop", image: artist1, spotifyArtistId: "2ssMAH1zhNUAwxBNvESHnA", spotifyTrackId: "6nrXSWvhy3Aghr3YAn5DzQ", bio: "Bio coming soon." },
 ];

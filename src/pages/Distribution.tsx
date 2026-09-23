@@ -22,7 +22,9 @@ const stats = [
 ];
 
 const Distribution = () => {
-  const rosterArtists = artists.filter((a) => a.id === "chuckiee" || a.id === "mercy-porter");
+  const rosterArtists = artists.filter((a) =>
+    ["chuckiee", "mercy-porter", "jahballa"].includes(a.id)
+  );
 
   const [activeService, setActiveService] = useState(0);
   const [activeArtist, setActiveArtist] = useState(0);
