@@ -18,7 +18,7 @@ export const artists = [
   { id: "mercy-porter", name: "Mercy Porter", genre: "R&B / Hip-Hop", image: artist5 },
   { id: "jahballa", name: "Jahballa", genre: "Hip-Hop", image: pmgLogo, spotifyTrackId: "2I8KpG4z6IfzBZb2wcrDmr", bio: "Artist profile coming soon." },
   { id: "hammad", name: "Hammad", genre: "Hip-Hop", image: pmgLogo, spotifyTrackId: "6UoBXNEbOnh0lbFTcY0EtY", bio: "Artist profile coming soon." },
-  { id: "stockz", name: "Stockz", genre: "Hip-Hop", image: pmgLogo, bio: "Artist profile coming soon." },
+  { id: "stockz", name: "Stockz", genre: "Hip-Hop", image: pmgLogo, spotifyTrackId: "2GTOG4F5hhZoUngsyZFPpq", bio: "Artist profile coming soon." },
   { id: "dex-osama", name: "Dex Osama", genre: "Hip-Hop", image: artist6 },
   { id: "zoe", name: "Zoe", genre: "R&B / Pop", image: artist1, spotifyArtistId: "2ssMAH1zhNUAwxBNvESHnA", spotifyTrackId: "6nrXSWvhy3Aghr3YAn5DzQ", bio: "Bio coming soon." },
 ];
