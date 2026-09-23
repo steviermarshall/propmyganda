@@ -6,7 +6,7 @@
  * threshold, etc.) is tweened in-place and must NOT change this key —
  * otherwise the composer re-initializes every frame and the scene flickers.
  */
-export type CosmicMode = "forest" | "transitioning" | "theater" | "game";
+export type CosmicMode = "forest" | "transitioning" | "theater" | "game" | "fight";
 
 export function getComposerKey(mode: CosmicMode, isMobile: boolean): string {
   const isHeavy = (mode === "theater" || mode === "game") && !isMobile;

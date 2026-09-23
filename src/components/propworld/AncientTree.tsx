@@ -6,7 +6,7 @@ interface Props {
   onEnter: () => void;
   onHoverChange?: (hovered: boolean) => void;
   isMobile?: boolean;
-  variant?: "room" | "game";
+  variant?: "room" | "game" | "fight";
 }
 
 /**
@@ -495,7 +495,7 @@ export default function AncientTree({ onEnter, onHoverChange, isMobile, variant 
             {/* THE DOORWAY IS THE ORB. */}
             <mesh ref={orbCoreRef as unknown as React.Ref<THREE.Mesh>} geometry={archGeom}>
               <meshBasicMaterial
-                color={variant === "game" ? "#c0f4ff" : "#fff2c2"}
+                color={variant === "game" ? "#c0f4ff" : variant === "fight" ? "#ffd0d0" : "#fff2c2"}
                 toneMapped={false}
                 side={THREE.DoubleSide}
               />
@@ -504,7 +504,7 @@ export default function AncientTree({ onEnter, onHoverChange, isMobile, variant 
             <mesh geometry={archGeom} scale={[1.04, 1.04, 1.04]}>
               <meshBasicMaterial
                 ref={orbGlowRef}
-                color={variant === "game" ? "#40b8ff" : "#ffb96a"}
+                color={variant === "game" ? "#40b8ff" : variant === "fight" ? "#ff3030" : "#ffb96a"}
                 transparent
                 opacity={0.55}
                 blending={THREE.AdditiveBlending}
@@ -516,7 +516,7 @@ export default function AncientTree({ onEnter, onHoverChange, isMobile, variant 
 
             <mesh ref={orbHaloRef} geometry={archGeom} scale={[1.18, 1.12, 1.18]}>
               <meshBasicMaterial
-                color={variant === "game" ? "#2060ff" : "#ff9a3a"}
+                color={variant === "game" ? "#2060ff" : variant === "fight" ? "#b00018" : "#ff9a3a"}
                 transparent
                 opacity={0.22}
                 blending={THREE.AdditiveBlending}
@@ -530,7 +530,7 @@ export default function AncientTree({ onEnter, onHoverChange, isMobile, variant 
               ref={orbLightRef}
               position={[0, DOORWAY_Y_CENTER, trunkR + 0.5]}
               intensity={2.6}
-              color={variant === "game" ? "#40a0ff" : "#ffa040"}
+              color={variant === "game" ? "#40a0ff" : variant === "fight" ? "#ff2020" : "#ffa040"}
               distance={10}
               decay={2}
             />
