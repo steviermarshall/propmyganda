@@ -15,7 +15,7 @@ export default {
     extend: {
       fontFamily: {
         sans: ["Barlow", "Helvetica Neue", "Arial", "sans-serif"],
-        display: ["Dirty Stains", "Rubik Dirt", "Anton", "Impact", "sans-serif"],
+        display: ["Rubik Dirt", "Anton", "Impact", "sans-serif"],
         condensed: ["Anton", "Bebas Neue", "Impact", "sans-serif"],
         grunge: ["Rubik Dirt", "Anton", "Impact", "sans-serif"],
         drip: ["Rubik Wet Paint", "Rubik Dirt", "Impact", "sans-serif"],
