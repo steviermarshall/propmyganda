@@ -1025,9 +1025,43 @@ interface Rig3 {
 const BONE_NAMES = ["Hips", "Spine", "Spine1", "Spine2", "Neck", "Head", "LeftArm", "LeftForeArm", "LeftHand", "RightArm", "RightForeArm", "RightHand",
   "LeftUpLeg", "LeftLeg", "LeftFoot", "RightUpLeg", "RightLeg", "RightFoot"];
 
+/**
+ * Fighters are sized from their skeleton (foot bone -> head bone), not their mesh bounds.
+ * Skinned meshes report bind-pose geometry bounds, which vary wildly between exports
+ * (KatBot's tail/mask meshes made him read far smaller than he is, so he scaled up huge).
+ */
+const FIGHTER_HEAD_SPAN = 1.44;   // metres from foot to head bone => ~1.8 m total height
+function measureFighter(model: THREE.Object3D) {
+  model.updateWorldMatrix(true, true);
+  let head = -Infinity, foot = Infinity, hasHead = false, hasFoot = false;
+  const hips = new THREE.Vector3();
+  const p = new THREE.Vector3();
+  model.traverse((o) => {
+    if (!(o as THREE.Bone).isBone) return;
+    const n = o.name.replace(/^mixamorig\d*:?/, "");
+    o.getWorldPosition(p);
+    if (n === "Head") { head = Math.max(head, p.y); hasHead = true; }
+    if (n === "LeftFoot" || n === "RightFoot" || n === "LeftToeBase" || n === "RightToeBase") { foot = Math.min(foot, p.y); hasFoot = true; }
+    if (n === "Hips") hips.copy(p);
+  });
+  return { head, foot, hips, ok: hasHead && hasFoot && head - foot > 0 };
+}
+
+function normalizeFighter(model: THREE.Object3D) {
+  const m = measureFighter(model);
+  if (!m.ok) { normalizeObject(model, 1.8); return; }
+  model.scale.multiplyScalar(FIGHTER_HEAD_SPAN / (m.head - m.foot));
+  const after = measureFighter(model);
+  // feet on the floor, body centred over the origin
+  model.position.y -= after.foot;
+  model.position.x -= after.hips.x;
+  model.position.z -= after.hips.z;
+  model.updateWorldMatrix(true, true);
+}
+
 function makeRig(asset: Asset, color: string): Rig3 {
   const model = SkeletonUtils.clone(asset.scene);
-  normalizeObject(model, 1.8);
+  normalizeFighter(model);
   model.traverse((o) => {
     const m = o as THREE.Mesh;
     if (m.isMesh) { m.castShadow = true; m.frustumCulled = false; }
