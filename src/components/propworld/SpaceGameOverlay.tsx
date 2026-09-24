@@ -15,7 +15,7 @@ interface HudState {
 }
 
 function GameHUD({ onRestart }: { onRestart: () => void }) {
-  const [hud, setHud] = useState<HudState>({ score: Number(localStorage.getItem("pmg_score") || 0), hp: 10, wave: 1, gameOver: false, waveComplete: false });
+  const [hud, setHud] = useState<HudState>({ score: 0, hp: 10, wave: 1, gameOver: false, waveComplete: false });
   const wcTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {

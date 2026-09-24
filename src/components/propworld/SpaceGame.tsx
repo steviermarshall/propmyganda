@@ -289,7 +289,7 @@ export default function SpaceGame({ isMobile = false, onRegisterShoot }: Props) 
     pLasers:  new Array(MAX_P_LASERS).fill(null),
     eLasers:  new Array(MAX_E_LASERS).fill(null),
     playerX: 0, playerY: 0,
-    playerHp: 10, score: Number(localStorage.getItem('pmg_score') || 0), wave: 1,
+    playerHp: 10, score: 0, wave: 1,
     waveState: "cleared", waveTimer: 0,
     nextDiveT: 999,
     formOffX: 0, marchDir: 1, stepOffset: 0,
