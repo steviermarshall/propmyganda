@@ -1,6 +1,6 @@
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import PMGFight from "@/components/PMGFight";
+import PMGFight3D from "@/components/PMGFight3D";
 import SEO from "@/components/SEO";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Joystick, Minimap, SoundToggle } from "@/components/propworld/ForestUI";
@@ -117,7 +117,7 @@ const Propworld = () => {
       <AnimatePresence>
         {mode === "fight" && (
           <motion.div key="fight" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.45 }} className="absolute inset-0 z-[60] overflow-auto bg-background">
-            <PMGFight onExit={() => exitTo("fight")} />
+            <PMGFight3D onExit={() => exitTo("fight")} />
           </motion.div>
         )}
         {mode === "game" && (
