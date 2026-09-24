@@ -39,7 +39,7 @@ function GameHUD({ onRestart }: { onRestart: () => void }) {
 
   return (
     <div className="pointer-events-none absolute inset-0">
-      <div className="absolute left-6 top-24">
+      <div className="absolute left-6 top-36">
         <p className="mb-0.5 text-[9px] uppercase tracking-[0.4em] text-cyan-300/60">Score</p>
         <p className="text-2xl font-bold tabular-nums text-cyan-200 drop-shadow-[0_0_8px_rgba(0,255,238,0.6)]">{hud.score.toLocaleString()}</p>
       </div>
