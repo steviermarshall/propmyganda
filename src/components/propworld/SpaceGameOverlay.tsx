@@ -1,7 +1,5 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import { Canvas } from "@react-three/fiber";
-import { EffectComposer, Bloom, Vignette } from "@react-three/postprocessing";
-import { AnimatePresence, motion } from "framer-motion";
 import * as THREE from "three";
 import { useIsMobile } from "@/hooks/use-mobile";
 import SpaceGame from "./SpaceGame";
@@ -94,19 +92,15 @@ export default function SpaceGameOverlay({ onExit }: { onExit: () => void }) {
       <Canvas
         key={run}
         camera={{ position: [0, 3, 10], fov: isMobile ? 75 : 62 }}
-        dpr={isMobile ? [1, 1.25] : [1, 1.5]}
-        gl={{ antialias: !isMobile, toneMapping: THREE.ACESFilmicToneMapping, powerPreference: "high-performance" }}
+        dpr={[1, 1]}
+        gl={{ antialias: false, toneMapping: THREE.ACESFilmicToneMapping, powerPreference: "high-performance" }}
       >
         <color attach="background" args={["#02030a"]} />
         <ambientLight intensity={0.35} color="#5a7aff" />
         <directionalLight position={[3, 10, 6]} intensity={1.1} color="#dff6ff" />
         <Suspense fallback={null}>
-          <SpaceGame isMobile={isMobile} onRegisterShoot={(fn) => { shootRef.current = fn; }} />
+          <SpaceGame isMobile onRegisterShoot={(fn) => { shootRef.current = fn; }} />
         </Suspense>
-        <EffectComposer multisampling={isMobile ? 0 : 4}>
-          <Bloom intensity={1.4} luminanceThreshold={0.2} luminanceSmoothing={0.9} mipmapBlur />
-          <Vignette eskil={false} offset={0.2} darkness={0.85} />
-        </EffectComposer>
       </Canvas>
       <CosmicHUD />
       <GameHUD key={run} onRestart={() => { localStorage.setItem("pmg_score", "0"); setRun((r) => r + 1); }} />
