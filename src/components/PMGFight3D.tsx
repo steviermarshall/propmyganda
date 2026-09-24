@@ -1025,9 +1025,36 @@ interface Rig3 {
 const BONE_NAMES = ["Hips", "Spine", "Spine1", "Spine2", "Neck", "Head", "LeftArm", "LeftForeArm", "LeftHand", "RightArm", "RightForeArm", "RightHand",
   "LeftUpLeg", "LeftLeg", "LeftFoot", "RightUpLeg", "RightLeg", "RightFoot"];
 
+/**
+ * Fighters are sized from their skeleton (foot bone -> head bone), not their mesh bounds.
+ * Skinned meshes report bind-pose geometry bounds, which vary wildly between exports
+ * (KatBot's tail/mask meshes made him read far smaller than he is, so he scaled up huge).
+ */
+const FIGHTER_HEAD_SPAN = 1.44;   // metres from foot to head bone => ~1.8 m total height
+function normalizeFighter(model: THREE.Object3D) {
+  model.updateWorldMatrix(true, true);
+  let head: number | null = null, foot: number | null = null, hips: THREE.Vector3 | null = null;
+  const p = new THREE.Vector3();
+  model.traverse((o) => {
+    if (!(o as THREE.Bone).isBone) return;
+    const n = o.name.replace(/^mixamorig\d*:?/, "");
+    o.getWorldPosition(p);
+    if (n === "Head") head = head === null ? p.y : Math.max(head, p.y);
+    if (n === "LeftFoot" || n === "RightFoot" || n === "LeftToeBase" || n === "RightToeBase") foot = foot === null ? p.y : Math.min(foot, p.y);
+    if (n === "Hips") hips = p.clone();
+  });
+  if (head === null || foot === null || head - foot <= 0) { normalizeObject(model, 1.8); return; }
+  const k = FIGHTER_HEAD_SPAN / (head - foot);
+  model.scale.multiplyScalar(k);
+  model.updateWorldMatrix(true, true);
+  // feet on the floor, body centred over the origin
+  model.position.y -= foot * k;
+  if (hips) { model.position.x -= hips.x * k; model.position.z -= hips.z * k; }
+}
+
 function makeRig(asset: Asset, color: string): Rig3 {
   const model = SkeletonUtils.clone(asset.scene);
-  normalizeObject(model, 1.8);
+  normalizeFighter(model);
   model.traverse((o) => {
     const m = o as THREE.Mesh;
     if (m.isMesh) { m.castShadow = true; m.frustumCulled = false; }
