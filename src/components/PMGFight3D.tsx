@@ -1031,25 +1031,32 @@ const BONE_NAMES = ["Hips", "Spine", "Spine1", "Spine2", "Neck", "Head", "LeftAr
  * (KatBot's tail/mask meshes made him read far smaller than he is, so he scaled up huge).
  */
 const FIGHTER_HEAD_SPAN = 1.44;   // metres from foot to head bone => ~1.8 m total height
-function normalizeFighter(model: THREE.Object3D) {
+function measureFighter(model: THREE.Object3D) {
   model.updateWorldMatrix(true, true);
-  let head: number | null = null, foot: number | null = null, hips: THREE.Vector3 | null = null;
+  let head = -Infinity, foot = Infinity, hasHead = false, hasFoot = false;
+  const hips = new THREE.Vector3();
   const p = new THREE.Vector3();
   model.traverse((o) => {
     if (!(o as THREE.Bone).isBone) return;
     const n = o.name.replace(/^mixamorig\d*:?/, "");
     o.getWorldPosition(p);
-    if (n === "Head") head = head === null ? p.y : Math.max(head, p.y);
-    if (n === "LeftFoot" || n === "RightFoot" || n === "LeftToeBase" || n === "RightToeBase") foot = foot === null ? p.y : Math.min(foot, p.y);
-    if (n === "Hips") hips = p.clone();
+    if (n === "Head") { head = Math.max(head, p.y); hasHead = true; }
+    if (n === "LeftFoot" || n === "RightFoot" || n === "LeftToeBase" || n === "RightToeBase") { foot = Math.min(foot, p.y); hasFoot = true; }
+    if (n === "Hips") hips.copy(p);
   });
-  if (head === null || foot === null || head - foot <= 0) { normalizeObject(model, 1.8); return; }
-  const k = FIGHTER_HEAD_SPAN / (head - foot);
-  model.scale.multiplyScalar(k);
-  model.updateWorldMatrix(true, true);
+  return { head, foot, hips, ok: hasHead && hasFoot && head - foot > 0 };
+}
+
+function normalizeFighter(model: THREE.Object3D) {
+  const m = measureFighter(model);
+  if (!m.ok) { normalizeObject(model, 1.8); return; }
+  model.scale.multiplyScalar(FIGHTER_HEAD_SPAN / (m.head - m.foot));
+  const after = measureFighter(model);
   // feet on the floor, body centred over the origin
-  model.position.y -= foot * k;
-  if (hips) { model.position.x -= hips.x * k; model.position.z -= hips.z * k; }
+  model.position.y -= after.foot;
+  model.position.x -= after.hips.x;
+  model.position.z -= after.hips.z;
+  model.updateWorldMatrix(true, true);
 }
 
 function makeRig(asset: Asset, color: string): Rig3 {
