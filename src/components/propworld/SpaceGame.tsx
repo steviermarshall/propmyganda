@@ -393,7 +393,7 @@ export default function SpaceGame({ isMobile = false, onRegisterShoot }: Props) 
     persp.updateProjectionMatrix();
 
     // Hold-to-fire (pointer held without drag)
-    if (ptrRef.current.down && !ptrRef.current.moved && t - lastHoldRef.current > 0.18) {
+    if (ptrRef.current.down && t - lastHoldRef.current > 0.18) {
       lastHoldRef.current = t;
       firePLaser();
     }
@@ -593,7 +593,11 @@ export default function SpaceGame({ isMobile = false, onRegisterShoot }: Props) 
 
   return (
     <group>
-      <CosmicEnvironment isMobile={isMobile} noSway />
+      <CosmicEnvironment
+        isMobile={isMobile}
+        noSway
+        onHittableHover={(hovering) => window.dispatchEvent(new CustomEvent("cosmic:hover", { detail: hovering }))}
+      />
       <ImpactBursts />
 
       {/* Player ship — sits at z=PLAYER_Z, moves on XY */}

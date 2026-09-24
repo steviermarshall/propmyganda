@@ -80,18 +80,8 @@ function GameHUD({ onRestart }: { onRestart: () => void }) {
 /** Blue tree: full-screen space shooter that launches straight away, like PMG Fight. */
 export default function SpaceGameOverlay({ onExit }: { onExit: () => void }) {
   const isMobile = useIsMobile();
-  const [started, setStarted] = useState(false);
   const [run, setRun] = useState(0);
   const shootRef = useRef<(() => void) | null>(null);
-
-  // Auto-launch after a short title card (tap/Space skips it)
-  useEffect(() => {
-    if (started) return;
-    const t = setTimeout(() => setStarted(true), 1600);
-    const k = (e: KeyboardEvent) => { if (e.code === "Space" || e.key === "Enter") setStarted(true); };
-    window.addEventListener("keydown", k);
-    return () => { clearTimeout(t); window.removeEventListener("keydown", k); };
-  }, [started]);
 
   useEffect(() => {
     const k = (e: KeyboardEvent) => { if (e.key === "Escape") onExit(); };
@@ -101,50 +91,28 @@ export default function SpaceGameOverlay({ onExit }: { onExit: () => void }) {
 
   return (
     <div className="relative h-full w-full bg-[#02030a] text-white">
-      {started && (
-        <>
-          <Canvas
-            key={run}
-            camera={{ position: [0, 3, 10], fov: isMobile ? 75 : 62 }}
-            dpr={isMobile ? [1, 1.5] : [1, 2]}
-            gl={{ antialias: !isMobile, toneMapping: THREE.ACESFilmicToneMapping, powerPreference: "high-performance" }}
-          >
-            <color attach="background" args={["#02030a"]} />
-            <ambientLight intensity={0.35} color="#5a7aff" />
-            <directionalLight position={[3, 10, 6]} intensity={1.1} color="#dff6ff" />
-            <Suspense fallback={null}>
-              <SpaceGame isMobile={isMobile} onRegisterShoot={(fn) => { shootRef.current = fn; }} />
-            </Suspense>
-            <EffectComposer>
-              <Bloom intensity={1.4} luminanceThreshold={0.2} luminanceSmoothing={0.9} mipmapBlur />
-              <Vignette eskil={false} offset={0.2} darkness={0.85} />
-            </EffectComposer>
-          </Canvas>
-          <CosmicHUD />
-          <GameHUD key={run} onRestart={() => { localStorage.setItem("pmg_score", "0"); setRun((r) => r + 1); }} />
-          <p className="pointer-events-none absolute inset-x-0 bottom-6 text-center text-[10px] uppercase tracking-[0.35em] text-cyan-200/60">
-            Drag to steer · Tap / Space to fire
-          </p>
-        </>
-      )}
-
-      <AnimatePresence>
-        {!started && (
-          <motion.button
-            key="title"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0, scale: 1.08 }}
-            transition={{ duration: 0.4 }}
-            onClick={() => setStarted(true)}
-            className="absolute inset-0 flex flex-col items-center justify-center"
-          >
-            <p className="text-[10px] uppercase tracking-[0.5em] text-cyan-300/70">Blue Tree</p>
-            <h2 className="mt-3 font-display text-6xl uppercase text-cyan-100 drop-shadow-[0_0_30px_rgba(56,225,255,0.7)] md:text-8xl">The Game</h2>
-            <p className="mt-6 animate-pulse text-[11px] uppercase tracking-[0.4em] text-cyan-200/70">Launching · tap to start now</p>
-          </motion.button>
-        )}
-      </AnimatePresence>
+      <Canvas
+        key={run}
+        camera={{ position: [0, 3, 10], fov: isMobile ? 75 : 62 }}
+        dpr={isMobile ? [1, 1.25] : [1, 1.5]}
+        gl={{ antialias: !isMobile, toneMapping: THREE.ACESFilmicToneMapping, powerPreference: "high-performance" }}
+      >
+        <color attach="background" args={["#02030a"]} />
+        <ambientLight intensity={0.35} color="#5a7aff" />
+        <directionalLight position={[3, 10, 6]} intensity={1.1} color="#dff6ff" />
+        <Suspense fallback={null}>
+          <SpaceGame isMobile={isMobile} onRegisterShoot={(fn) => { shootRef.current = fn; }} />
+        </Suspense>
+        <EffectComposer multisampling={isMobile ? 0 : 4}>
+          <Bloom intensity={1.4} luminanceThreshold={0.2} luminanceSmoothing={0.9} mipmapBlur />
+          <Vignette eskil={false} offset={0.2} darkness={0.85} />
+        </EffectComposer>
+      </Canvas>
+      <CosmicHUD />
+      <GameHUD key={run} onRestart={() => { localStorage.setItem("pmg_score", "0"); setRun((r) => r + 1); }} />
+      <p className="pointer-events-none absolute inset-x-0 bottom-6 text-center text-[10px] uppercase tracking-[0.35em] text-cyan-200/60">
+        Drag to steer · Tap / Space to fire
+      </p>
 
       <button
         onClick={onExit}
