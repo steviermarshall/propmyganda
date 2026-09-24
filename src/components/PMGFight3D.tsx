@@ -1665,6 +1665,10 @@ const Sound = {
     if (this.musicOn) { if (!this.music) this.next(); else this.music.play().catch(() => {}); } else this.music?.pause();
     this.emit();
   },
+  pause() {
+    this.music?.pause();
+    this.ctx?.suspend?.();
+  },
   toggleFx() { this.fxOn = !this.fxOn; store.set("fx", this.fxOn); this.emit(); },
 
   /** Short arcade sounds, built from noise and tones. */
@@ -1901,6 +1905,7 @@ export default function PMGFight3D({ onExit }: { onExit?: () => void }) {
   useEffect(() => { if (screen !== "intro" && !portraits) renderPortraits().then(setPortraits); }, [screen, portraits]);
   useEffect(() => { getLogo(); }, []);
   useEffect(() => { if (screen === "stage" && !stagePics) renderStagePreviews().then(setStagePics); }, [screen, stagePics]);
+  useEffect(() => () => Sound.pause(), []);
 
   const choose = (i: number) => {
     const next = [...picks, i];
