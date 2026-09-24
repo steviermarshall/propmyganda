@@ -1,5 +1,6 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import { Canvas } from "@react-three/fiber";
+import { AnimatePresence, motion } from "framer-motion";
 import * as THREE from "three";
 import { useIsMobile } from "@/hooks/use-mobile";
 import SpaceGame from "./SpaceGame";
