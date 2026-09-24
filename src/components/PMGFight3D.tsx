@@ -14,26 +14,27 @@ import { useEffect, useRef, useState } from "react";
 import type { PointerEvent as RPointerEvent, ReactNode } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader.js";
 import * as SkeletonUtils from "three/examples/jsm/utils/SkeletonUtils.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
-import pmgGraffitiLogo from "@/assets/pmg/pmg-graffiti-logo.png.asset.json";
+import pmgGraffitiLogo from "@/assets/pmg/pmg-logo-correct.png.asset.json";
 import propmygandaLogo from "@/assets/pmg/propmyganda-logo.png.asset.json";
-import jpeezModel from "@/assets/pmg/jpeez.fbx.asset.json";
-import jahballaModel from "@/assets/pmg/jahballa.fbx.asset.json";
-import stockzModel from "@/assets/pmg/stockz.fbx.asset.json";
-import zoeModel from "@/assets/pmg/zoe.fbx.asset.json";
-import hammadModel from "@/assets/pmg/hammad.fbx.asset.json";
-import subwayModel from "@/assets/pmg/subway.glb.asset.json";
-import benchModel from "@/assets/pmg/bench.glb.asset.json";
-import spraycanModel from "@/assets/pmg/spraycan.glb.asset.json";
-import ratModel from "@/assets/pmg/rat.glb.asset.json";
-import dumpsterModel from "@/assets/pmg/dumpster.glb.asset.json";
-import billboardModel from "@/assets/pmg/billboard.glb.asset.json";
-import carModel from "@/assets/pmg/car.glb.asset.json";
-import dirtyDanTrack from "@/assets/pmg/dirty-dan.m4a.asset.json";
-import jahballaPrideTrack from "@/assets/pmg/jahballa-pride.m4a.asset.json";
-import roamTrack from "@/assets/pmg/roam.wav.asset.json";
+import jpeezModel from "@/assets/pmg/jpeez-correct.glb.asset.json";
+import jahballaModel from "@/assets/pmg/jahballa-correct.glb.asset.json";
+import stockzModel from "@/assets/pmg/stockz-correct.glb.asset.json";
+import zoeModel from "@/assets/pmg/zoe-correct.glb.asset.json";
+import hammadModel from "@/assets/pmg/hammad-correct.glb.asset.json";
+import katbotModel from "@/assets/pmg/katbot-correct.glb.asset.json";
+import subwayModel from "@/assets/pmg/subway-correct.glb.asset.json";
+import benchModel from "@/assets/pmg/bench-correct.glb.asset.json";
+import spraycanModel from "@/assets/pmg/spraycan-correct.glb.asset.json";
+import ratModel from "@/assets/pmg/rat-correct.glb.asset.json";
+import dumpsterModel from "@/assets/pmg/dumpster-correct.glb.asset.json";
+import billboardModel from "@/assets/pmg/billboard-correct.glb.asset.json";
+import carModel from "@/assets/pmg/car-correct.glb.asset.json";
+import dirtyDanTrack from "@/assets/pmg/song-dirty-dan.mp3.asset.json";
+import stockzTrack from "@/assets/pmg/song-fine-tiino-stockz.mp3.asset.json";
+import jahballaPrideTrack from "@/assets/pmg/song-jahballa-pride.mp3.asset.json";
+import zoeTrack from "@/assets/pmg/song-zoe-tuesday-rayny.mp3.asset.json";
 
 /** Legacy base for optional files that have not yet been supplied. */
 const MODEL_BASE = "/pmg/";
@@ -46,6 +47,7 @@ const FIGHTER_URLS: Record<string, string> = {
   stockz: stockzModel.url,
   zoe: zoeModel.url,
   hammad: hammadModel.url,
+  katbot: katbotModel.url,
 };
 
 const PROP_URLS: Record<string, string> = {
@@ -61,8 +63,9 @@ const PROP_URLS: Record<string, string> = {
 /** Music plays in shuffled order after the first player interaction. */
 const SONGS: { url: string; title: string }[] = [
   { url: dirtyDanTrack.url, title: "Dirty Dan" },
+  { url: stockzTrack.url, title: "Fine Tiino — Stockz" },
   { url: jahballaPrideTrack.url, title: "JahBalla — Pride" },
-  { url: roamTrack.url, title: "Roam" },
+  { url: zoeTrack.url, title: "Tuesday Rayny — Zoe" },
 ];
 
 /* ================================================================== */
@@ -626,9 +629,7 @@ function loadFighter(id: string): Promise<Asset> {
   let p = assetCache.get(id);
   if (!p) {
     const url = FIGHTER_URLS[id];
-    p = url
-      ? new FBXLoader().loadAsync(url).then((scene) => ({ scene, clips: scene.animations }))
-      : new GLTFLoader().loadAsync(`${MODEL_BASE}${id}.glb`).then((g) => ({ scene: g.scene as THREE.Group, clips: g.animations }));
+    p = new GLTFLoader().loadAsync(url ?? `${MODEL_BASE}${id}.glb`).then((g) => ({ scene: g.scene as THREE.Group, clips: g.animations }));
     p = p.catch((error) => {
       console.warn(`PMG Fight could not load fighter model: ${id}`, error);
       return createFallbackFighter(id);

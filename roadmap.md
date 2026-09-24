@@ -12,3 +12,5 @@
 - [x] Verify fighter selection, both arenas, music, gameplay, and the return flow
 - [x] Replace PMG Fight branding and arena signs with the uploaded PMG logos
 - [x] Reproduce and fix the blue-tree space-combat glitch
+
+- [x] Replace every PMG Fight model, logo, and soundtrack with the corrected uploaded files
