@@ -1896,7 +1896,8 @@ function SprayIntro({ onDone }: { onDone: () => void }) {
       canCam = new THREE.PerspectiveCamera(28, CW / CH, 0.01, 10); canCam.position.set(0, 0.1, 0.52); canCam.lookAt(0, 0.1, 0);
       new GLTFLoader().loadAsync(PROP_URLS.spraycan).then((g) => {
         can = g.scene;
-        normalizeObject(can, 0.28);
+        // Leave enough camera margin for the tilted can to remain visible cap-to-base.
+        normalizeObject(can, 0.18);
         canScene?.add(can);
       }).catch(() => {});
     } catch { canR = null; }
