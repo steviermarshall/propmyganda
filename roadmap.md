@@ -6,4 +6,4 @@
 
 - [x] Replace PMG Fight with the uploaded 3D edition
 - [x] Preserve the return-to-forest flow
-- [ ] Replace temporary 3D fighter stand-ins and add music when the GLB/MP3 files are supplied
+- [ ] Replace temporary 3D fighter stand-ins and add music when the GLB/MP3 files are supplied — blocked until those files are uploaded
