@@ -188,17 +188,36 @@ function GrassBlades({ count = 1400 }: { count?: number }) {
     if (meshRef.current.instanceColor) meshRef.current.instanceColor.needsUpdate = true;
   }, [transforms, dummy]);
 
-  // Gentle sway
+  // Wind sway — vertex shader bends blade tips
+  const windUniform = useMemo(() => ({ value: 0 }), []);
+  const onBeforeCompile = useMemo(
+    () => (shader: THREE.WebGLProgramParametersWithUniforms) => {
+      shader.uniforms.uTime = windUniform;
+      shader.vertexShader = shader.vertexShader
+        .replace("#include <common>", "#include <common>\nuniform float uTime;")
+        .replace(
+          "#include <project_vertex>",
+          `vec4 mvPosition = vec4( transformed, 1.0 );
+#ifdef USE_INSTANCING
+  mvPosition = instanceMatrix * mvPosition;
+#endif
+  float h = clamp(position.y + 0.5, 0.0, 1.0);
+  mvPosition.x += sin(uTime * 1.7 + mvPosition.z * 0.35 + mvPosition.x * 0.2) * 0.12 * h * h;
+  mvPosition.z += cos(uTime * 1.2 + mvPosition.x * 0.3) * 0.06 * h * h;
+  mvPosition = modelViewMatrix * mvPosition;
+  gl_Position = projectionMatrix * mvPosition;`,
+        );
+    },
+    [windUniform],
+  );
   useFrame((state) => {
-    if (!meshRef.current) return;
-    const t = state.clock.getElapsedTime();
-    meshRef.current.rotation.y = Math.sin(t * 0.15) * 0.005;
+    windUniform.value = state.clock.getElapsedTime();
   });
 
   return (
     <instancedMesh ref={meshRef} args={[undefined as never, undefined as never, transforms.length]}>
       <coneGeometry args={[1, 1, 4]} />
-      <meshStandardMaterial vertexColors roughness={1} flatShading />
+      <meshStandardMaterial vertexColors roughness={1} flatShading onBeforeCompile={onBeforeCompile} />
     </instancedMesh>
   );
 }

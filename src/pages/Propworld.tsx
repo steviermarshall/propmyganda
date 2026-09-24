@@ -1,302 +1,137 @@
-import { Suspense, lazy, useState, useEffect, useRef } from "react";
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import CosmicHUD from "@/components/propworld/CosmicHUD";
 import PMGFight from "@/components/PMGFight";
 import SEO from "@/components/SEO";
-
-// ─── Game HUD ────────────────────────────────────────────────────────────────
-
-interface HudState {
-  score: number;
-  hp: number;
-  wave: number;
-  gameOver: boolean;
-  waveComplete: boolean;
-}
-
-function GameHUD() {
-  const [hud, setHud] = useState<HudState>({ score: Number(localStorage.getItem('pmg_score') || 0), hp: 10, wave: 1, gameOver: false, waveComplete: false });
-  const wcTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    const handler = (e: Event) => {
-      const d = (e as CustomEvent).detail as HudState;
-      setHud((prev) => ({ ...prev, ...d }));
-      if (d.waveComplete) {
-        if (wcTimerRef.current) clearTimeout(wcTimerRef.current);
-        wcTimerRef.current = setTimeout(() => {
-          setHud((prev) => ({ ...prev, waveComplete: false }));
-        }, 2500);
-      }
-    };
-    window.addEventListener("game:hud", handler);
-    return () => window.removeEventListener("game:hud", handler);
-  }, []);
-
-  const maxHp = 10;
-  const segments = Array.from({ length: maxHp }, (_, i) => i < hud.hp);
-
-  return (
-    <div className="pointer-events-none absolute inset-0">
-      {/* Score — top left */}
-      <div className="absolute top-5 left-6">
-        <p className="text-[9px] tracking-[0.4em] uppercase text-cyan-300/60 mb-0.5">Score</p>
-        <p className="text-2xl font-bold tabular-nums text-cyan-200 drop-shadow-[0_0_8px_rgba(0,255,238,0.6)]">
-          {hud.score.toLocaleString()}
-        </p>
-      </div>
-
-      {/* Wave — top center */}
-      <div className="absolute top-5 left-1/2 -translate-x-1/2 text-center">
-        <p className="text-[9px] tracking-[0.4em] uppercase text-cyan-300/60 mb-0.5">Wave</p>
-        <p className="text-xl font-bold text-cyan-100">{hud.wave}</p>
-      </div>
-
-      {/* HP — top right */}
-      <div className="absolute top-5 right-6 flex flex-col items-end">
-        <p className="text-[9px] tracking-[0.4em] uppercase text-cyan-300/60 mb-1">Hull</p>
-        <div className="flex gap-1">
-          {segments.map((alive, i) => (
-            <div
-              key={i}
-              className={`h-3 w-3 rounded-sm border transition-all duration-300 ${
-                alive
-                  ? "bg-cyan-400 border-cyan-300 shadow-[0_0_5px_rgba(0,255,238,0.8)]"
-                  : "bg-transparent border-cyan-800/50"
-              }`}
-            />
-          ))}
-        </div>
-      </div>
-
-      {/* Wave complete */}
-      <AnimatePresence>
-        {hud.waveComplete && (
-          <motion.div
-            key="wc"
-            initial={{ opacity: 0, scale: 0.85 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 1.1 }}
-            transition={{ duration: 0.4 }}
-            className="absolute inset-0 flex items-center justify-center"
-          >
-            <p className="text-3xl font-bold tracking-[0.2em] uppercase text-cyan-200 drop-shadow-[0_0_24px_rgba(0,255,238,0.8)]">
-              Wave {hud.wave} Clear
-            </p>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Game over */}
-      {hud.gameOver && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60">
-          <p className="text-5xl font-bold tracking-[0.15em] uppercase text-red-400 mb-3 drop-shadow-[0_0_24px_rgba(255,60,0,0.9)]">
-            Game Over
-          </p>
-          <p className="text-lg text-white/70 mb-6">
-            Score: <span className="text-cyan-300 font-bold">{hud.score.toLocaleString()}</span>
-          </p>
-          <button
-            className="pointer-events-auto text-[11px] tracking-[0.3em] uppercase border border-cyan-400/50 px-6 py-3 text-cyan-100 hover:bg-cyan-400/10 transition-colors"
-            onClick={() => window.location.reload()}
-          >
-            Play Again
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Joystick, Minimap, SoundToggle } from "@/components/propworld/ForestUI";
+import { PORTAL_BY_ID, placePlayerAtDoor, type Portal } from "@/components/propworld/worldState";
 
 const PropworldScene = lazy(() => import("@/components/propworld/PropworldScene"));
+const SpaceGameOverlay = lazy(() => import("@/components/propworld/SpaceGameOverlay"));
+const RoomExclusive = lazy(() => import("@/components/propworld/RoomExclusive"));
 
-type Mode = "forest" | "transitioning" | "theater" | "game" | "fight";
+type Mode = "forest" | "transitioning" | Portal;
 
 const Propworld = () => {
   const [mode, setMode] = useState<Mode>("forest");
-  const [sceneKey, setSceneKey] = useState(0);
+  const [near, setNear] = useState<Portal | null>(null);
+  const isMobile = useIsMobile();
+  const pending = useRef<Portal | null>(null);
 
-  const handleModeChange = (m: Mode) => {
-    setMode(m);
-  };
+  // Failsafe: on slow devices the camera swoop can lag — open the tree anyway.
+  useEffect(() => {
+    if (mode !== "transitioning") return;
+    const t = setTimeout(() => { if (pending.current) setMode(pending.current); }, 2600);
+    return () => clearTimeout(t);
+  }, [mode]);
+
+  const exitTo = useCallback((from: Portal) => {
+    placePlayerAtDoor(from);
+    setNear(null);
+    setMode("forest");
+  }, []);
+
+  const inForest = mode === "forest" || mode === "transitioning";
+  const nearSpec = near ? PORTAL_BY_ID[near] : null;
 
   return (
-    <main className="relative h-screen w-screen overflow-hidden bg-[#02060a] text-white select-none" style={{ WebkitUserSelect: 'none', WebkitTouchCallout: 'none' } as React.CSSProperties}>
+    <main className="relative h-screen w-screen select-none overflow-hidden bg-[#02060a] text-white" style={{ WebkitUserSelect: "none", WebkitTouchCallout: "none" } as React.CSSProperties}>
       <SEO
         title="Propworld — Interactive 3D Experience | PMG"
-        description="Step into Propworld, PMG's interactive 3D space combining a cosmic game and social room."
+        description="Explore Propworld, PMG's interactive 3D forest: play The Game, battle in PMG Fight, and step into the PMG Exclusive room."
         path="/propworld"
       />
       <h1 className="sr-only">Propworld — PMG interactive 3D experience</h1>
-      {/* Full-screen 3D scene */}
-      <div className={`absolute inset-0 transition-opacity duration-500 ${mode === "fight" ? "pointer-events-none opacity-0" : "opacity-100"}`}>
-        <Suspense fallback={<div className="w-full h-full bg-[#02060a]" />}>
-          <PropworldScene
-            key={sceneKey}
-            onModeChange={handleModeChange}
-          />
-        </Suspense>
-      </div>
 
-      <AnimatePresence>
-        {mode === "fight" && (
-          <motion.div
-            key="pmg-fight"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.45 }}
-            className="absolute inset-0 z-[60] overflow-auto bg-background"
-          >
-            <PMGFight
-              onExit={() => {
-                setMode("forest");
-                setSceneKey((key) => key + 1);
-              }}
+      {/* Explorable forest — unmounted while inside a tree to free the GPU */}
+      {inForest && (
+        <div className="absolute inset-0">
+          <Suspense fallback={<div className="h-full w-full bg-[#02060a]" />}>
+            <PropworldScene
+              onNear={setNear}
+              onTransitionStart={(p) => { pending.current = p; setMode("transitioning"); }}
+              onEnter={(p) => setMode(p)}
             />
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </Suspense>
+        </div>
+      )}
 
-      {/* Subtle vignette overlay for legibility */}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/60" />
+      {inForest && <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/50" />}
 
-      {/* Cosmic HUD overlay — theater and game */}
-      {(mode === "theater" || mode === "game") && <CosmicHUD />}
-
-      {/* Game HUD — score, HP, wave */}
-      {mode === "game" && <GameHUD />}
-
-      {/* ── Forest pill labels (purely decorative, no pointer events) ── */}
+      {/* Forest HUD */}
       <AnimatePresence>
         {mode === "forest" && (
-          <motion.div
-            key="forest-ui"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.6 }}
-            className="absolute inset-0 pointer-events-none"
-          >
-            <div className="absolute inset-x-0 bottom-14 grid grid-cols-3 items-end gap-2 px-4 md:gap-8 md:px-12">
-            {/* Left label — THE GAME (blue) */}
-            <div className="flex flex-col items-start">
-              <p className="text-[9px] tracking-[0.45em] uppercase text-cyan-400/60 mb-2">Blue Tree</p>
-              <h2 className="text-3xl md:text-4xl font-bold uppercase tracking-tight text-cyan-100/70">
-                The Game
-              </h2>
-              <p className="mt-1 text-[11px] md:text-xs text-cyan-300/50 tracking-wide">
-                Space combat · Wave survival
-              </p>
+          <motion.div key="forest-ui" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.5 }} className="pointer-events-none absolute inset-0">
+            <div className="absolute right-4 top-20 flex flex-col items-end gap-3">
+              <Minimap />
+              <SoundToggle />
             </div>
 
-            {/* Center label — PMG FIGHT (crimson) */}
-            <div className="flex flex-col items-center text-center">
-              <p className="mb-2 text-[8px] uppercase tracking-[0.25em] text-red-400/70 md:text-[9px] md:tracking-[0.45em]">Crimson Tree</p>
-              <h2 className="font-bold uppercase text-red-100/80 text-lg md:text-4xl">
-                PMG Fight
-              </h2>
-              <p className="mt-1 hidden text-xs tracking-wide text-red-300/60 sm:block">
-                Arcade combat · Roster battle
-              </p>
+            <div className="absolute inset-x-0 top-20 flex flex-col items-center">
+              <p className="text-[9px] uppercase tracking-[0.5em] text-white/40">Propworld</p>
+              <div className="mt-2 h-px w-8 bg-white/20" />
             </div>
 
-            {/* Right label — THE ROOM (amber) */}
-            <div className="flex flex-col items-end text-right">
-              <p className="text-[9px] tracking-[0.45em] uppercase text-amber-400/60 mb-2">Amber Tree</p>
-              <h2 className="text-3xl md:text-4xl font-bold uppercase tracking-tight text-amber-100/70">
-                The Room
-              </h2>
-              <p className="mt-1 text-[11px] md:text-xs text-amber-300/50 tracking-wide">
-                Social hub · Media wall
-              </p>
-            </div>
-            </div>
+            <AnimatePresence>
+              {nearSpec && (
+                <motion.button
+                  key={nearSpec.id}
+                  initial={{ opacity: 0, y: 16, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  onClick={() => window.dispatchEvent(new CustomEvent("propworld:enter", { detail: nearSpec.id }))}
+                  className="pointer-events-auto absolute bottom-28 left-1/2 -translate-x-1/2 border bg-black/55 px-7 py-3 text-center backdrop-blur"
+                  style={{ borderColor: nearSpec.color, boxShadow: `0 0 30px ${nearSpec.color}55` }}
+                >
+                  <span className="block text-[9px] uppercase tracking-[0.4em]" style={{ color: nearSpec.color }}>{nearSpec.sub}</span>
+                  <span className="mt-1 block font-display text-2xl uppercase text-white">Enter {nearSpec.label}</span>
+                  <span className="mt-1 block text-[9px] uppercase tracking-[0.3em] text-white/50">{isMobile ? "Tap" : "Press E"}</span>
+                </motion.button>
+              )}
+            </AnimatePresence>
 
-            {/* Center title */}
-            <div className="absolute inset-x-0 top-0 flex flex-col items-center pt-10">
-              <p className="text-[9px] tracking-[0.5em] uppercase text-white/30 mb-2">Propworld</p>
-              <div className="h-px w-8 bg-white/15" />
-            </div>
+            {isMobile && <Joystick />}
 
-            {/* Hint */}
-            <p className="absolute inset-x-0 bottom-8 text-center text-[9px] tracking-[0.35em] uppercase text-white/30">
-              Drag to look · Press a doorway to enter
+            <p className="absolute inset-x-0 bottom-6 px-6 text-center text-[9px] uppercase tracking-[0.3em] text-white/40">
+              {isMobile ? "Joystick or tap to walk · Drag to turn · Tap a tree to enter" : "WASD / click to walk · Drag or Q/R to turn · Scroll to zoom · E to enter"}
             </p>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Cinematic transition: vignette + fade to black */}
+      {/* Fade to black while swooping into a tree */}
       <AnimatePresence>
         {mode === "transitioning" && (
-          <>
-            <motion.div
-              key="trans-vignette"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.6 }}
-              className="pointer-events-none absolute inset-0"
-              style={{
-                background:
-                  "radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.95) 85%)",
-              }}
-            />
-            <motion.div
-              key="trans-fade"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: [0, 1, 1, 0] }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 2.8, times: [0, 0.55, 0.85, 1], ease: "easeInOut" }}
-              className="pointer-events-none absolute inset-0 bg-black"
-            />
-          </>
+          <motion.div
+            key="trans-fade"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: [0, 0, 1] }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 1.6, times: [0, 0.55, 1], ease: "easeIn" }}
+            className="pointer-events-none absolute inset-0 bg-black"
+          />
         )}
       </AnimatePresence>
 
-      {/* Theater (Room) UI */}
+      {/* Tree interiors — full-screen, like PMG Fight */}
       <AnimatePresence>
-        {mode === "theater" && (
-          <motion.div
-            key="theater-ui"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
-            className="absolute inset-x-0 bottom-8 flex flex-col items-center px-6"
-          >
-            <p className="text-[10px] tracking-[0.4em] uppercase text-amber-200/70 mb-3">
-              The Room · Drag to look · Pinch / scroll to move · Tap to kick
-            </p>
-            <button
-              onClick={() => window.location.reload()}
-              className="pointer-events-auto text-[10px] tracking-[0.3em] uppercase border border-amber-200/30 px-5 py-2.5 text-amber-100 hover:bg-amber-200/10 hover:border-amber-200/60 transition-colors"
-            >
-              ← Return to Forest
-            </button>
+        {mode === "fight" && (
+          <motion.div key="fight" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.45 }} className="absolute inset-0 z-[60] overflow-auto bg-background">
+            <PMGFight onExit={() => exitTo("fight")} />
           </motion.div>
         )}
-      </AnimatePresence>
-
-      {/* Game UI */}
-      <AnimatePresence>
         {mode === "game" && (
-          <motion.div
-            key="game-ui"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
-            className="absolute inset-x-0 bottom-8 flex flex-col items-center px-6"
-          >
-            <p className="text-[10px] tracking-[0.4em] uppercase text-cyan-200/70 mb-3">
-              Drag to aim · Tap / Space / Hold to fire
-            </p>
-            <button
-              onClick={() => window.location.reload()}
-              className="pointer-events-auto text-[10px] tracking-[0.3em] uppercase border border-cyan-200/30 px-5 py-2.5 text-cyan-100 hover:bg-cyan-200/10 hover:border-cyan-200/60 transition-colors"
-            >
-              ← Return to Forest
-            </button>
+          <motion.div key="game" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.45 }} className="absolute inset-0 z-[40]">
+            <Suspense fallback={<div className="h-full w-full bg-[#02030a]" />}>
+              <SpaceGameOverlay onExit={() => exitTo("game")} />
+            </Suspense>
+          </motion.div>
+        )}
+        {mode === "room" && (
+          <motion.div key="room" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.45 }} className="absolute inset-0 z-[40]">
+            <Suspense fallback={<div className="h-full w-full bg-[#0e0804]" />}>
+              <RoomExclusive onExit={() => exitTo("room")} />
+            </Suspense>
           </motion.div>
         )}
       </AnimatePresence>
