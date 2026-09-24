@@ -8,5 +8,5 @@
 - [x] Preserve the return-to-forest flow
 - [ ] Replace temporary fighter stand-ins with the uploaded JPeez, JahBalla, Stockz, Zoe, and Hammad models
 - [ ] Add the uploaded subway, bench, billboard, spray can, rat, trash can, and Mercedes assets to the fight stages
-- [ ] Add the uploaded Dirty Dan and JahBalla music tracks
+- [ ] Add the uploaded Dirty Dan, JahBalla, and Roam music tracks
 - [ ] Verify fighter selection, both arenas, music, gameplay, and the return flow

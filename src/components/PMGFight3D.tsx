@@ -14,16 +14,54 @@ import { useEffect, useRef, useState } from "react";
 import type { PointerEvent as RPointerEvent, ReactNode } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader.js";
 import * as SkeletonUtils from "three/examples/jsm/utils/SkeletonUtils.js";
 import pmgLogo from "@/assets/pmg-logo-clean.png";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
+import jpeezModel from "@/assets/pmg/jpeez.fbx.asset.json";
+import jahballaModel from "@/assets/pmg/jahballa.fbx.asset.json";
+import stockzModel from "@/assets/pmg/stockz.fbx.asset.json";
+import zoeModel from "@/assets/pmg/zoe.fbx.asset.json";
+import hammadModel from "@/assets/pmg/hammad.fbx.asset.json";
+import subwayModel from "@/assets/pmg/subway.glb.asset.json";
+import benchModel from "@/assets/pmg/bench.glb.asset.json";
+import spraycanModel from "@/assets/pmg/spraycan.glb.asset.json";
+import ratModel from "@/assets/pmg/rat.glb.asset.json";
+import dumpsterModel from "@/assets/pmg/dumpster.glb.asset.json";
+import billboardModel from "@/assets/pmg/billboard.glb.asset.json";
+import carModel from "@/assets/pmg/car.glb.asset.json";
+import dirtyDanTrack from "@/assets/pmg/dirty-dan.m4a.asset.json";
+import jahballaPrideTrack from "@/assets/pmg/jahballa-pride.m4a.asset.json";
+import roamTrack from "@/assets/pmg/roam.wav.asset.json";
 
-/** Where the game files live (Lovable: the public/pmg folder). */
+/** Legacy base for optional files that have not yet been supplied. */
 const MODEL_BASE = "/pmg/";
 const LOGO_URL = pmgLogo;
 
-/** Music — plays in random order. Add a song: put the mp3 in public/pmg and add a line here. */
-const SONGS: { file: string; title: string }[] = [];
+const FIGHTER_URLS: Record<string, string> = {
+  jpeez: jpeezModel.url,
+  jahballa: jahballaModel.url,
+  stockz: stockzModel.url,
+  zoe: zoeModel.url,
+  hammad: hammadModel.url,
+};
+
+const PROP_URLS: Record<string, string> = {
+  subway: subwayModel.url,
+  bench: benchModel.url,
+  spraycan: spraycanModel.url,
+  rat: ratModel.url,
+  dumpster: dumpsterModel.url,
+  billboard: billboardModel.url,
+  car: carModel.url,
+};
+
+/** Music plays in shuffled order after the first player interaction. */
+const SONGS: { url: string; title: string }[] = [
+  { url: dirtyDanTrack.url, title: "Dirty Dan" },
+  { url: jahballaPrideTrack.url, title: "JahBalla — Pride" },
+  { url: roamTrack.url, title: "Roam" },
+];
 
 /* ================================================================== */
 /*  ROSTER                                                             */
@@ -585,9 +623,14 @@ function createFallbackFighter(id: string): Asset {
 function loadFighter(id: string): Promise<Asset> {
   let p = assetCache.get(id);
   if (!p) {
-    p = new GLTFLoader().loadAsync(`${MODEL_BASE}${id}.glb`)
-      .then((g) => ({ scene: g.scene as THREE.Group, clips: g.animations }))
-      .catch(() => createFallbackFighter(id));
+    const url = FIGHTER_URLS[id];
+    p = url
+      ? new FBXLoader().loadAsync(url).then((scene) => ({ scene, clips: scene.animations }))
+      : new GLTFLoader().loadAsync(`${MODEL_BASE}${id}.glb`).then((g) => ({ scene: g.scene as THREE.Group, clips: g.animations }));
+    p = p.catch((error) => {
+      console.warn(`PMG Fight could not load fighter model: ${id}`, error);
+      return createFallbackFighter(id);
+    });
     assetCache.set(id, p);
   }
   return p;
@@ -727,7 +770,8 @@ interface GLTFResult { scene: THREE.Object3D; animations: THREE.AnimationClip[] 
 function loadGLB(name: string): Promise<GLTFResult | null> {
   let p = propCache.get(name);
   if (!p) {
-    p = new GLTFLoader().loadAsync(`${MODEL_BASE}${name}.glb`).then((g) => {
+    const url = PROP_URLS[name] ?? `${MODEL_BASE}${name}.glb`;
+    p = new GLTFLoader().loadAsync(url).then((g) => {
       g.scene.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
       return { scene: g.scene as THREE.Object3D, animations: g.animations };
     }).catch(() => null);
@@ -737,6 +781,20 @@ function loadGLB(name: string): Promise<GLTFResult | null> {
 }
 function loadProp(name: string): Promise<THREE.Object3D | null> {
   return loadGLB(name).then((g) => (g ? g.scene.clone(true) : null));
+}
+
+function normalizeObject(obj: THREE.Object3D, targetSize: number, axis: "x" | "y" = "y") {
+  obj.updateWorldMatrix(true, true);
+  const box = new THREE.Box3().setFromObject(obj);
+  const size = box.getSize(new THREE.Vector3());
+  const sourceSize = axis === "x" ? size.x : size.y;
+  if (sourceSize > 0) obj.scale.multiplyScalar(targetSize / sourceSize);
+  obj.updateWorldMatrix(true, true);
+  const scaled = new THREE.Box3().setFromObject(obj);
+  const center = scaled.getCenter(new THREE.Vector3());
+  obj.position.x -= center.x;
+  obj.position.z -= center.z;
+  obj.position.y -= scaled.min.y;
 }
 
 /** Rats: small, hidden most of the time, now and then they scurry along a lane in the background. */
@@ -840,17 +898,18 @@ function buildStreets(renderer?: THREE.WebGLRenderer): Stage {
   // dumpsters either side; the warm flicker is from fires just out of shot
   const flames: Stage["flames"] = [];
   for (const [bx, ry] of [[-4.7, 0.3], [4.7, -0.3]] as [number, number][]) {
-    jobs.push(loadProp("dumpster").then((d) => { if (!d) return; d.position.set(bx, 0, -1.45); d.rotation.y = ry; scene.add(d); }));
+    jobs.push(loadProp("dumpster").then((d) => { if (!d) return; normalizeObject(d, 1.35); d.position.set(bx, 0, -1.45); d.rotation.y = ry; scene.add(d); }));
     const light = new THREE.PointLight(0xff7a2a, 12, 10, 1.6); light.position.set(bx * 1.35, 1.2, -0.6); scene.add(light);
     flames.push({ spr: [], light });
   }
 
   // the Benz parked behind the cage, nose toward the PMG wall; the Propmyganda billboard
   jobs.push(loadProp("car").then((car) => { if (!car) return;
+    normalizeObject(car, 4.5, "x");
     car.position.set(-3.6, 0, -4.3); car.rotation.y = Math.PI / 2; carEnv(renderer, car); scene.add(car);
   }));
   jobs.push(loadProp("billboard").then((bb) => { if (!bb) return;
-    bb.scale.setScalar(0.4); bb.position.set(3.7, -1.85, -5.0); bb.rotation.y = -Math.PI / 2; scene.add(bb);
+    normalizeObject(bb, 3.6); bb.position.set(4.8, 0, -5.4); bb.rotation.y = -Math.PI / 2; scene.add(bb);
   }));
 
   // rats along the base of the fence and between the dumpsters
@@ -883,6 +942,7 @@ function buildSubway(renderer?: THREE.WebGLRenderer): Stage {
 
   const ready = loadProp("subway").then(async (st) => {
     if (!st) return;
+    normalizeObject(st, 20, "x");
     // the model's back wall runs along its x = -3.6 side: turn it to face the camera, centre it
     st.rotation.y = -Math.PI / 2; scene.add(st); st.updateMatrixWorld(true);
     let wallBox: THREE.Box3 | null = null;
@@ -904,6 +964,7 @@ function buildSubway(renderer?: THREE.WebGLRenderer): Stage {
     let seatY = 0.45, bx = -2.4;
     const bz = WALL_Z + 0.42;
     if (bench) {
+      normalizeObject(bench, 1.05);
       bench.position.set(bx, 0, bz); scene.add(bench); bench.updateMatrixWorld(true);
       const ray = new THREE.Raycaster(new THREE.Vector3(bx + 0.3, 3, bz + 0.12), new THREE.Vector3(0, -1, 0));
       const hit = ray.intersectObject(bench, true)[0];
@@ -948,7 +1009,7 @@ const BONE_NAMES = ["Hips", "Spine", "Spine1", "Spine2", "Neck", "Head", "LeftAr
 
 function makeRig(asset: Asset, color: string): Rig3 {
   const model = SkeletonUtils.clone(asset.scene);
-  model.scale.setScalar(0.01);
+  normalizeObject(model, 1.8);
   model.traverse((o) => {
     const m = o as THREE.Mesh;
     if (m.isMesh) { m.castShadow = true; m.frustumCulled = false; }
@@ -1655,7 +1716,7 @@ const Sound = {
       this.music.addEventListener("ended", () => this.next());
       this.music.addEventListener("error", () => { if (this.musicOn) setTimeout(() => this.next(), 400); });
     }
-    this.music.src = MODEL_BASE + song.file;
+    this.music.src = song.url;
     this.title = song.title;
     if (this.musicOn) this.music.play().catch(() => { /* blocked until the next tap */ });
     this.emit();
@@ -1781,7 +1842,11 @@ function SprayIntro({ onDone }: { onDone: () => void }) {
       const k = new THREE.DirectionalLight(0xffffff, 3); k.position.set(-1, 2, 2); canScene.add(k);
       const rimL = new THREE.DirectionalLight(0xffc890, 2.5); rimL.position.set(2, 1, -1); canScene.add(rimL);
       canCam = new THREE.PerspectiveCamera(28, CW / CH, 0.01, 10); canCam.position.set(0, 0.1, 0.52); canCam.lookAt(0, 0.1, 0);
-      new GLTFLoader().loadAsync(`${MODEL_BASE}spraycan.glb`).then((g) => { can = g.scene; canScene!.add(can); }).catch(() => {});
+      new GLTFLoader().loadAsync(PROP_URLS.spraycan).then((g) => {
+        can = g.scene;
+        normalizeObject(can, 0.28);
+        canScene?.add(can);
+      }).catch(() => {});
     } catch { canR = null; }
 
     let L = { x: 0, y: 0, w: 0, h: 0 };
@@ -2041,7 +2106,9 @@ function FightView3D(props: {
     (async () => {
       let a1: Asset, a2: Asset;
       await getLogo();
-      const stagePreload = loc === "subway" ? Promise.all([loadGLB("subway"), loadGLB("bench"), loadGLB("rat")]) : Promise.all([loadGLB("dumpster"), loadGLB("rat")]);
+       const stagePreload = loc === "subway"
+         ? Promise.all([loadGLB("subway"), loadGLB("bench"), loadGLB("rat")])
+         : Promise.all([loadGLB("dumpster"), loadGLB("rat"), loadGLB("car"), loadGLB("billboard")]);
       try { [a1, a2] = await Promise.all([loadFighter(p1.id), loadFighter(p2.id)]); await stagePreload; }
       catch { if (alive) setStatus("error"); return; }
       if (!alive) return;
