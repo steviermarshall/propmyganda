@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import PMGFight from "@/components/PMGFight";
 import SEO from "@/components/SEO";
@@ -16,6 +16,14 @@ const Propworld = () => {
   const [mode, setMode] = useState<Mode>("forest");
   const [near, setNear] = useState<Portal | null>(null);
   const isMobile = useIsMobile();
+  const pending = useRef<Portal | null>(null);
+
+  // Failsafe: on slow devices the camera swoop can lag — open the tree anyway.
+  useEffect(() => {
+    if (mode !== "transitioning") return;
+    const t = setTimeout(() => { if (pending.current) setMode(pending.current); }, 2600);
+    return () => clearTimeout(t);
+  }, [mode]);
 
   const exitTo = useCallback((from: Portal) => {
     placePlayerAtDoor(from);
@@ -41,7 +49,7 @@ const Propworld = () => {
           <Suspense fallback={<div className="h-full w-full bg-[#02060a]" />}>
             <PropworldScene
               onNear={setNear}
-              onTransitionStart={() => setMode("transitioning")}
+              onTransitionStart={(p) => { pending.current = p; setMode("transitioning"); }}
               onEnter={(p) => setMode(p)}
             />
           </Suspense>
