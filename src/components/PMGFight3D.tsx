@@ -16,8 +16,9 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader.js";
 import * as SkeletonUtils from "three/examples/jsm/utils/SkeletonUtils.js";
-import pmgLogo from "@/assets/pmg-logo-clean.png";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
+import pmgGraffitiLogo from "@/assets/pmg/pmg-graffiti-logo.png.asset.json";
+import propmygandaLogo from "@/assets/pmg/propmyganda-logo.png.asset.json";
 import jpeezModel from "@/assets/pmg/jpeez.fbx.asset.json";
 import jahballaModel from "@/assets/pmg/jahballa.fbx.asset.json";
 import stockzModel from "@/assets/pmg/stockz.fbx.asset.json";
@@ -36,7 +37,8 @@ import roamTrack from "@/assets/pmg/roam.wav.asset.json";
 
 /** Legacy base for optional files that have not yet been supplied. */
 const MODEL_BASE = "/pmg/";
-const LOGO_URL = pmgLogo;
+const LOGO_URL = pmgGraffitiLogo.url;
+const WORDMARK_URL = propmygandaLogo.url;
 
 const FIGHTER_URLS: Record<string, string> = {
   jpeez: jpeezModel.url,
@@ -911,6 +913,21 @@ function buildStreets(renderer?: THREE.WebGLRenderer): Stage {
   jobs.push(loadProp("billboard").then((bb) => { if (!bb) return;
     normalizeObject(bb, 3.6); bb.position.set(4.8, 0, -5.4); bb.rotation.y = -Math.PI / 2; scene.add(bb);
   }));
+  jobs.push(new THREE.TextureLoader().loadAsync(WORDMARK_URL).then((texture) => {
+    texture.colorSpace = THREE.SRGBColorSpace;
+    const backing = new THREE.Mesh(
+      new THREE.PlaneGeometry(3.8, 1.15),
+      new THREE.MeshBasicMaterial({ color: 0xf4f2ee }),
+    );
+    backing.position.set(4.35, 2.55, -5.72);
+    scene.add(backing);
+    const mark = new THREE.Mesh(
+      new THREE.PlaneGeometry(3.45, 0.9),
+      new THREE.MeshBasicMaterial({ map: texture, transparent: true, depthWrite: false }),
+    );
+    mark.position.set(4.35, 2.55, -5.7);
+    scene.add(mark);
+  }).catch(() => {}));
 
   // rats along the base of the fence and between the dumpsters
   const rats: RatInst[] = [];
@@ -1611,7 +1628,7 @@ const CSS = `
 .pmg-rotate{color:#efdcc6;font-size:13px;margin-top:10px;text-align:center}
 .pmg-intro{position:fixed;inset:0;z-index:50;background:#050304;display:flex;align-items:center;justify-content:center;cursor:pointer}
 .pmg-intro canvas{width:100%;height:100%;display:block}
-.pmg-skip{position:absolute;bottom:18px;right:20px;font:12px ${HUDF};color:#8a8f99;letter-spacing:2px}
+.pmg-skip{appearance:none;position:absolute;bottom:18px;right:20px;border:0;background:transparent;font:12px ${HUDF};color:#c9d1dc;letter-spacing:2px;cursor:pointer;padding:10px}
 .pmg-exit{position:fixed;left:16px;top:80px;z-index:70}
 @media (max-width:900px){.pmg-grid{grid-template-columns:repeat(3,1fr)}}
 @media (max-width:480px){.pmg-grid{grid-template-columns:repeat(2,1fr)}.pmg-locs{grid-template-columns:1fr}}
@@ -1949,9 +1966,9 @@ function SprayIntro({ onDone }: { onDone: () => void }) {
   }, []);
 
   return (
-    <div className="pmg-intro" onPointerDown={() => { Sound.unlock(); finish(); }} role="button" aria-label="Skip intro">
+    <div className="pmg-intro" onClick={() => { Sound.unlock(); finish(); }}>
       <canvas ref={ref} />
-      <div className="pmg-skip">TAP TO SKIP</div>
+      <button className="pmg-skip" type="button" onPointerDown={(event) => { event.stopPropagation(); Sound.unlock(); finish(); }} onClick={(event) => { event.stopPropagation(); Sound.unlock(); finish(); }}>TAP TO SKIP</button>
     </div>
   );
 }
