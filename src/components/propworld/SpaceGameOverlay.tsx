@@ -104,7 +104,7 @@ export default function SpaceGameOverlay({ onExit }: { onExit: () => void }) {
         </Suspense>
       </Canvas>
       <CosmicHUD />
-      <GameHUD key={run} onRestart={() => { localStorage.setItem("pmg_score", "0"); setRun((r) => r + 1); }} />
+      <GameHUD key={run} onRestart={() => setRun((r) => r + 1)} />
       <p className="pointer-events-none absolute inset-x-0 bottom-6 text-center text-[10px] uppercase tracking-[0.35em] text-cyan-200/60">
         Drag to steer · Tap / Space to fire
       </p>

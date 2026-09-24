@@ -123,7 +123,6 @@ function divePath(
 }
 
 function dispatchHud(g: GS, waveComplete = false) {
-  if (g.gameOver) localStorage.setItem('pmg_score', String(g.score));
   window.dispatchEvent(new CustomEvent("game:hud", {
     detail: { score: g.score, hp: g.playerHp, wave: g.wave, gameOver: g.gameOver, waveComplete },
   }));
