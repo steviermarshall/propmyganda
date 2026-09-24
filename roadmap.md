@@ -10,3 +10,4 @@
 - [ ] Add the uploaded subway, bench, billboard, spray can, rat, trash can, and Mercedes assets to the fight stages
 - [ ] Add the uploaded Dirty Dan, JahBalla, and Roam music tracks
 - [ ] Verify fighter selection, both arenas, music, gameplay, and the return flow
+- [ ] Replace PMG Fight branding and arena signs with the uploaded PMG logos
