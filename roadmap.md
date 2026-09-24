@@ -11,3 +11,4 @@
 - [x] Add the uploaded Dirty Dan, JahBalla, and Roam music tracks
 - [ ] Verify fighter selection, both arenas, music, gameplay, and the return flow
 - [x] Replace PMG Fight branding and arena signs with the uploaded PMG logos
+- [ ] Reproduce and fix the blue-tree space-combat glitch
