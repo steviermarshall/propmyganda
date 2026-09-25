@@ -41,6 +41,7 @@ import StevenDashboard from "./pages/admin/StevenDashboard";
 import JayDashboard from "./pages/admin/JayDashboard";
 import EditorDashboard from "./pages/admin/EditorDashboard";
 import DeliverablesReport from "./pages/admin/DeliverablesReport";
+import RoadmapBoard from "./pages/admin/RoadmapBoard";
 import OAuthConsent from "./pages/OAuthConsent";
 
 const queryClient = new QueryClient();
@@ -86,6 +87,7 @@ const AppRoutes = () => {
         <Route path="/admin/jay"    element={<CrmProtectedRoute allowedRoles={["admin","jay"]}><JayDashboard /></CrmProtectedRoute>} />
         <Route path="/admin/editor" element={<CrmProtectedRoute allowedRoles={["admin","editor","jay"]}><EditorDashboard /></CrmProtectedRoute>} />
         <Route path="/admin/reports/deliverables" element={<CrmProtectedRoute allowedRoles={["admin","jay"]}><DeliverablesReport /></CrmProtectedRoute>} />
+        <Route path="/admin/roadmap" element={<CrmProtectedRoute allowedRoles={["admin","mike","steven","jay","editor"]}><RoadmapBoard /></CrmProtectedRoute>} />
       </Routes>
     );
   }
