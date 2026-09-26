@@ -345,15 +345,28 @@ export default function Events() {
           </aside>
         </div>
 
-        {/* Past flyer archive */}
+        {/* Past flyer wall */}
         {!loading && past.length > 0 && (
-          <div className="container-content mt-12">
-            <p className="text-[9px] tracking-[0.4em] uppercase text-muted-foreground mb-6">Archive</p>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {past.map(ev => <PastCard key={ev.id} ev={ev} />)}
+          <div
+            className="mt-12 border-y border-black/20 py-12"
+            style={{
+              backgroundColor: "#F2EFE9",
+              backgroundImage:
+                "linear-gradient(rgba(0,0,0,0.07) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.07) 1px, transparent 1px)",
+              backgroundSize: "56px 28px",
+            }}
+          >
+            <div className="container-content">
+              <p className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#0B0B0B]/60 mb-8">
+                Flyer archive
+              </p>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-10">
+                {past.map((ev, i) => <PastCard key={ev.id} ev={ev} index={i} />)}
+              </div>
             </div>
           </div>
         )}
+
       </section>
 
       <Marquee />
