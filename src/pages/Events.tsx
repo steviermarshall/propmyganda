@@ -134,15 +134,20 @@ function igEmbedUrl(url: string): string {
   return `${url.split("?")[0].replace(/\/$/, "")}/embed/`;
 }
 
-function PastCard({ ev }: { ev: Event }) {
+function PastCard({ ev, index = 0 }: { ev: Event; index?: number }) {
   const d = fmt(ev.event_date);
   // Use ticket_url as a fallback when flyer_url is missing but it's an IG link
   const visualUrl = ev.flyer_url ?? (isInstagramUrl(ev.ticket_url) ? ev.ticket_url : null);
   const igEmbed = isInstagramUrl(visualUrl);
+  const tilt = [-2, 1.5, -1, 2, -1.5, 1][index % 6];
 
   const linkHref = ev.ticket_url ?? ev.flyer_url ?? null;
   const inner = (
-    <div className="group relative overflow-hidden border border-border/40 hover:border-border transition-colors">
+    <div
+      className="group relative overflow-hidden border border-black/20 bg-[#F2EFE9] shadow-[0_6px_18px_rgba(0,0,0,0.25)] transition-transform duration-200"
+      style={{ transform: `rotate(${tilt}deg)` }}
+    >
+
       {igEmbed ? (
         <div className="aspect-[3/4] overflow-hidden bg-secondary relative">
           <iframe
