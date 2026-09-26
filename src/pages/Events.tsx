@@ -137,11 +137,11 @@ function igEmbedUrl(url: string): string {
 /** Measured picture shape of each Nonstop NY post (photo-only crop). */
 const IG_ASPECTS: Record<string, string> = {
   DAb2hotJcrw: "4 / 5",
-  DHj0IMTpEw3: "3 / 4",
-  DIM3RPhJsZr: "3 / 4",
+  DHj0IMTpEw3: "4 / 5",
+  DIM3RPhJsZr: "4 / 5",
   DK56lIeAHWm: "3 / 4",
   DLDLIIXxeB4: "4 / 5",
-  DMvqNELpNk6: "3 / 4",
+  DMvqNELpNk6: "320 / 411",
   "C_BhAPApZB0": "4 / 5",
   DFn8akapqFC: "4 / 5",
   DY5dyihCXGY: "3 / 4",
