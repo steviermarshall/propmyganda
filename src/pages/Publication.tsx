@@ -8,13 +8,7 @@ type Pub = Database["public"]["Tables"]["publications"]["Row"];
 
 const CATEGORIES = ["All", "Business", "Artists", "Culture", "Milestones", "Industry"] as const;
 
-const CAT_COLOR: Record<string, string> = {
-  Business:    "#00F0FF",
-  Artists:     "#FF3B30",
-  Culture:     "#FFCC00",
-  Milestones:  "#34C759",
-  Industry:    "#AF52DE",
-};
+// Brand System: yellow is the only accent — every category tag is the same ink.
 
 function fmtDate(s: string | null) {
   if (!s) return "";
