@@ -19,8 +19,9 @@ export default function CrmProtectedRoute({ children, allowedRoles }: Props) {
 
   if (!session) return <Navigate to="/auth/login" replace />;
 
-  if (allowedRoles && crmRole && !allowedRoles.includes(crmRole as string)) {
-    return <Navigate to="/auth/login" replace />;
+  const r = (crmRole as string) === "ceo" ? "admin" : (crmRole as string);
+  if (allowedRoles && (!crmRole || !allowedRoles.includes(r))) {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <>{children}</>;
