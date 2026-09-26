@@ -134,15 +134,20 @@ function igEmbedUrl(url: string): string {
   return `${url.split("?")[0].replace(/\/$/, "")}/embed/`;
 }
 
-function PastCard({ ev }: { ev: Event }) {
+function PastCard({ ev, index = 0 }: { ev: Event; index?: number }) {
   const d = fmt(ev.event_date);
   // Use ticket_url as a fallback when flyer_url is missing but it's an IG link
   const visualUrl = ev.flyer_url ?? (isInstagramUrl(ev.ticket_url) ? ev.ticket_url : null);
   const igEmbed = isInstagramUrl(visualUrl);
+  const tilt = [-2, 1.5, -1, 2, -1.5, 1][index % 6];
 
   const linkHref = ev.ticket_url ?? ev.flyer_url ?? null;
   const inner = (
-    <div className="group relative overflow-hidden border border-border/40 hover:border-border transition-colors">
+    <div
+      className="group relative overflow-hidden border border-black/20 bg-[#F2EFE9] shadow-[0_6px_18px_rgba(0,0,0,0.25)] transition-transform duration-200"
+      style={{ transform: `rotate(${tilt}deg)` }}
+    >
+
       {igEmbed ? (
         <div className="aspect-[3/4] overflow-hidden bg-secondary relative">
           <iframe
@@ -168,11 +173,12 @@ function PastCard({ ev }: { ev: Event }) {
           <span className="text-6xl font-black text-border">{d.day}</span>
         </div>
       )}
-      <div className="p-4">
-        <p className="text-[9px] tracking-[0.3em] uppercase text-muted-foreground">{d.month} {d.year}</p>
-        <h3 className="font-black text-sm uppercase tracking-tight mt-1 line-clamp-2">{ev.title}</h3>
-        {ev.city && <p className="text-[10px] text-muted-foreground mt-0.5">{ev.city}</p>}
+      <div className="p-4 text-[#0B0B0B]">
+        <p className="font-mono text-[9px] tracking-[0.2em] uppercase opacity-60">{d.month} {d.year}</p>
+        <h3 className="font-display text-sm uppercase leading-[0.9] tracking-[-0.03em] mt-1 line-clamp-2">{ev.title}</h3>
+        {ev.city && <p className="font-mono text-[9px] uppercase tracking-[0.15em] opacity-50 mt-0.5">{ev.city}</p>}
       </div>
+
     </div>
   );
 
@@ -339,15 +345,28 @@ export default function Events() {
           </aside>
         </div>
 
-        {/* Past flyer archive */}
+        {/* Past flyer wall */}
         {!loading && past.length > 0 && (
-          <div className="container-content mt-12">
-            <p className="text-[9px] tracking-[0.4em] uppercase text-muted-foreground mb-6">Archive</p>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {past.map(ev => <PastCard key={ev.id} ev={ev} />)}
+          <div
+            className="mt-12 border-y border-black/20 py-12"
+            style={{
+              backgroundColor: "#F2EFE9",
+              backgroundImage:
+                "linear-gradient(rgba(0,0,0,0.07) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.07) 1px, transparent 1px)",
+              backgroundSize: "56px 28px",
+            }}
+          >
+            <div className="container-content">
+              <p className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#0B0B0B]/60 mb-8">
+                Flyer archive
+              </p>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-10">
+                {past.map((ev, i) => <PastCard key={ev.id} ev={ev} index={i} />)}
+              </div>
             </div>
           </div>
         )}
+
       </section>
 
       <Marquee />

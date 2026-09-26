@@ -1,10 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=Barlow:wght@300;400;500;600;700;800;900&family=IBM+Plex+Mono:wght@300;400;500;600;700&family=Rubik+Dirt&family=Rubik+Wet+Paint&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400..900&family=Archivo+Black&family=Space+Mono:wght@400;700&display=swap');
 
-@font-face {
-  font-family: "Dirty Stains";
-  src: url("/__l5e/assets-v1/67115ba6-ca51-480b-b00b-14882b2211bd/DirtyStains.otf") format("opentype");
-  font-display: swap;
-}
 
 @tailwind base;
 @tailwind components;
@@ -42,9 +37,10 @@
     --sidebar-border: 0 0% 20%;
     --sidebar-ring: 0 0% 100%;
 
-    /* Electric accent — #F5FF00 */
-    --electric: 58 100% 50%;
-    --electric-foreground: 0 0% 0%;
+    /* PMG yellow — #FFD230 */
+    --electric: 46 100% 59%;
+    --electric-foreground: 0 0% 4%;
+
 
     /* Custom tokens */
     --section-padding: 5rem;

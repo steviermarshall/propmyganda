@@ -16,18 +16,23 @@ const services = [
 
 const stats = [
   { value: "150+", label: "Platforms" },
-  { value: "6", label: "Artists" },
+  { value: "2", label: "Artists" },
   { value: "100M+", label: "Streams" },
   { value: "100%", label: "Independent" },
 ];
 
+const CATALOGUE: Record<string, string> = {
+  chuckiee: "PMG-D-001",
+  "mercy-porter": "PMG-D-002",
+};
+
 const Distribution = () => {
-  const rosterArtists = artists.filter((a) =>
-    ["chuckiee", "mercy-porter", "jahballa", "zoe", "hammad", "stockz"].includes(a.id)
-  );
+  // Distribution clients only. Jahballa, Hammad, Stockz and Zoë moved to Records.
+  const rosterArtists = artists.filter((a) => ["chuckiee", "mercy-porter"].includes(a.id));
 
   const [activeService, setActiveService] = useState(0);
   const [activeArtist, setActiveArtist] = useState(0);
+
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -73,116 +78,121 @@ const Distribution = () => {
         description="PMG delivers your music to Spotify, Apple Music, and 150+ DSPs. Marketing, sync, catalog management. Apply to work with PMG."
         path="/distribution"
       />
-      {/* Hero */}
-      <section className="bg-black text-white pt-32 pb-24 md:pt-44 md:pb-32 overflow-hidden relative">
-        <div className="container-content relative z-10">
-          <ScrollReveal y={80}>
-            <p className="text-xs tracking-[0.4em] uppercase text-white/40 mb-6">Propmyganda · Distribution</p>
-            <h1 className="font-display text-[14vw] md:text-[10vw] uppercase leading-none tracking-tight mb-0">
-              We Move<br />
-              <span className="text-electric">Music.</span>
-            </h1>
-          </ScrollReveal>
-          <ScrollReveal delay={0.3}>
-            <p className="text-base md:text-lg leading-relaxed text-white/60 max-w-xl mt-8">
-              PMG is the independent distribution and content arm for artists building something real.
-              We bring industry expertise to those doing the work.
-            </p>
-          </ScrollReveal>
-        </div>
-        {/* Background grid */}
-        <div className="absolute inset-0 opacity-[0.03]"
-          style={{ backgroundImage: "linear-gradient(white 1px, transparent 1px), linear-gradient(90deg, white 1px, transparent 1px)", backgroundSize: "60px 60px" }} />
+      {/* Hero — condensed */}
+      <section className="bg-black text-white px-6 md:px-10 pt-24 md:pt-32 pb-6 border-b border-white/10">
+        <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/40">
+          Propmyganda · Distribution
+        </p>
+        <h1 className="font-display text-[14vw] md:text-[9vw] uppercase leading-[0.85] tracking-[-0.03em]">
+          We Move<br />
+          <span className="text-electric">Music.</span>
+        </h1>
+        <p className="mt-3 max-w-md text-sm leading-snug text-white/60">
+          Every major platform. Transparent splits. No middlemen. No payola · 0.00
+        </p>
+      </section>
+
+      {/* Roster first — compact rows */}
+      <section className="bg-black text-white px-6 md:px-10 py-8 border-b border-white/10">
+        <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-white/40">
+          Distributed Artists
+        </p>
+        <ul className="border-t border-white/15">
+          {rosterArtists.map((a, i) => {
+            const artist = a as typeof a & {
+              spotifyAlbumId?: string;
+              spotifyTrackId?: string;
+              spotifyArtistId?: string;
+            };
+            const link = artist.spotifyAlbumId
+              ? `https://open.spotify.com/album/${artist.spotifyAlbumId}`
+              : artist.spotifyTrackId
+                ? `https://open.spotify.com/track/${artist.spotifyTrackId}`
+                : artist.spotifyArtistId
+                  ? `https://open.spotify.com/artist/${artist.spotifyArtistId}`
+                  : null;
+            return (
+              <li
+                key={a.id}
+                className="flex items-center justify-between gap-4 border-b border-white/15 py-3"
+              >
+                <button
+                  onClick={() => setActiveArtist(i)}
+                  className="flex min-w-0 items-baseline gap-3 text-left"
+                >
+                  <span className="font-mono text-[10px] tracking-[0.18em] text-electric">
+                    {CATALOGUE[a.id] ?? "PMG-D-000"}
+                  </span>
+                  <span className="truncate font-display text-lg uppercase tracking-[-0.03em]">
+                    {a.name}
+                  </span>
+                </button>
+                {link && (
+                  <a
+                    href={link}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex-shrink-0 font-mono text-[10px] uppercase tracking-[0.18em] text-white/50 hover:text-electric"
+                  >
+                    Listen →
+                  </a>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+
+        {/* Selected artist player */}
+        {(() => {
+          const artist = rosterArtists[activeArtist] as (typeof rosterArtists)[0] & {
+            bio?: string;
+            spotifyAlbumId?: string;
+            spotifyTrackId?: string;
+            spotifyArtistId?: string;
+          };
+          if (!artist) return null;
+          const embedSrc = artist.spotifyAlbumId
+            ? `https://open.spotify.com/embed/album/${artist.spotifyAlbumId}?utm_source=generator&theme=0`
+            : artist.spotifyTrackId
+              ? `https://open.spotify.com/embed/track/${artist.spotifyTrackId}?utm_source=generator&theme=0`
+              : artist.spotifyArtistId
+                ? `https://open.spotify.com/embed/artist/${artist.spotifyArtistId}?utm_source=generator&theme=0`
+                : null;
+          if (!embedSrc) return null;
+          return (
+            <div className="mt-5 border border-white/15 bg-black p-3">
+              <iframe
+                title={`${artist.name} on Spotify`}
+                src={embedSrc}
+                width="100%"
+                height="232"
+                frameBorder="0"
+                loading="lazy"
+                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+              />
+              <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.18em] text-white/40">
+                {artist.name} · {CATALOGUE[artist.id] ?? ""}
+              </p>
+            </div>
+          );
+        })()}
       </section>
 
       {/* Stats */}
       <section className="bg-electric">
-        <div className="container-content py-8">
+        <div className="container-content py-5">
           <div className="grid grid-cols-4 divide-x divide-black/20">
             {stats.map((s) => (
-              <div key={s.label} className="text-center px-4 py-2">
-                <p className="font-display text-3xl md:text-5xl text-black leading-none">{s.value}</p>
-                <p className="text-[10px] uppercase tracking-[0.2em] text-black/60 mt-1">{s.label}</p>
+              <div key={s.label} className="text-center px-2">
+                <p className="font-display text-2xl md:text-4xl text-black leading-none">{s.value}</p>
+                <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-black/60 mt-1">{s.label}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Artist Showcase */}
-      <section className="section-padding bg-background border-t border-border">
-        <div className="container-content">
-          <ScrollReveal>
-            <h2 className="font-display text-4xl md:text-6xl uppercase mb-12">The Roster</h2>
-          </ScrollReveal>
-          <ScrollReveal delay={0.15} className="flex flex-col md:flex-row gap-8">
-            <div className="md:w-48 flex md:flex-col gap-2 overflow-x-auto md:overflow-visible pb-2 md:pb-0">
-              {rosterArtists.map((a, i) => (
-                <button
-                  key={a.id}
-                  onClick={() => setActiveArtist(i)}
-                  className={`text-left text-xs tracking-[0.15em] uppercase font-bold whitespace-nowrap px-3 py-2.5 border-l-2 transition-all ${
-                    i === activeArtist
-                      ? "border-electric text-foreground bg-electric/5"
-                      : "border-transparent text-muted-foreground hover:text-foreground hover:border-foreground/30"
-                  }`}
-                >
-                  {a.name}
-                </button>
-              ))}
-            </div>
-            <div className="flex-1">
-              {(() => {
-                const artist = rosterArtists[activeArtist] as typeof rosterArtists[0] & { bio?: string; albumCover?: string; spotifyAlbumId?: string; spotifyTrackId?: string; spotifyArtistId?: string };
-                const embedSrc = artist.spotifyAlbumId
-                  ? `https://open.spotify.com/embed/album/${artist.spotifyAlbumId}?utm_source=generator&theme=0`
-                  : artist.spotifyTrackId
-                  ? `https://open.spotify.com/embed/track/${artist.spotifyTrackId}?utm_source=generator&theme=0`
-                  : artist.spotifyArtistId
-                  ? `https://open.spotify.com/embed/artist/${artist.spotifyArtistId}?utm_source=generator&theme=0`
-                  : null;
-                return (
-                  <div className="flex flex-col md:flex-row gap-8">
-                    <div className="md:w-1/2 flex-shrink-0 self-start aspect-square overflow-hidden bg-secondary">
-                      <img
-                        src={artist.albumCover ?? artist.image}
-                        alt={artist.name}
-                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"
-                        loading="lazy"
-                        width={800}
-                        height={800}
-                      />
-                    </div>
-                    <div className="md:w-1/2 flex flex-col justify-center gap-4">
-                      <div>
-                        <p className="text-xs tracking-[0.2em] uppercase text-muted-foreground mb-2">{artist.genre}</p>
-                        <h3 className="font-display text-4xl md:text-5xl uppercase leading-none">{artist.name}</h3>
-                        <p className="text-muted-foreground mt-4 text-sm leading-relaxed">
-                          {artist.bio ?? `One of PMG's cornerstone artists. ${artist.name} embodies what it means to be 100% independent.`}
-                        </p>
-                      </div>
-                      {embedSrc ? (
-                        <iframe
-                          src={embedSrc}
-                          width="100%"
-                          height="380"
-                          frameBorder="0"
-                          allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                          loading="eager"
-                        />
-                      ) : (
-                        <button className="self-start bg-black text-white px-6 py-3 text-xs tracking-[0.2em] uppercase font-bold hover:bg-electric hover:text-black transition-colors">
-                          Listen Now
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-          </ScrollReveal>
-        </div>
-      </section>
+
 
       {/* Services */}
       <section className="section-padding bg-black text-white">

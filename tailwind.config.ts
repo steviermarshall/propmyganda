@@ -14,13 +14,14 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ["Barlow", "Helvetica Neue", "Arial", "sans-serif"],
-        display: ["Rubik Dirt", "Anton", "Impact", "sans-serif"],
-        condensed: ["Anton", "Bebas Neue", "Impact", "sans-serif"],
-        grunge: ["Rubik Dirt", "Anton", "Impact", "sans-serif"],
-        drip: ["Rubik Wet Paint", "Rubik Dirt", "Impact", "sans-serif"],
-        mono: ["IBM Plex Mono", "ui-monospace", "SFMono-Regular", "monospace"],
+        sans: ["Archivo", "Helvetica Neue", "Arial", "sans-serif"],
+        display: ["Archivo Black", "Archivo", "Impact", "sans-serif"],
+        condensed: ["Archivo Black", "Archivo", "Impact", "sans-serif"],
+        grunge: ["Archivo Black", "Archivo", "Impact", "sans-serif"],
+        drip: ["Archivo Black", "Archivo", "Impact", "sans-serif"],
+        mono: ["Space Mono", "ui-monospace", "SFMono-Regular", "monospace"],
       },
+
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
