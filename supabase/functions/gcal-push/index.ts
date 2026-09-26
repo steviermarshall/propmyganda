@@ -143,7 +143,12 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Invite the whole team so it lands on everyone's calendar
+    const { data: team } = await supabase.from("team_members").select("email").not("email", "is", null);
+    const attendees = (team ?? []).map((t: any) => ({ email: t.email }));
+
     const eventPayload = {
+      attendees,
       summary,
       description,
       start: { dateTime: new Date(startISO).toISOString() },
@@ -158,8 +163,9 @@ Deno.serve(async (req) => {
     const url = isUpdate
       ? `${GCAL_BASE}/calendars/${encodeURIComponent(calendarId)}/events/${syncRow.google_event_id}`
       : `${GCAL_BASE}/calendars/${encodeURIComponent(calendarId)}/events`;
+    const sendUrl = `${url}?sendUpdates=all`;
 
-    const resp = await fetch(url, {
+    const resp = await fetch(sendUrl, {
       method: isUpdate ? "PATCH" : "POST",
       headers: authHeaders,
       body: JSON.stringify(eventPayload),
