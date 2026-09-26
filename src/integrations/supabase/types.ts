@@ -393,6 +393,36 @@ export type Database = {
         }
         Relationships: []
       }
+      contact_submissions: {
+        Row: {
+          created_at: string
+          email: string
+          handled: boolean
+          id: string
+          message: string
+          name: string
+          subject: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          handled?: boolean
+          id?: string
+          message: string
+          name: string
+          subject?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          handled?: boolean
+          id?: string
+          message?: string
+          name?: string
+          subject?: string
+        }
+        Relationships: []
+      }
       crm_bookings: {
         Row: {
           amount_quoted: number | null
@@ -1015,6 +1045,45 @@ export type Database = {
         }
         Relationships: []
       }
+      pmg_tasks: {
+        Row: {
+          area: string | null
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          priority: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          area?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          priority?: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          area?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          priority?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -1052,11 +1121,13 @@ export type Database = {
           category: string
           cover_url: string | null
           created_at: string
+          credit: string | null
           excerpt: string | null
           featured: boolean
           id: string
           published_at: string | null
           slug: string
+          source_url: string | null
           title: string
           updated_at: string
         }
@@ -1066,11 +1137,13 @@ export type Database = {
           category?: string
           cover_url?: string | null
           created_at?: string
+          credit?: string | null
           excerpt?: string | null
           featured?: boolean
           id?: string
           published_at?: string | null
           slug: string
+          source_url?: string | null
           title: string
           updated_at?: string
         }
@@ -1080,11 +1153,13 @@ export type Database = {
           category?: string
           cover_url?: string | null
           created_at?: string
+          credit?: string | null
           excerpt?: string | null
           featured?: boolean
           id?: string
           published_at?: string | null
           slug?: string
+          source_url?: string | null
           title?: string
           updated_at?: string
         }
