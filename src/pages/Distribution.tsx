@@ -142,7 +142,7 @@ const Distribution = () => {
           })}
         </ul>
 
-        {/* Selected artist player */}
+        {/* Selected artist — restore the full-size artwork/profile without changing the compact roster */}
         {(() => {
           const artist = rosterArtists[activeArtist] as (typeof rosterArtists)[0] & {
             bio?: string;
@@ -158,21 +158,19 @@ const Distribution = () => {
               : artist.spotifyArtistId
                 ? `https://open.spotify.com/embed/artist/${artist.spotifyArtistId}?utm_source=generator&theme=0`
                 : null;
-          if (!embedSrc) return null;
           return (
-            <div className="mt-5 border border-white/15 bg-black p-3">
-              <iframe
-                title={`${artist.name} on Spotify`}
-                src={embedSrc}
-                width="100%"
-                height="232"
-                frameBorder="0"
-                loading="lazy"
-                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-              />
-              <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.18em] text-white/40">
-                {artist.name} · {CATALOGUE[artist.id] ?? ""}
-              </p>
+            <div className="mt-8 grid items-center gap-6 border-t border-white/15 pt-8 md:grid-cols-2 md:gap-10">
+              <div className="aspect-square w-full max-w-[680px] overflow-hidden bg-secondary">
+                <img src={artist.albumCover ?? artist.image} alt={`${artist.name} artwork`} className="h-full w-full object-cover" loading="lazy" />
+              </div>
+              <div className="min-w-0">
+                <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-electric">{CATALOGUE[artist.id] ?? ""} · {artist.genre}</p>
+                <h2 className="mt-2 font-display text-4xl uppercase leading-none md:text-5xl">{artist.name}</h2>
+                {artist.bio && <p className="mt-4 max-w-lg text-sm leading-relaxed text-primary-foreground/60">{artist.bio}</p>}
+                {embedSrc && <div className="mt-6 border border-primary-foreground/15 p-2">
+                  <iframe title={`${artist.name} on Spotify`} src={embedSrc} width="100%" height="352" className="block" loading="lazy" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" />
+                </div>}
+              </div>
             </div>
           );
         })()}

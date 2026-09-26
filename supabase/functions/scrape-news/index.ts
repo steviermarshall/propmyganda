@@ -63,7 +63,18 @@ function firstImage(block: string): string | null {
   ];
   for (const re of patterns) {
     const m = block.match(re);
-    if (m) return decodeEntities(m[1]);
+    if (m) {
+      try {
+        const url = new URL(decodeEntities(m[1]));
+        if (!/^https?:$/.test(url.protocol)) continue;
+        if (url.hostname === "billboard.com" || url.hostname === "www.billboard.com") {
+          url.searchParams.delete("w");
+          url.searchParams.delete("h");
+          url.searchParams.delete("crop");
+        }
+        return url.toString();
+      } catch { continue; }
+    }
   }
   return null;
 }
