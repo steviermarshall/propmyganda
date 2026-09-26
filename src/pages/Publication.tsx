@@ -4,7 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import SEO from "@/components/SEO";
 
-type Pub = Database["public"]["Tables"]["publications"]["Row"];
+type Pub = Database["public"]["Tables"]["publications"]["Row"] & {
+  source_url?: string | null;
+  credit?: string | null;
+};
 
 const CATEGORIES = ["All", "Business", "Artists", "Culture", "Milestones", "Industry"] as const;
 
