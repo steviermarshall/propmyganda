@@ -38,5 +38,5 @@
 - [x] Replace every PMG Fight model, logo, and soundtrack with the corrected uploaded files
 
 ## New tasks
-- [ ] Remove "Made with Lovable" badge from the site
-- [ ] Populate Events page from the 10 Instagram post links the user sent
+- [x] Remove "Made with Lovable" badge from the site
+- [x] Populate Events page from the 10 Instagram post links the user sent
