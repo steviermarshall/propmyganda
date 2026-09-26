@@ -1,5 +1,5 @@
 import { Navigate } from "react-router-dom";
-import type { UserRole } from "@/integrations/supabase/types";
+import type { UserRole } from "@/types/roles";
 import { useAuth } from "@/hooks/use-auth";
 
 interface Props {

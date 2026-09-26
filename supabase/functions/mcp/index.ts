@@ -2,9 +2,6 @@
 // To take ownership, delete this banner line; the plugin then leaves the file alone.
 // supabase function: mcp
 // Bundled from src/lib/mcp/index.ts by @lovable.dev/mcp-js.
-// <define:import.meta.env>
-var define_import_meta_env_default = { MODE: "production", BASE_URL: "/", DEV: false, PROD: true, SSR: false };
-
 // src/lib/mcp/index.ts
 import { auth, defineMcp } from "npm:@lovable.dev/mcp-js@3.0.1";
 
@@ -13,7 +10,7 @@ import { defineTool } from "npm:@lovable.dev/mcp-js@3.0.1";
 import { z } from "npm:zod@^3.25.76";
 
 // src/lib/mcp/supabase.ts
-import { createClient } from "npm:@supabase/supabase-js@^2.104.1";
+import { createClient } from "npm:@supabase/supabase-js@^2.117.2";
 function runtimeEnv(name) {
   const runtime = globalThis;
   return runtime.Deno?.env?.get?.(name) ?? runtime.process?.env?.[name];
@@ -252,7 +249,7 @@ var update_booking_status_default = defineTool5({
 });
 
 // src/lib/mcp/index.ts
-var projectRef = define_import_meta_env_default.VITE_SUPABASE_PROJECT_ID ?? "trwnqtgywfsalvismioi";
+var projectRef = "gfqcmtslhwkcwfkqjfqw";
 var mcp_default = defineMcp({
   name: "propmyganda-brand-launch",
   title: "Propmyganda Brand Launch",

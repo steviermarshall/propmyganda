@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import type { CrmRole, Database } from "@/integrations/supabase/types";
+import type { CrmRole } from "@/types/roles";
+import type { Database } from "@/integrations/supabase/types";
 
 type TeamMember = Database["public"]["Tables"]["team_members"]["Row"];
 
