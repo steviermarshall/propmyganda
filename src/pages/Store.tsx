@@ -8,18 +8,22 @@ const Store = () => {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!contact.trim()) return;
+    if (!contact.includes("@")) {
+      setState("error");
+      return;
+    }
     setState("sending");
-    const isEmail = contact.includes("@");
     const { error } = await supabase.from("newsletter_subscribers").insert([
       {
-        email: isEmail ? contact.trim() : null,
-        phone: isEmail ? null : contact.trim(),
-        source: "store-vault",
+        email: contact.trim(),
+        source: "store",
+        unsubscribed_at: null,
+        is_active: true,
       },
     ] as never);
     setState(error ? "error" : "done");
   }
+
 
   const line = (label: string, value: string) => (
     <div className="flex justify-between gap-4">
