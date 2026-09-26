@@ -97,8 +97,7 @@ export default function PublicationDetail() {
       {/* Header */}
       <header className="container-content max-w-4xl py-12 md:py-16">
         <span
-          className="inline-block text-[10px] tracking-[0.25em] uppercase font-bold mb-6 px-2 py-1 text-white"
-          style={{ backgroundColor: color }}
+          className="inline-block bg-electric text-electric-foreground text-[10px] tracking-[0.25em] uppercase font-bold mb-6 px-2 py-1"
         >
           {pub.category}
         </span>
@@ -112,6 +111,17 @@ export default function PublicationDetail() {
           {pub.author && <span className="font-bold text-black">By {pub.author}</span>}
           {pub.author && pub.published_at && <span>·</span>}
           {pub.published_at && <span>{fmtDate(pub.published_at)}</span>}
+          {pub.credit && (
+            <>
+              <span>·</span>
+              <span>{pub.credit}</span>
+              {pub.source_url && (
+                <a href={pub.source_url} target="_blank" rel="noreferrer" className="underline hover:text-black">
+                  Read the original
+                </a>
+              )}
+            </>
+          )}
         </div>
       </header>
 
