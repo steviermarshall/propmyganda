@@ -223,7 +223,8 @@ export default function Events() {
       .order("display_order", { ascending: true })
       .order("created_at", { ascending: false })
       .then(({ data }) => {
-        setIgPosts((data ?? []) as IgPost[]);
+        // This seeded post was removed on Instagram; its embed displays a broken-link error.
+        setIgPosts(((data ?? []) as IgPost[]).filter((post) => !post.instagram_url.includes("DDFwiTKSdWm")));
         setIgLoading(false);
       });
   }, []);
@@ -309,6 +310,7 @@ export default function Events() {
               limit={6}
               cols="grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
             />
+            {!igLoading && igPosts.length === 0 && <a href="https://www.instagram.com/nonstopnewyork/" target="_blank" rel="noopener noreferrer" className="mt-4 inline-block border-b border-foreground pb-1 text-xs uppercase tracking-widest">See past events on Instagram ↗</a>}
           </div>
 
           <aside className="bg-primary text-primary-foreground p-6 lg:sticky lg:top-24 lg:self-start">

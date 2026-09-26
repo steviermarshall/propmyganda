@@ -17,10 +17,6 @@ function getCleanUrl(url: string) {
   return url.split("?")[0].replace(/\/$/, "");
 }
 
-function getEmbedUrl(url: string) {
-  return `${getCleanUrl(url)}/embed/`;
-}
-
 export default function InstagramFeed({
   posts,
   loading,
@@ -42,7 +38,7 @@ export default function InstagramFeed({
   if (visible.length === 0) {
     return (
       <div className="border border-border p-16 text-center max-w-lg">
-        <p className="text-muted-foreground text-sm uppercase tracking-widest">No posts yet</p>
+        <p className="text-muted-foreground text-sm uppercase tracking-widest">Event flyers coming soon</p>
       </div>
     );
   }
@@ -50,20 +46,15 @@ export default function InstagramFeed({
   return (
     <div className={`grid ${cols} gap-4`}>
       {visible.map((post) => (
-        <div
+        <a
           key={post.id}
-          className="relative w-full aspect-[1080/1350] overflow-hidden bg-secondary border border-border"
+          href={getCleanUrl(post.instagram_url)} target="_blank" rel="noopener noreferrer"
+          className="relative flex w-full aspect-[1080/1350] flex-col justify-end overflow-hidden bg-primary p-5 text-primary-foreground border border-border hover:border-electric"
         >
-          <iframe
-            src={getEmbedUrl(post.instagram_url)}
-            title={post.label ?? "Instagram post"}
-            className="absolute left-0 w-full border-0"
-            style={{ top: -54, height: "calc(100% + 160px)" }}
-            scrolling="no"
-            loading="lazy"
-            allowTransparency
-          />
-        </div>
+          <span className="font-mono text-[10px] uppercase text-electric">Nonstop New York · Archive</span>
+          <span className="mt-2 font-display text-2xl uppercase">{post.label ?? "Event post"}</span>
+          <span className="mt-4 font-mono text-[10px] uppercase">View on Instagram ↗</span>
+        </a>
       ))}
     </div>
   );
