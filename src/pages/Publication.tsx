@@ -97,13 +97,11 @@ function MediumCard({ pub }: { pub: Pub }) {
 
 // Compact row card — for the list section
 function CompactCard({ pub }: { pub: Pub }) {
-  const color = CAT_COLOR[pub.category] ?? "#000";
   return (
     <Link to={`/publication/${pub.slug}`} className="group grid grid-cols-[1fr_auto] gap-4 py-4 border-b border-black/10 items-start">
       <div className="min-w-0">
         <span
-          className="inline-block text-[9px] tracking-[0.25em] uppercase font-bold mb-2 px-1.5 py-0.5 text-white"
-          style={{ backgroundColor: color }}
+          className="inline-block bg-electric text-electric-foreground text-[9px] tracking-[0.25em] uppercase font-bold mb-2 px-1.5 py-0.5"
         >
           {pub.category}
         </span>
