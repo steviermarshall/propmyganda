@@ -21,13 +21,18 @@ const stats = [
   { value: "100%", label: "Independent" },
 ];
 
+const CATALOGUE: Record<string, string> = {
+  chuckiee: "PMG-D-001",
+  "mercy-porter": "PMG-D-002",
+};
+
 const Distribution = () => {
-  const rosterArtists = artists.filter((a) =>
-    ["chuckiee", "mercy-porter", "jahballa", "zoe", "hammad", "stockz"].includes(a.id)
-  );
+  // Distribution clients only. Jahballa, Hammad, Stockz and Zoë moved to Records.
+  const rosterArtists = artists.filter((a) => ["chuckiee", "mercy-porter"].includes(a.id));
 
   const [activeService, setActiveService] = useState(0);
   const [activeArtist, setActiveArtist] = useState(0);
+
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
