@@ -22,7 +22,7 @@ interface SitemapEntry {
 function extractStringIds(source: string, arrayName: string, nextAnchor: string): string[] {
   const start = source.indexOf(`export const ${arrayName}`);
   if (start === -1) return [];
-  const end = nextAnchor ? source.indexOf(nextAnchor, start) : source.length;
+  const end = nextAnchor ? source.indexOf(nextAnchor, start + arrayName.length + 13) : source.length;
   const block = source.slice(start, end === -1 ? undefined : end);
   const ids: string[] = [];
   for (const m of block.matchAll(/\bid:\s*"([^"]+)"/g)) ids.push(m[1]);
