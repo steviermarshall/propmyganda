@@ -1,4 +1,5 @@
 import { Navigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { useRole } from "@/hooks/use-role";
 import { useCrmAuth, crmRoleToDashboardPath } from "@/hooks/use-crm-auth";
 
@@ -23,6 +24,13 @@ export default function DashboardRoot() {
     case "distribution": return <Navigate to="/dashboard/distribution" replace />;
     case "marketing":    return <Navigate to="/dashboard/marketing" replace />;
     case "sponsorships": return <Navigate to="/dashboard/sponsorships" replace />;
-    default:             return <Navigate to="/auth/login" replace />;
+    default:
+      return (
+        <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center gap-6 px-6 text-center">
+          <h1 className="font-display text-4xl uppercase">No team access yet</h1>
+          <p className="font-mono text-xs uppercase tracking-widest text-white/50">This login isn't linked to a PMG team member.</p>
+          <button onClick={() => supabase.auth.signOut().then(() => (window.location.href = "/auth/login"))} className="bg-electric text-black px-8 py-3 font-mono text-xs uppercase tracking-widest">Sign out</button>
+        </div>
+      );
   }
 }

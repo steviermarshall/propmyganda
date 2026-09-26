@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Instagram, Twitter, Youtube } from "lucide-react";
 import ScrollReveal from "@/components/webgl/ScrollReveal";
 import SEO from "@/components/SEO";
@@ -19,6 +21,16 @@ const localBusinessJsonLd = {
 };
 
 const Contact = () => {
+  const [sent, setSent] = useState(false);
+  async function submit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const f = new FormData(e.currentTarget);
+    const name = String(f.get("name") || ""), email = String(f.get("email") || "");
+    const subject = String(f.get("subject") || "General"), message = String(f.get("message") || "");
+    if (email) await supabase.from("newsletter_subscribers").insert({ email, source: "site", is_active: true, unsubscribed_at: null } as never);
+    window.location.href = `mailto:info@propmyganda.com?subject=${encodeURIComponent(`[${subject}] ${name}`)}&body=${encodeURIComponent(`${message}\n\n— ${name} (${email})`)}`;
+    setSent(true);
+  }
   return (
     <div className="bg-primary text-primary-foreground min-h-screen">
       <SEO
@@ -51,19 +63,21 @@ const Contact = () => {
 
           {/* Right — Form */}
           <ScrollReveal delay={0.2} y={50}>
-            <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
+            <form className="space-y-6" onSubmit={submit}>
               <input
                 type="text"
+                name="name" required
                 placeholder="Name"
                 className="w-full bg-transparent border-b border-primary-foreground/30 py-3 text-sm placeholder:text-primary-foreground/40 focus:border-primary-foreground outline-none transition-colors"
               />
               <input
                 type="email"
+                name="email" required
                 placeholder="Email"
                 className="w-full bg-transparent border-b border-primary-foreground/30 py-3 text-sm placeholder:text-primary-foreground/40 focus:border-primary-foreground outline-none transition-colors"
               />
               <label htmlFor="contact-subject" className="sr-only">Subject</label>
-              <select id="contact-subject" aria-label="Message subject" className="w-full bg-transparent border-b border-primary-foreground/30 py-3 text-sm text-primary-foreground/40 focus:border-primary-foreground outline-none transition-colors">
+              <select id="contact-subject" name="subject" aria-label="Message subject" className="w-full bg-transparent border-b border-primary-foreground/30 py-3 text-sm text-primary-foreground/40 focus:border-primary-foreground outline-none transition-colors">
                 <option value="" className="bg-primary">Subject</option>
                 <option value="general" className="bg-primary">General</option>
                 <option value="distribution" className="bg-primary">Distribution</option>
@@ -72,6 +86,7 @@ const Contact = () => {
                 <option value="other" className="bg-primary">Other</option>
               </select>
               <textarea
+                name="message" required
                 placeholder="Message"
                 rows={5}
                 className="w-full bg-transparent border-b border-primary-foreground/30 py-3 text-sm placeholder:text-primary-foreground/40 focus:border-primary-foreground outline-none transition-colors resize-none"
@@ -80,7 +95,7 @@ const Contact = () => {
                 type="submit"
                 className="bg-primary-foreground text-primary px-10 py-4 text-xs tracking-[0.2em] uppercase font-bold hover:opacity-80 transition-opacity"
               >
-                Send Message
+                {sent ? "Sent — thanks" : "Send Message"}
               </button>
             </form>
           </ScrollReveal>
