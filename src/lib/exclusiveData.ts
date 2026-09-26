@@ -77,9 +77,9 @@ export const releases = [
 ];
 
 export const videos = [
-  { title: "KINO — NO TIME (PMG)", id: "Ielihry8M20" },
-  { title: "Stockz — The Inverse (PMG)", id: "O79bphnB7gI" },
-  { title: "Big Yavo speaks with his mother", id: "wu3HSbXf5zA" },
+  { title: "JORJIANA — RICH FINALLY (PMG Visualizer)", id: "ySVEwStt0CE" },
+  { title: "Mak Sauce — Money Mansion (Freestyle) (PMG Visualizer)", id: "1N3g9PZ8Ogo" },
+  { title: "Bally Baby — PMG Show & Tell", id: "tK3G6_bP5yw" },
 ];
 
 export const SPOTIFY_ARTIST_EMBED = "https://open.spotify.com/embed/artist/2p1eP8MWD2IANiWjFVr7NV?utm_source=generator&theme=0";
