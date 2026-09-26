@@ -4,14 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import SEO from "@/components/SEO";
 
-type Pub = Database["public"]["Tables"]["publications"]["Row"];
-
-const CAT_COLOR: Record<string, string> = {
-  Business:    "#00F0FF",
-  Artists:     "#FF3B30",
-  Culture:     "#FFCC00",
-  Milestones:  "#34C759",
-  Industry:    "#AF52DE",
+type Pub = Database["public"]["Tables"]["publications"]["Row"] & {
+  source_url?: string | null;
+  credit?: string | null;
 };
 
 function fmtDate(s: string | null) {
@@ -71,8 +66,6 @@ export default function PublicationDetail() {
     );
   }
 
-  const color = CAT_COLOR[pub.category] ?? "#000";
-
   const articleJsonLd = {
     "@context": "https://schema.org",
     "@type": "Article",
@@ -104,8 +97,7 @@ export default function PublicationDetail() {
       {/* Header */}
       <header className="container-content max-w-4xl py-12 md:py-16">
         <span
-          className="inline-block text-[10px] tracking-[0.25em] uppercase font-bold mb-6 px-2 py-1 text-white"
-          style={{ backgroundColor: color }}
+          className="inline-block bg-electric text-electric-foreground text-[10px] tracking-[0.25em] uppercase font-bold mb-6 px-2 py-1"
         >
           {pub.category}
         </span>
@@ -119,6 +111,17 @@ export default function PublicationDetail() {
           {pub.author && <span className="font-bold text-black">By {pub.author}</span>}
           {pub.author && pub.published_at && <span>·</span>}
           {pub.published_at && <span>{fmtDate(pub.published_at)}</span>}
+          {pub.credit && (
+            <>
+              <span>·</span>
+              <span>{pub.credit}</span>
+              {pub.source_url && (
+                <a href={pub.source_url} target="_blank" rel="noreferrer" className="underline hover:text-black">
+                  Read the original
+                </a>
+              )}
+            </>
+          )}
         </div>
       </header>
 
