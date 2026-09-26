@@ -46,12 +46,13 @@ export default function Publication() {
       });
   }, []);
   const filtered = cat === "All" ? articles : articles.filter((a) => a.category === cat);
+  const ordered = [...filtered].sort((a, b) => Number(!!publicationImage(b.cover_url)) - Number(!!publicationImage(a.cover_url)));
   return (
     <main className="min-h-screen bg-primary text-primary-foreground">
       <SEO title="Publication — PMG Editorial" description="Music, artists and the business behind them. The PMG editorial wire." path="/publication" />
       <header className="border-b border-primary-foreground/20 px-6 pb-8 pt-28 md:px-10 md:pt-32">
         <p className="font-mono text-[10px] uppercase text-electric">Propmyganda · Editorial</p>
-        <h1 className="font-display text-5xl uppercase leading-none md:text-8xl">Publication</h1>
+        <h1 className="font-display text-4xl uppercase leading-none sm:text-5xl md:text-8xl">Publication</h1>
       </header>
       <div className="border-b border-primary-foreground/20 px-6 md:px-10">
         <nav aria-label="Publication categories" className="flex gap-6 overflow-x-auto">
@@ -61,7 +62,7 @@ export default function Publication() {
       <section className="container-content py-8 md:py-12" aria-live="polite">
         {loading ? <p className="font-mono text-xs uppercase text-primary-foreground/50">Loading…</p> : filtered.length === 0 ? <p className="py-16 font-mono text-xs uppercase text-primary-foreground/60">No stories in this section yet.</p> : (
           <div className="grid grid-cols-1 gap-x-8 gap-y-10 md:grid-cols-2">
-            {filtered.map((pub, i) => <Story key={pub.id} pub={pub} lead={i === 0} />)}
+            {ordered.map((pub, i) => <Story key={pub.id} pub={pub} lead={i === 0} />)}
           </div>
         )}
       </section>
