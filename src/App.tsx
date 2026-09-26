@@ -43,6 +43,7 @@ import EditorDashboard from "./pages/admin/EditorDashboard";
 import DeliverablesReport from "./pages/admin/DeliverablesReport";
 import RoadmapBoard from "./pages/admin/RoadmapBoard";
 import ContactInquiries from "./pages/admin/ContactInquiries";
+import NewsWire from "./pages/admin/NewsWire";
 import OAuthConsent from "./pages/OAuthConsent";
 
 const queryClient = new QueryClient();
