@@ -67,7 +67,7 @@ export default function RoadmapBoard() {
         area: newArea.trim() || null,
         priority: newPriority,
         status: "idea",
-        created_by: member?.id ?? null,
+        created_by: member?.auth_user_id ?? null,
       });
       if (error) throw new Error(error.message);
     },
