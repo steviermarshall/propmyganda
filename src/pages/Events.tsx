@@ -173,11 +173,12 @@ function PastCard({ ev, index = 0 }: { ev: Event; index?: number }) {
           <span className="text-6xl font-black text-border">{d.day}</span>
         </div>
       )}
-      <div className="p-4">
-        <p className="text-[9px] tracking-[0.3em] uppercase text-muted-foreground">{d.month} {d.year}</p>
-        <h3 className="font-black text-sm uppercase tracking-tight mt-1 line-clamp-2">{ev.title}</h3>
-        {ev.city && <p className="text-[10px] text-muted-foreground mt-0.5">{ev.city}</p>}
+      <div className="p-4 text-[#0B0B0B]">
+        <p className="font-mono text-[9px] tracking-[0.2em] uppercase opacity-60">{d.month} {d.year}</p>
+        <h3 className="font-display text-sm uppercase leading-[0.9] tracking-[-0.03em] mt-1 line-clamp-2">{ev.title}</h3>
+        {ev.city && <p className="font-mono text-[9px] uppercase tracking-[0.15em] opacity-50 mt-0.5">{ev.city}</p>}
       </div>
+
     </div>
   );
 
