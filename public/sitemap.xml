@@ -96,6 +96,36 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://propmyganda.com/store/hoodie</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://propmyganda.com/store/tee</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://propmyganda.com/store/vinyl-1</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://propmyganda.com/store/snapback</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://propmyganda.com/store/cd-1</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://propmyganda.com/store/poster</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://propmyganda.com/publication/pmg-distribution-partnership</loc>
     <lastmod>2026-09-24</lastmod>
     <changefreq>monthly</changefreq>
