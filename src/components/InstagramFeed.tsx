@@ -2,6 +2,8 @@ interface Post {
   id: string;
   instagram_url: string;
   label: string | null;
+  /** CSS aspect-ratio of the post's picture, e.g. "4 / 5" or "3 / 4". Defaults to 4 / 5. */
+  aspect?: string;
 }
 
 interface Props {
@@ -13,10 +15,17 @@ interface Props {
   cols?: string;
 }
 
+/** Fixed header (avatar + username) height inside Instagram's embed page. */
+const IG_EMBED_HEADER = 54;
+
 function getCleanUrl(url: string) {
   return url.split("?")[0].replace(/\/$/, "");
 }
 
+/**
+ * Shows ONLY the post's picture: Instagram's embed iframe is cropped to hide
+ * the header above and the caption below the photo.
+ */
 export default function InstagramFeed({
   posts,
   loading,
@@ -29,7 +38,7 @@ export default function InstagramFeed({
     return (
       <div className={`grid ${cols} gap-4`}>
         {Array.from({ length: limit ?? 6 }).map((_, i) => (
-          <div key={i} className="bg-secondary animate-pulse aspect-[1080/1350]" />
+          <div key={i} className="bg-secondary animate-pulse aspect-[4/5]" />
         ))}
       </div>
     );
@@ -49,11 +58,18 @@ export default function InstagramFeed({
         <a
           key={post.id}
           href={getCleanUrl(post.instagram_url)} target="_blank" rel="noopener noreferrer"
-          className="relative flex w-full aspect-[1080/1350] flex-col justify-end overflow-hidden bg-primary p-5 text-primary-foreground border border-border hover:border-electric"
+          className="relative block w-full overflow-hidden border border-border hover:border-electric transition-colors"
+          style={{ aspectRatio: post.aspect ?? "4 / 5" }}
         >
-          <span className="font-mono text-[10px] uppercase text-electric">Nonstop New York · Archive</span>
-          <span className="mt-2 font-display text-2xl uppercase">{post.label ?? "Event post"}</span>
-          <span className="mt-4 font-mono text-[10px] uppercase">View on Instagram ↗</span>
+          <iframe
+            src={`${getCleanUrl(post.instagram_url)}/embed/`}
+            title={post.label ?? "Instagram post"}
+            className="absolute left-0 w-full border-0 pointer-events-none"
+            style={{ top: -IG_EMBED_HEADER, height: `calc(100% + ${IG_EMBED_HEADER + 2}px)` }}
+            scrolling="no"
+            loading="lazy"
+            tabIndex={-1}
+          />
         </a>
       ))}
     </div>
