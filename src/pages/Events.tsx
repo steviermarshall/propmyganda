@@ -241,7 +241,12 @@ export default function Events() {
       .order("created_at", { ascending: false })
       .then(({ data }) => {
         // This seeded post was removed on Instagram; its embed displays a broken-link error.
-        setIgPosts(((data ?? []) as IgPost[]).filter((post) => !post.instagram_url.includes("DDFwiTKSdWm")));
+        setIgPosts((((data ?? []) as IgPost[])
+          .filter((post) => !post.instagram_url.includes("DDFwiTKSdWm")))
+          .map((post) => {
+            const code = igCode(post.instagram_url);
+            return { ...post, aspect: code ? IG_ASPECTS[code] : undefined };
+          }));
         setIgLoading(false);
       });
   }, []);
