@@ -113,6 +113,7 @@ function CompactCard({ pub }: { pub: Pub }) {
           {pub.author && <span className="font-bold">{pub.author}</span>}
           {pub.author && pub.published_at && <span>·</span>}
           {pub.published_at && <span>{timeAgo(pub.published_at)}</span>}
+          {pub.credit && <><span>·</span><span>{pub.credit}</span></>}
         </div>
       </div>
       {pub.cover_url && (
