@@ -255,66 +255,99 @@ export type Database = {
       bookings: {
         Row: {
           amenities: string | null
+          artist_name: string | null
           budget_range: string | null
           capacity: string | null
           created_at: string | null
+          created_by: string | null
+          deal_type: string | null
           email: string
           equipment: string | null
+          event_at: string | null
           event_date: string | null
           event_type: string | null
           expected_attendance: string | null
           genre: string | null
           id: string
           indoor_outdoor: string | null
+          is_free: boolean
           location: string | null
+          marketing_budget: string | null
           marketing_goals: string | null
           name: string
           notes: string | null
+          partner_name: string | null
           phone: string | null
+          platforms: string | null
+          release_date: string | null
+          release_title: string | null
+          revenue_split: string | null
           service: string
           set_length: string | null
           staff_count: string | null
         }
         Insert: {
           amenities?: string | null
+          artist_name?: string | null
           budget_range?: string | null
           capacity?: string | null
           created_at?: string | null
+          created_by?: string | null
+          deal_type?: string | null
           email: string
           equipment?: string | null
+          event_at?: string | null
           event_date?: string | null
           event_type?: string | null
           expected_attendance?: string | null
           genre?: string | null
           id?: string
           indoor_outdoor?: string | null
+          is_free?: boolean
           location?: string | null
+          marketing_budget?: string | null
           marketing_goals?: string | null
           name: string
           notes?: string | null
+          partner_name?: string | null
           phone?: string | null
+          platforms?: string | null
+          release_date?: string | null
+          release_title?: string | null
+          revenue_split?: string | null
           service: string
           set_length?: string | null
           staff_count?: string | null
         }
         Update: {
           amenities?: string | null
+          artist_name?: string | null
           budget_range?: string | null
           capacity?: string | null
           created_at?: string | null
+          created_by?: string | null
+          deal_type?: string | null
           email?: string
           equipment?: string | null
+          event_at?: string | null
           event_date?: string | null
           event_type?: string | null
           expected_attendance?: string | null
           genre?: string | null
           id?: string
           indoor_outdoor?: string | null
+          is_free?: boolean
           location?: string | null
+          marketing_budget?: string | null
           marketing_goals?: string | null
           name?: string
           notes?: string | null
+          partner_name?: string | null
           phone?: string | null
+          platforms?: string | null
+          release_date?: string | null
+          release_title?: string | null
+          revenue_split?: string | null
           service?: string
           set_length?: string | null
           staff_count?: string | null
@@ -370,6 +403,7 @@ export type Database = {
           id: string
           notes: string | null
           package: string | null
+          shoot_at: string | null
           shoot_date: string | null
           song_or_project: string | null
           source: string | null
@@ -386,6 +420,7 @@ export type Database = {
           id?: string
           notes?: string | null
           package?: string | null
+          shoot_at?: string | null
           shoot_date?: string | null
           song_or_project?: string | null
           source?: string | null
@@ -402,6 +437,7 @@ export type Database = {
           id?: string
           notes?: string | null
           package?: string | null
+          shoot_at?: string | null
           shoot_date?: string | null
           song_or_project?: string | null
           source?: string | null
@@ -1172,50 +1208,69 @@ export type Database = {
       shoots: {
         Row: {
           artist_name: string
+          assigned_editor_id: string | null
           booking_id: string | null
           created_at: string | null
+          duration_hours: number | null
           id: string
           location: string | null
           media_agency_project_id: string | null
           notes: string | null
+          scheduled_at: string | null
           shoot_date: string
           shoot_type: string
           shoot_window: string | null
           shooter: string | null
           status: string
+          title: string | null
           updated_at: string | null
         }
         Insert: {
           artist_name: string
+          assigned_editor_id?: string | null
           booking_id?: string | null
           created_at?: string | null
+          duration_hours?: number | null
           id?: string
           location?: string | null
           media_agency_project_id?: string | null
           notes?: string | null
+          scheduled_at?: string | null
           shoot_date: string
           shoot_type: string
           shoot_window?: string | null
           shooter?: string | null
           status?: string
+          title?: string | null
           updated_at?: string | null
         }
         Update: {
           artist_name?: string
+          assigned_editor_id?: string | null
           booking_id?: string | null
           created_at?: string | null
+          duration_hours?: number | null
           id?: string
           location?: string | null
           media_agency_project_id?: string | null
           notes?: string | null
+          scheduled_at?: string | null
           shoot_date?: string
           shoot_type?: string
           shoot_window?: string | null
           shooter?: string | null
           status?: string
+          title?: string | null
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "shoots_assigned_editor_id_fkey"
+            columns: ["assigned_editor_id"]
+            isOneToOne: false
+            referencedRelation: "team_members"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "shoots_booking_id_fkey"
             columns: ["booking_id"]

@@ -15,6 +15,13 @@
       "when": 1790397556967,
       "tag": "0001_pmg_crm_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790397581565,
+      "tag": "0002_pmg_crm_phase6_and_fixes",
+      "breakpoints": true
     }
   ]
 }
