@@ -134,6 +134,23 @@ function igEmbedUrl(url: string): string {
   return `${url.split("?")[0].replace(/\/$/, "")}/embed/`;
 }
 
+/** Measured picture shape of each Nonstop NY post (photo-only crop). */
+const IG_ASPECTS: Record<string, string> = {
+  DAb2hotJcrw: "4 / 5",
+  DHj0IMTpEw3: "3 / 4",
+  DIM3RPhJsZr: "3 / 4",
+  DK56lIeAHWm: "3 / 4",
+  DLDLIIXxeB4: "4 / 5",
+  DMvqNELpNk6: "3 / 4",
+  "C_BhAPApZB0": "4 / 5",
+  DFn8akapqFC: "4 / 5",
+  DY5dyihCXGY: "3 / 4",
+};
+
+function igCode(url: string): string | undefined {
+  return url.match(/instagram\.com\/(?:p|reel)\/([A-Za-z0-9_-]+)/)?.[1];
+}
+
 function PastCard({ ev, index = 0 }: { ev: Event; index?: number }) {
   const d = fmt(ev.event_date);
   // Use ticket_url as a fallback when flyer_url is missing but it's an IG link
