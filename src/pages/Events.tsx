@@ -309,7 +309,7 @@ export default function Events() {
                 <p className="text-sm text-muted-foreground">Past events are on Nonstop New York while the flyer archive is being updated.</p>
                 <a href="https://www.instagram.com/nonstopnewyork/" target="_blank" rel="noopener noreferrer" className="mt-5 inline-block border-b border-foreground pb-1 text-xs uppercase tracking-widest">See past events on Instagram ↗</a>
               </div>
-            ) : <InstagramFeed posts={igPosts} loading={igLoading} limit={6} cols="grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" />}
+            ) : <InstagramFeed posts={igPosts} loading={igLoading} limit={9} cols="grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" />}
           </div>
 
           <aside className="bg-primary text-primary-foreground p-6 lg:sticky lg:top-24 lg:self-start">
