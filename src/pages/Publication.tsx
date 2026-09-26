@@ -28,7 +28,6 @@ function timeAgo(s: string | null) {
 
 // Massive featured hero — looks like The Verge top-of-page
 function HeroFeatured({ pub }: { pub: Pub }) {
-  const color = CAT_COLOR[pub.category] ?? "#000";
   return (
     <Link to={`/publication/${pub.slug}`} className="block group border-b-4 border-black">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
@@ -43,8 +42,7 @@ function HeroFeatured({ pub }: { pub: Pub }) {
         )}
         <div className="flex flex-col justify-center p-8 md:p-12 lg:p-16 bg-white">
           <span
-            className="inline-block self-start text-[10px] tracking-[0.25em] uppercase font-bold mb-6 px-2 py-1 text-white"
-            style={{ backgroundColor: color }}
+            className="inline-block self-start bg-electric text-electric-foreground text-[10px] tracking-[0.25em] uppercase font-bold mb-6 px-2 py-1"
           >
             {pub.category}
           </span>
