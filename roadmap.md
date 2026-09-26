@@ -36,3 +36,7 @@
 - [x] Make KatBot the same size as the other fighters
 - [x] Scale down the spray can so the whole can is visible
 - [x] Replace every PMG Fight model, logo, and soundtrack with the corrected uploaded files
+
+## New tasks
+- [ ] Remove "Made with Lovable" badge from the site
+- [ ] Populate Events page from the 10 Instagram post links the user sent
