@@ -10,7 +10,7 @@ const localBusinessJsonLd = {
   "@context": "https://schema.org",
   "@type": "LocalBusiness",
   name: "Propmyganda",
-  image: "https://propmyganda.lovable.app/og-image-v2.jpg",
+  image: "https://propmyganda.com/og-image.png",
   url: "https://propmyganda.com/contact",
   email: CONTACT_EMAIL,
   address: {
