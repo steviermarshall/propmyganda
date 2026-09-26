@@ -134,6 +134,23 @@ function igEmbedUrl(url: string): string {
   return `${url.split("?")[0].replace(/\/$/, "")}/embed/`;
 }
 
+/** Measured picture shape of each Nonstop NY post (photo-only crop). */
+const IG_ASPECTS: Record<string, string> = {
+  DAb2hotJcrw: "4 / 5",
+  DHj0IMTpEw3: "4 / 5",
+  DIM3RPhJsZr: "4 / 5",
+  DK56lIeAHWm: "3 / 4",
+  DLDLIIXxeB4: "4 / 5",
+  DMvqNELpNk6: "320 / 411",
+  "C_BhAPApZB0": "4 / 5",
+  DFn8akapqFC: "4 / 5",
+  DY5dyihCXGY: "3 / 4",
+};
+
+function igCode(url: string): string | undefined {
+  return url.match(/instagram\.com\/(?:p|reel)\/([A-Za-z0-9_-]+)/)?.[1];
+}
+
 function PastCard({ ev, index = 0 }: { ev: Event; index?: number }) {
   const d = fmt(ev.event_date);
   // Use ticket_url as a fallback when flyer_url is missing but it's an IG link
@@ -224,7 +241,12 @@ export default function Events() {
       .order("created_at", { ascending: false })
       .then(({ data }) => {
         // This seeded post was removed on Instagram; its embed displays a broken-link error.
-        setIgPosts(((data ?? []) as IgPost[]).filter((post) => !post.instagram_url.includes("DDFwiTKSdWm")));
+        setIgPosts((((data ?? []) as IgPost[])
+          .filter((post) => !post.instagram_url.includes("DDFwiTKSdWm")))
+          .map((post) => {
+            const code = igCode(post.instagram_url);
+            return { ...post, aspect: code ? IG_ASPECTS[code] : undefined };
+          }));
         setIgLoading(false);
       });
   }, []);
