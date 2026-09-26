@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import SEO from "@/components/SEO";
+import { publicationImage } from "@/lib/publicationImage";
 
 type Pub = Database["public"]["Tables"]["publications"]["Row"] & {
   source_url?: string | null;
@@ -47,7 +48,7 @@ export default function PublicationDetail() {
 
   if (loading) {
     return (
-      <div className="bg-white min-h-screen pt-40 text-center text-black/40 text-sm uppercase tracking-widest">
+      <div className="bg-primary min-h-screen pt-40 text-center text-primary-foreground/40 text-sm uppercase tracking-widest">
         Loading…
       </div>
     );
@@ -55,10 +56,10 @@ export default function PublicationDetail() {
 
   if (!pub) {
     return (
-      <div className="bg-white min-h-screen flex items-center justify-center">
+      <div className="bg-primary min-h-screen flex items-center justify-center">
         <div className="text-center">
           <h1 className="font-display text-4xl uppercase mb-4">Article Not Found</h1>
-          <Link to="/publication" className="text-xs tracking-[0.2em] uppercase border-b-2 border-black pb-1">
+          <Link to="/publication" className="text-xs tracking-[0.2em] uppercase border-b-2 border-primary-foreground pb-1">
             Back to Publication
           </Link>
         </div>
@@ -71,25 +72,25 @@ export default function PublicationDetail() {
     "@type": "Article",
     headline: pub.title,
     description: pub.excerpt ?? undefined,
-    image: pub.cover_url ?? undefined,
+    image: publicationImage(pub.cover_url) ?? undefined,
     author: pub.author ? { "@type": "Person", name: pub.author } : undefined,
     datePublished: pub.published_at ?? undefined,
   };
 
   return (
-    <div className="bg-white text-black min-h-screen">
+    <div className="bg-primary text-primary-foreground min-h-screen">
       <SEO
         title={`${pub.title} — PMG Publication`}
         description={pub.excerpt ?? `${pub.category} story from PROPMYGANDA.`}
         path={`/publication/${pub.slug}`}
-        image={pub.cover_url ?? undefined}
+        image={publicationImage(pub.cover_url) ?? undefined}
         type="article"
         jsonLd={articleJsonLd}
       />
 
       {/* Breadcrumb */}
-      <div className="container-content pt-28 pb-6 border-b border-black/10">
-        <Link to="/publication" className="text-[10px] tracking-[0.3em] uppercase text-black/40 hover:text-black">
+      <div className="container-content pt-28 pb-6 border-b border-primary-foreground/10">
+        <Link to="/publication" className="text-[10px] tracking-[0.3em] uppercase text-primary-foreground/40 hover:text-primary-foreground">
           ← Publication
         </Link>
       </div>
@@ -105,10 +106,10 @@ export default function PublicationDetail() {
           {pub.title}
         </h1>
         {pub.excerpt && (
-          <p className="text-lg md:text-xl text-black/60 leading-relaxed mb-8 max-w-3xl">{pub.excerpt}</p>
+          <p className="text-lg md:text-xl text-primary-foreground/60 leading-relaxed mb-8 max-w-3xl">{pub.excerpt}</p>
         )}
-        <div className="flex flex-wrap items-center gap-3 text-[10px] uppercase tracking-[0.25em] text-black/60 pt-6 border-t border-black/10">
-          {pub.author && <span className="font-bold text-black">By {pub.author}</span>}
+        <div className="flex flex-wrap items-center gap-3 text-[10px] uppercase tracking-[0.25em] text-primary-foreground/60 pt-6 border-t border-primary-foreground/10">
+          {pub.author && <span className="font-bold text-primary-foreground">By {pub.author}</span>}
           {pub.author && pub.published_at && <span>·</span>}
           {pub.published_at && <span>{fmtDate(pub.published_at)}</span>}
           {pub.credit && (
@@ -116,7 +117,7 @@ export default function PublicationDetail() {
               <span>·</span>
               <span>{pub.credit}</span>
               {pub.source_url && (
-                <a href={pub.source_url} target="_blank" rel="noreferrer" className="underline hover:text-black">
+                <a href={pub.source_url} target="_blank" rel="noreferrer" className="underline hover:text-primary-foreground">
                   Read the original
                 </a>
               )}
@@ -138,14 +139,14 @@ export default function PublicationDetail() {
       {pub.body && (
         <article className="container-content max-w-3xl pb-16">
           <div
-            className="prose prose-lg max-w-none
+            className="prose prose-invert prose-lg max-w-none
               prose-headings:font-display prose-headings:uppercase prose-headings:tracking-tight
               prose-h2:text-3xl prose-h2:mt-12 prose-h2:mb-4
               prose-h3:text-2xl prose-h3:mt-8 prose-h3:mb-3
-              prose-p:text-base prose-p:leading-relaxed prose-p:text-black/80 prose-p:mb-6
-              prose-a:text-black prose-a:underline prose-a:decoration-2 prose-a:underline-offset-4
-              prose-strong:text-black prose-strong:font-bold
-              prose-blockquote:border-l-4 prose-blockquote:border-black prose-blockquote:pl-6 prose-blockquote:italic prose-blockquote:text-black/70
+              prose-p:text-base prose-p:leading-relaxed prose-p:text-primary-foreground/80 prose-p:mb-6
+              prose-a:text-primary-foreground prose-a:underline prose-a:decoration-2 prose-a:underline-offset-4
+              prose-strong:text-primary-foreground prose-strong:font-bold
+              prose-blockquote:border-l-4 prose-blockquote:border-primary-foreground prose-blockquote:pl-6 prose-blockquote:italic prose-blockquote:text-primary-foreground/70
               prose-img:my-8"
             dangerouslySetInnerHTML={{ __html: pub.body }}
           />
@@ -154,9 +155,9 @@ export default function PublicationDetail() {
 
       {/* Related */}
       {related.length > 0 && (
-        <section className="border-t-4 border-black bg-white">
+        <section className="border-t-4 border-primary-foreground bg-primary">
           <div className="container-content py-12">
-            <p className="text-[10px] tracking-[0.4em] uppercase font-bold text-black mb-6 pb-3 border-b-2 border-black">
+            <p className="text-[10px] tracking-[0.4em] uppercase font-bold text-primary-foreground mb-6 pb-3 border-b-2 border-primary-foreground">
               More in {pub.category}
             </p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -165,9 +166,9 @@ export default function PublicationDetail() {
                   {r.cover_url && (
                     <div className="aspect-video overflow-hidden bg-black mb-4">
                       <img
-                        src={r.cover_url}
+                        src={publicationImage(r.cover_url) ?? ""}
                         alt={r.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
                       />
                     </div>
                   )}
@@ -175,7 +176,7 @@ export default function PublicationDetail() {
                     {r.title}
                   </h3>
                   {r.published_at && (
-                    <p className="text-[9px] uppercase tracking-[0.2em] text-black/40">
+                    <p className="text-[9px] uppercase tracking-[0.2em] text-primary-foreground/40">
                       {fmtDate(r.published_at)}
                     </p>
                   )}
