@@ -3,7 +3,7 @@ import { useRole } from "@/hooks/use-role";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import pmgLogo from "@/assets/pmg-logo-clean.png";
-import type { UserRole } from "@/integrations/supabase/types";
+import type { UserRole } from "@/types/roles";
 
 interface NavItem {
   label: string;

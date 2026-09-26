@@ -70,7 +70,7 @@ function QuickAddModal({
     setSaving(true);
     try {
       const payload = schema.build(fields, member.id);
-      const { data, error } = await (supabase.from(schema.table) as any)
+      const { data, error } = await (supabase.from(schema.table as any) as any)
         .insert(payload)
         .select()
         .single();

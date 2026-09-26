@@ -1,4 +1,4 @@
-import type { UserRole } from "@/integrations/supabase/types";
+import type { UserRole } from "@/types/roles";
 import { useAuth } from "./use-auth";
 
 export function useRole() {
