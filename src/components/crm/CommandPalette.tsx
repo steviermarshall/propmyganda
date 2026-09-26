@@ -52,6 +52,7 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
   const jumpItems = [
     { label: "Jump → Roadmap Board", goto: "/admin/roadmap" },
     { label: "Jump → Contact Inbox", goto: "/admin/contact" },
+    { label: "Jump → PMG Wire", goto: "/admin/wire" },
     { label: "Jump → CEO Dashboard", goto: "/admin/stevie" },
     { label: "Jump → Mike", goto: "/admin/mike" },
     { label: "Jump → Steven", goto: "/admin/steven" },
