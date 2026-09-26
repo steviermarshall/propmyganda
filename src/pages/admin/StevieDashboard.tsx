@@ -158,6 +158,7 @@ export default function StevieDashboard() {
           { to: "/admin/editor", label: "Editors",              color: "#7CFFB2" },
           { to: "/admin/reports/deliverables", label: "Reports → Deliverables", color: STEVIE },
           { to: "/admin/roadmap", label: "★ Roadmap Board", color: STEVIE },
+          { to: "/admin/contact", label: "✉ Contact Inbox", color: "#FFD230" },
           { to: "/dashboard/admin",        label: "Site · Overview",     color: "#ffffff" },
           { to: "/dashboard/distribution", label: "Site · Distribution", color: "#ffffff" },
           { to: "/dashboard/marketing",    label: "Site · Marketing",    color: "#ffffff" },
