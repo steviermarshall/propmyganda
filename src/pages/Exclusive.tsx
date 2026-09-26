@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import SEO from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { socialLinks, releases, videos, pmgLogo } from "@/lib/exclusiveData";
+import { socialLinks, releases, videos } from "@/lib/exclusiveData";
 
 function JoinForm({ compact = false }: { compact?: boolean }) {
   const [email, setEmail] = useState("");
