@@ -8,7 +8,7 @@
 - [x] Exclusive page: Latest Drops first, join section as a real form
 - [x] Events page: pasted flyer wall
 - [ ] Route contact form submissions to workwithpmg@gmail.com (DB + CRM inbox)
-- [ ] Publication page: news aggregator + scheduled scraper bot
+- [x] Publication page: news aggregator + scheduled scraper bot (run supabase/pmg_publication_bot.sql in Cloud SQL Editor to add source columns + start the 4-hour schedule)
 - [ ] Propworld: camera up/down pitch control
 - [ ] Propworld: fix the Amber Room not opening
 - [ ] Propworld: verify space game on large desktop screens
