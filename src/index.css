@@ -37,9 +37,10 @@
     --sidebar-border: 0 0% 20%;
     --sidebar-ring: 0 0% 100%;
 
-    /* Electric accent — #F5FF00 */
-    --electric: 58 100% 50%;
-    --electric-foreground: 0 0% 0%;
+    /* PMG yellow — #FFD230 */
+    --electric: 46 100% 59%;
+    --electric-foreground: 0 0% 4%;
+
 
     /* Custom tokens */
     --section-padding: 5rem;
