@@ -4,14 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import SEO from "@/components/SEO";
 
-type Pub = Database["public"]["Tables"]["publications"]["Row"];
-
-const CAT_COLOR: Record<string, string> = {
-  Business:    "#00F0FF",
-  Artists:     "#FF3B30",
-  Culture:     "#FFCC00",
-  Milestones:  "#34C759",
-  Industry:    "#AF52DE",
+type Pub = Database["public"]["Tables"]["publications"]["Row"] & {
+  source_url?: string | null;
+  credit?: string | null;
 };
 
 function fmtDate(s: string | null) {
@@ -70,8 +65,6 @@ export default function PublicationDetail() {
       </div>
     );
   }
-
-  const color = CAT_COLOR[pub.category] ?? "#000";
 
   const articleJsonLd = {
     "@context": "https://schema.org",
