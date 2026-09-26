@@ -129,8 +129,8 @@ export default function PublicationDetail() {
       {/* Cover image */}
       {pub.cover_url && (
         <div className="container-content max-w-5xl mb-12">
-          <div className="aspect-video overflow-hidden bg-black">
-            <img src={pub.cover_url} alt={pub.title} className="w-full h-full object-cover" />
+          <div className="aspect-video overflow-hidden bg-secondary">
+            <img src={publicationImage(pub.cover_url) ?? ""} alt={pub.title} className="w-full h-full object-contain" />
           </div>
         </div>
       )}

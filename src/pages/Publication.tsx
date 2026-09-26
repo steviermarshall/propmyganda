@@ -5,7 +5,7 @@ import type { Database } from "@/integrations/supabase/types";
 import SEO from "@/components/SEO";
 import { publicationImage } from "@/lib/publicationImage";
 
- type Pub = Database["public"]["Tables"]["publications"]["Row"] & { source_url?: string | null; credit?: string | null };
+type Pub = Database["public"]["Tables"]["publications"]["Row"] & { source_url?: string | null; credit?: string | null };
 const CATEGORIES = ["All", "Business", "Artists", "Culture", "Milestones", "Industry"] as const;
 
 function dateOf(value: string | null) {
@@ -17,8 +17,7 @@ function Story({ pub, lead = false }: { pub: Pub; lead?: boolean }) {
   return (
     <Link to={`/publication/${pub.slug}`} className={`group block min-w-0 ${lead ? "md:col-span-2" : ""}`}>
       <div className={`relative overflow-hidden border border-primary-foreground/15 bg-secondary ${lead ? "aspect-[4/3] md:aspect-[16/7]" : "aspect-[4/3]"}`}>
-        {image ? <img src={image} alt="" loading={lead ? "eager" : "lazy"} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]" onError={(e) => { e.currentTarget.style.display = "none"; }} /> : null}
-        <span className="absolute bottom-4 left-4 font-display text-5xl uppercase text-secondary-foreground/20 md:text-7xl" aria-hidden="true">PMG</span>
+        {image ? <img src={image} alt="" loading={lead ? "eager" : "lazy"} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]" onError={(e) => { e.currentTarget.style.display = "none"; }} /> : <span className="absolute bottom-4 left-4 font-display text-5xl uppercase text-secondary-foreground/20 md:text-7xl" aria-hidden="true">PMG</span>}
       </div>
       <div className="border-b border-primary-foreground/20 py-5">
         <div className="mb-3 flex flex-wrap gap-x-4 gap-y-1 font-mono text-[10px] uppercase text-electric">
