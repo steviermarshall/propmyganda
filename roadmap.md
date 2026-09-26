@@ -1,6 +1,9 @@
 # Roadmap
 
 ## Brand & public pages overhaul
+- [ ] Repair Events archive using past posts from @nonstopnewyork; individual post links may be needed if Instagram blocks the account feed.
+- [ ] Restore Distribution's larger album art and artist profile presentation only, keeping its concise structure.
+- [ ] Improve Publication image quality and align its layout with the PMG public pages.
 - [x] Apply the PMG Brand System (Archivo Black / Archivo / Space Mono, #FFD230 palette)
 - [x] Records page: 6-video reel carousel + Records artist cards (Jahballa, Hammad, Stockz, Zoë)
 - [x] Distribution page: roster first, Chuckiee + Mercy Porter only, compact rows
