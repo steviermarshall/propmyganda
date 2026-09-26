@@ -16,7 +16,7 @@ const services = [
 
 const stats = [
   { value: "150+", label: "Platforms" },
-  { value: "6", label: "Artists" },
+  { value: "2", label: "Artists" },
   { value: "100M+", label: "Streams" },
   { value: "100%", label: "Independent" },
 ];

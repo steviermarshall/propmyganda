@@ -1,133 +1,111 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import { products } from "@/lib/data";
-import Marquee from "@/components/Marquee";
-import ScrollReveal from "@/components/webgl/ScrollReveal";
+import { supabase } from "@/integrations/supabase/client";
 import SEO from "@/components/SEO";
 
-const filters = ["All", "Music", "Clothing", "Accessories"];
-
 const Store = () => {
-  const [activeFilter, setActiveFilter] = useState("All");
+  const [contact, setContact] = useState("");
+  const [state, setState] = useState<"idle" | "sending" | "done" | "error">("idle");
 
-  const filtered = activeFilter === "All" ? products : products.filter((p) => p.category === activeFilter);
-  const featured = products[0];
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!contact.trim()) return;
+    setState("sending");
+    const isEmail = contact.includes("@");
+    const { error } = await supabase.from("newsletter_subscribers").insert([
+      {
+        email: isEmail ? contact.trim() : null,
+        phone: isEmail ? null : contact.trim(),
+        source: "store-vault",
+      },
+    ] as never);
+    setState(error ? "error" : "done");
+  }
+
+  const line = (label: string, value: string) => (
+    <div className="flex justify-between gap-4">
+      <span>{label}</span>
+      <span>{value}</span>
+    </div>
+  );
 
   return (
-    <div className="bg-background">
+    <div className="min-h-screen bg-black px-6 pb-16 pt-24 md:pt-32">
       <SEO
-        title="Store — PMG Official Merchandise | PROPMYGANDA"
-        description="Official PMG and artist merchandise. Music, apparel, and accessories. Ships worldwide."
+        title="Store — Vault Closed | PROPMYGANDA"
+        description="The PMG store is closed between drops. Leave your contact for the next one."
         path="/store"
       />
 
-      {/* Hero */}
-      <div className="bg-black text-white pt-32 pb-0 overflow-hidden">
-        <div className="container-content">
-          <ScrollReveal>
-            <p className="text-xs tracking-[0.3em] uppercase text-white/40 mb-4">PMG Official</p>
-            <h1 className="text-[12vw] md:text-[10vw] font-display uppercase leading-none tracking-tight">Store</h1>
-          </ScrollReveal>
-        </div>
-        {/* Featured product strip */}
-        <div className="mt-8 border-t border-white/10">
-          <Link to={`/store/${featured.id}`} className="group block">
-            <div className="container-content py-6 flex items-center justify-between">
-              <div className="flex items-center gap-6">
-                <div className="w-16 h-16 bg-white/5 overflow-hidden">
-                  <img src={featured.image} alt={featured.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                </div>
-                <div>
-                  <p className="text-[10px] uppercase tracking-[0.3em] text-white/40 mb-0.5">Featured Drop</p>
-                  <p className="font-display text-xl uppercase tracking-wide">{featured.name}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-6">
-                <span className="text-electric font-display text-2xl">${featured.price}</span>
-                <span className="text-xs tracking-[0.2em] uppercase text-white/40 group-hover:text-white transition-colors">Shop →</span>
-              </div>
-            </div>
-          </Link>
-        </div>
-      </div>
+      <div className="mx-auto max-w-sm">
+        {/* jagged top */}
+        <div
+          className="h-3 bg-[#F2EFE9]"
+          style={{
+            clipPath:
+              "polygon(0 100%, 0 40%, 4% 100%, 8% 40%, 12% 100%, 16% 40%, 20% 100%, 24% 40%, 28% 100%, 32% 40%, 36% 100%, 40% 40%, 44% 100%, 48% 40%, 52% 100%, 56% 40%, 60% 100%, 64% 40%, 68% 100%, 72% 40%, 76% 100%, 80% 40%, 84% 100%, 88% 40%, 92% 100%, 96% 40%, 100% 100%)",
+          }}
+        />
 
-      {/* Filters */}
-      <div className="border-b border-border sticky top-16 md:top-20 z-30 bg-background">
-        <div className="container-content">
-          <div className="flex gap-0 overflow-x-auto">
-            {filters.map((f) => (
+        <div className="bg-[#F2EFE9] px-6 py-6 font-mono text-[11px] uppercase tracking-[0.14em] text-[#0B0B0B]">
+          <p className="text-center font-display text-3xl tracking-[-0.03em]">PROPMYGANDA</p>
+          <p className="mt-1 text-center">Store · Vault Closed</p>
+
+          <div className="my-4 border-t border-dashed border-[#0B0B0B]/40" />
+
+          <div className="space-y-1.5">
+            {line("Items", "0")}
+            {line("Subtotal", "$0.00")}
+            {line("Shipping", "$0.00")}
+            {line("Total", "$0.00")}
+            {line("Next drop", "Soon")}
+          </div>
+
+          <div className="my-4 border-t border-dashed border-[#0B0B0B]/40" />
+
+          <p className="leading-relaxed normal-case tracking-normal">
+            The vault is shut while we figure out what's worth printing. No filler merch.
+          </p>
+
+          <div className="my-4 border-t border-dashed border-[#0B0B0B]/40" />
+
+          {state === "done" ? (
+            <p className="text-center">You're on the list. PMG-M-001 pending.</p>
+          ) : (
+            <form onSubmit={submit} className="space-y-2">
+              <label htmlFor="store-contact" className="block">
+                Email or phone
+              </label>
+              <input
+                id="store-contact"
+                value={contact}
+                onChange={(e) => setContact(e.target.value)}
+                className="w-full border border-[#0B0B0B] bg-transparent px-3 py-2 font-mono text-[11px] outline-none"
+                placeholder="you@email.com"
+              />
               <button
-                key={f}
-                onClick={() => setActiveFilter(f)}
-                className={`text-[11px] tracking-[0.2em] uppercase font-bold px-6 py-4 border-b-2 transition-colors whitespace-nowrap ${
-                  f === activeFilter
-                    ? "border-foreground text-foreground"
-                    : "border-transparent text-muted-foreground hover:text-foreground"
-                }`}
+                type="submit"
+                disabled={state === "sending"}
+                className="w-full bg-[#0B0B0B] px-3 py-3 font-mono text-[11px] uppercase tracking-[0.18em] text-[#FFD230] disabled:opacity-50"
               >
-                {f}
-                <span className="ml-2 text-[10px] opacity-50">
-                  {f === "All" ? products.length : products.filter(p => p.category === f).length}
-                </span>
+                {state === "sending" ? "Sending…" : "Notify me on drop"}
               </button>
-            ))}
-          </div>
+              {state === "error" && <p className="text-center">Didn't save. Try again.</p>}
+            </form>
+          )}
+
+          <div className="my-4 border-t border-dashed border-[#0B0B0B]/40" />
+          <p className="text-center">*** Thank you · 100% independent ***</p>
         </div>
+
+        {/* jagged bottom */}
+        <div
+          className="h-3 bg-[#F2EFE9]"
+          style={{
+            clipPath:
+              "polygon(0 0, 100% 0, 96% 60%, 92% 0, 88% 60%, 84% 0, 80% 60%, 76% 0, 72% 60%, 68% 0, 64% 60%, 60% 0, 56% 60%, 52% 0, 48% 60%, 44% 0, 40% 60%, 36% 0, 32% 60%, 28% 0, 24% 60%, 20% 0, 16% 60%, 12% 0, 8% 60%, 4% 0, 0 60%)",
+          }}
+        />
       </div>
-
-      {/* Grid */}
-      <section className="section-padding">
-        <div className="container-content">
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-px bg-border">
-            {filtered.map((product, i) => (
-              <ScrollReveal key={product.id} delay={(i % 3) * 0.05} y={30}>
-                <Link to={`/store/${product.id}`} className="group block bg-background">
-                  <div className="relative aspect-square overflow-hidden bg-secondary">
-                    <img
-                      src={product.image}
-                      alt={product.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                      loading="lazy"
-                      width={800}
-                      height={800}
-                    />
-                    {/* Hover overlay */}
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/70 transition-colors duration-300 flex items-center justify-center">
-                      <span className="text-white text-xs tracking-[0.3em] uppercase font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-300 border border-white px-5 py-3">
-                        View
-                      </span>
-                    </div>
-                    {/* Category tag */}
-                    <div className="absolute top-3 left-3">
-                      <span className="bg-black text-white text-[9px] tracking-[0.2em] uppercase px-2 py-1">
-                        {product.category}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="p-4 md:p-5">
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-1">{product.artist}</p>
-                    <p className="font-display text-lg uppercase leading-tight">{product.name}</p>
-                    <p className="text-electric font-bold text-sm mt-1">${product.price}</p>
-                  </div>
-                </Link>
-              </ScrollReveal>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Bottom CTA */}
-      <section className="bg-black text-white py-20">
-        <div className="container-content text-center">
-          <ScrollReveal>
-            <h2 className="font-display text-5xl md:text-7xl uppercase mb-6">100% Independent</h2>
-            <p className="text-white/50 text-sm tracking-widest uppercase mb-8">Every purchase supports the movement</p>
-            <div className="w-16 h-px bg-electric mx-auto" />
-          </ScrollReveal>
-        </div>
-      </section>
-
-      <Marquee />
     </div>
   );
 };
