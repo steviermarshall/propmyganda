@@ -40,7 +40,7 @@ export default function PublicationDetail() {
           .lte("published_at", new Date().toISOString())
           .order("published_at", { ascending: false })
           .limit(3);
-        setRelated((rel ?? []) as Pub[]);
+        setRelated(((rel ?? []) as Pub[]).filter((story) => story.body || story.source_url));
       }
       setLoading(false);
     })();
@@ -129,8 +129,8 @@ export default function PublicationDetail() {
       {/* Cover image */}
       {pub.cover_url && (
         <div className="container-content max-w-5xl mb-12">
-          <div className="aspect-video overflow-hidden bg-secondary">
-            <img src={publicationImage(pub.cover_url) ?? ""} alt={pub.title} className="w-full h-full object-contain" />
+          <div className="aspect-video overflow-hidden bg-primary">
+            <img src={publicationImage(pub.cover_url) ?? ""} alt={pub.title} className="w-full h-full object-cover" />
           </div>
         </div>
       )}
