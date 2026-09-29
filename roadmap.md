@@ -11,7 +11,8 @@
 - [x] Exclusive page: Latest Drops first, join section as a real form
 - [x] Events page: pasted flyer wall
 - [ ] Route contact form submissions to workwithpmg@gmail.com (DB + CRM inbox)
-- [x] Publication page: news aggregator + scheduled scraper bot (run supabase/pmg_publication_bot.sql in Cloud SQL Editor to add source columns + start the 4-hour schedule)
+- [x] Publication page: news aggregator + scheduled scraper bot (run supabase/pmg_publication_bot.sql in Cloud SQL Editor to add source columns + start the 2-hour schedule)
+- [x] PMG Wire v2: Verge-style Publication front page (lead story, top stories, live wire column), 12 feeds, real summaries to the rewriter, cross-outlet dedupe, og:image fallback, manual runs unthrottled with a story-count picker
 - [ ] Propworld: camera up/down pitch control
 - [ ] Propworld: fix the Amber Room not opening
 - [ ] Propworld: verify space game on large desktop screens
