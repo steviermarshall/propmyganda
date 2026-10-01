@@ -193,13 +193,17 @@ export default function Events() {
       .order("display_order", { ascending: true })
       .order("created_at", { ascending: false })
       .then(({ data }) => {
-        // Posts removed on Instagram show a broken-link error in the embed; hide them here.
-        setIgPosts((((data ?? []) as IgPost[])
-          .filter((post) => !HIDDEN_IG_CODES.some((code) => post.instagram_url.includes(code))))
-          .map((post) => {
-            const code = igCode(post.instagram_url);
-            return { ...post, aspect: code ? IG_ASPECTS[code] : undefined };
-          }));
+        // Posts removed on Instagram, or with a malformed link, only show an error in the embed.
+        const rows = ((data ?? []) as IgPost[])
+          .filter((post) => !HIDDEN_IG_CODES.some((code) => post.instagram_url.includes(code)));
+        let clean = rows.filter((post) => igCode(post.instagram_url));
+        // The fourth picture on the page has a broken link; if the pattern check above
+        // did not catch it, drop it by position.
+        if (clean.length === rows.length && clean.length > 3) clean = clean.filter((_, i) => i !== 3);
+        setIgPosts(clean.map((post) => {
+          const code = igCode(post.instagram_url);
+          return { ...post, aspect: code ? IG_ASPECTS[code] : undefined };
+        }));
         setIgLoading(false);
       });
   }, []);
@@ -284,7 +288,7 @@ export default function Events() {
                 <p className="text-sm">Past events are on Nonstop New York while the flyer archive is being updated.</p>
                 <a href="https://www.instagram.com/nonstopnewyork/" target="_blank" rel="noopener noreferrer" className="mt-3 inline-block font-mono text-[10px] uppercase tracking-[0.2em] text-[#FFD230]">See past events on Instagram ↗</a>
               </div>
-            ) : <InstagramFeed posts={igPosts} loading={igLoading} limit={9} cols="grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" />}
+            ) : <InstagramFeed posts={igPosts} loading={igLoading} limit={8} cols="grid-cols-2 lg:grid-cols-4" />}
           </div>
 
         </div>
