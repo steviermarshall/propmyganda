@@ -5,7 +5,6 @@ import Marquee from "@/components/Marquee";
 import ScrollReveal from "@/components/webgl/ScrollReveal";
 import InstagramFeed from "@/components/InstagramFeed";
 import SEO from "@/components/SEO";
-import wall from "@/assets/events-wall.jpg";
 
 type Event = Database["public"]["Tables"]["events"]["Row"];
 type IgPost = Database["public"]["Tables"]["instagram_posts"]["Row"];
@@ -20,13 +19,28 @@ function fmt(dateStr: string) {
   };
 }
 
-// ── Upcoming: a flyer pasted on the sticker wall ─────────────────────────────
+// ── The wall: off-white subway tile drawn in CSS (brand: wheatpaste wall) ──────
+const TILE = encodeURIComponent(
+  `<svg xmlns='http://www.w3.org/2000/svg' width='160' height='80' viewBox='0 0 160 80'>` +
+    `<rect width='160' height='80' fill='#F2EFE9'/>` +
+    `<rect x='1' y='1' width='158' height='38' fill='#F6F3EE' stroke='#C9C4BB' stroke-width='1.5'/>` +
+    `<rect x='-79' y='41' width='158' height='38' fill='#F6F3EE' stroke='#C9C4BB' stroke-width='1.5'/>` +
+    `<rect x='81' y='41' width='158' height='38' fill='#F6F3EE' stroke='#C9C4BB' stroke-width='1.5'/>` +
+  `</svg>`,
+);
+const WALL_STYLE: React.CSSProperties = {
+  backgroundColor: "#F2EFE9",
+  backgroundImage: `url("data:image/svg+xml;utf8,${TILE}")`,
+  backgroundSize: "160px 80px",
+};
+
+// ── Upcoming: a flyer pasted on the wall ─────────────────────────────
 function PastedEvent({ ev, index = 0 }: { ev: Event; index?: number }) {
   const d = fmt(ev.event_date);
   const tilt = [-1.5, 1, -0.5, 1.5][index % 4];
   return (
     <article
-      className="snap-in grid grid-cols-1 gap-0 border border-black/30 bg-[#F2EFE9] text-[#0B0B0B] shadow-[0_10px_30px_rgba(0,0,0,0.45)] sm:grid-cols-[180px_1fr]"
+      className="snap-in grid grid-cols-1 gap-0 border border-black/30 bg-[#F2EFE9] text-[#0B0B0B] shadow-[0_8px_24px_rgba(0,0,0,0.25)] sm:grid-cols-[180px_1fr]"
       style={{ transform: `rotate(${tilt}deg)` }}
     >
       {ev.flyer_url ? (
@@ -217,36 +231,33 @@ export default function Events() {
   }));
 
   return (
-    <div className="relative min-h-screen">
+    <div className="min-h-screen bg-[#0B0B0B]">
       <SEO
         title="Events — Nonstop NY Shows | PMG"
         description="Upcoming and past Nonstop NY events presented by PROPMYGANDA. Brooklyn-rooted independent music, shows, and culture."
         path="/events"
         jsonLd={eventJsonLd.length > 0 ? eventJsonLd : undefined}
       />
-      {/* The sticker wall is the whole background */}
-      <div aria-hidden="true" className="fixed inset-0 -z-10 bg-black">
-        <img src={wall} alt="" className="h-full w-full object-cover" style={{ filter: "brightness(1.35) contrast(1.05) saturate(1.1)" }} draggable={false} />
-      </div>
-
-      {/* Header */}
-      <div className="px-6 pb-8 pt-28 md:px-10 md:pt-32">
-        <div className="inline-block bg-[#0B0B0B] px-4 py-3 text-[#F2EFE9]">
-          <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-[#FFD230]">Nonstop NY</p>
-          <h1 className="font-display text-5xl uppercase leading-[0.85] tracking-[-0.03em] md:text-8xl">Events</h1>
-        </div>
+      {/* Header strip */}
+      <div className="bg-[#0B0B0B] px-6 pb-8 pt-28 text-[#F2EFE9] md:px-10 md:pt-32">
+        <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-[#FFD230]">Nonstop NY · PMG-E</p>
+        <h1 className="font-display text-6xl uppercase leading-[0.85] tracking-[-0.03em] md:text-8xl">Events</h1>
+        <p className="mt-3 max-w-md font-mono text-[11px] uppercase tracking-[0.14em] text-[#9A9A9E]">No skips · Brooklyn</p>
       </div>
 
       {/* Upcoming — flyers pasted on the wall */}
-      <section className="px-6 pb-12 md:px-10">
+      <section className="border-y-2 border-[#0B0B0B] px-6 py-12 md:px-10 md:py-16" style={WALL_STYLE}>
+        <p className="mb-6 inline-block bg-[#0B0B0B] px-3 py-2 font-mono text-[10px] uppercase tracking-[0.3em] text-[#F2EFE9]">
+          {upcoming.length > 0 ? `Upcoming · ${String(upcoming.length).padStart(2, "0")}` : "Upcoming"}
+        </p>
         {loading ? (
-          <div className="h-48 max-w-3xl animate-pulse bg-[#F2EFE9]/70" />
+          <div className="h-48 max-w-3xl animate-pulse border border-black/20 bg-[#F2EFE9]" />
         ) : upcoming.length > 0 ? (
           <div className="max-w-3xl space-y-8">
             {upcoming.map((ev, i) => <PastedEvent key={ev.id} ev={ev} index={i} />)}
           </div>
         ) : (
-          <div className="inline-block border border-black/30 bg-[#F2EFE9] px-5 py-4 text-[#0B0B0B] shadow-[0_10px_30px_rgba(0,0,0,0.45)]" style={{ transform: "rotate(-1deg)" }}>
+          <div className="inline-block border border-black/30 bg-[#F2EFE9] px-5 py-4 text-[#0B0B0B] shadow-[0_8px_24px_rgba(0,0,0,0.25)]" style={{ transform: "rotate(-1deg)" }}>
             <p className="font-display text-2xl uppercase leading-[0.9] tracking-[-0.03em]">Next date: soon</p>
             <a href="https://www.instagram.com/nonstopnewyork" target="_blank" rel="noopener noreferrer" className="mt-2 inline-block font-mono text-[10px] uppercase tracking-[0.2em] underline">@nonstopnewyork ↗</a>
           </div>
@@ -254,10 +265,10 @@ export default function Events() {
       </section>
 
       {/* From the Gram */}
-      <section className="py-10 lg:py-12">
+      <section className="bg-[#0B0B0B] py-10 text-[#F2EFE9] lg:py-12">
         <div className="container-content">
           <div>
-            <div className="mb-5 inline-flex items-center gap-4 bg-[#0B0B0B] px-3 py-2 text-[#F2EFE9]">
+            <div className="mb-5 inline-flex items-center gap-4 border border-[#F2EFE9]/30 px-3 py-2 text-[#F2EFE9]">
               <p className="font-mono text-[10px] tracking-[0.3em] uppercase">From the Gram</p>
               <a
                 href="https://www.instagram.com/nonstopnewyork"
@@ -269,7 +280,7 @@ export default function Events() {
               </a>
             </div>
             {!igLoading && igPosts.length === 0 ? (
-              <div className="inline-block bg-[#0B0B0B] px-4 py-3 text-[#F2EFE9]">
+              <div className="inline-block border border-[#F2EFE9]/30 px-4 py-3 text-[#F2EFE9]">
                 <p className="text-sm">Past events are on Nonstop New York while the flyer archive is being updated.</p>
                 <a href="https://www.instagram.com/nonstopnewyork/" target="_blank" rel="noopener noreferrer" className="mt-3 inline-block font-mono text-[10px] uppercase tracking-[0.2em] text-[#FFD230]">See past events on Instagram ↗</a>
               </div>
@@ -280,7 +291,7 @@ export default function Events() {
 
         {/* Past flyer wall */}
         {!loading && past.length > 0 && (
-          <div className="mt-12 py-12">
+          <div className="mt-12 border-t-2 border-[#0B0B0B] py-12" style={WALL_STYLE}>
             <div className="container-content">
               <p className="mb-8 inline-block bg-[#0B0B0B] px-3 py-2 font-mono text-[10px] uppercase tracking-[0.3em] text-[#F2EFE9]">
                 Flyer archive
