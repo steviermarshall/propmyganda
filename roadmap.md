@@ -38,5 +38,7 @@
 - [x] Replace every PMG Fight model, logo, and soundtrack with the corrected uploaded files
 
 ## New tasks
+- [ ] Update PMG Fight in Propworld with the newly uploaded game code.
+- [ ] Deploy the Spotify catalog.
 - [x] Remove "Made with Lovable" badge from the site
 - [x] Populate Events page from the 10 Instagram post links the user sent
