@@ -4,7 +4,7 @@ import SEO from "@/components/SEO";
 import ReelCarousel from "@/components/ReelCarousel";
 import { SpotifyPlayerProvider } from "@/components/records/SpotifyPlayer";
 import { ArtistTile, PlaylistTile, type RosterEntry } from "@/components/records/PlaylistTile";
-import { HudLink, LogLine, PHOS, Pill, Tile } from "@/components/records/ui";
+import { HudLink, LogLine, PHOS, Tile } from "@/components/records/ui";
 import { AmbientField } from "@/components/records/AmbientField";
 import { useSpotifyPlayer } from "@/components/records/SpotifyPlayer";
 import { PLAYLISTS, useSpotifyCatalog } from "@/lib/spotifyCatalog";
@@ -56,7 +56,8 @@ export default function Artists() {
 
   return (
     <SpotifyPlayerProvider>
-      <div className="min-h-screen bg-black text-white">
+      <div className="pmg-ambient relative isolate min-h-screen overflow-hidden bg-black text-white">
+        <Ambient />
         <SEO
           title="Records — PMG Roster | PROPMYGANDA"
           description="PMG Records. Collaborative sessions, live cuts and renditions with our artists."
@@ -64,30 +65,26 @@ export default function Artists() {
         />
 
         {/* Hero — short, straight to the point. The "Got a record?" pill is absolutely placed so it never moves the rest. */}
-        <section className="relative border-b border-white/10 px-6 pb-6 pt-24 md:px-10 md:pt-32">
-          <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/40">
-            PMG · Records
+        <section className="relative px-6 pb-6 pt-24 md:px-10 md:pt-32" style={{ borderBottom: `1px solid ${PHOS.faint}` }}>
+          <p className="font-mono text-[10px] uppercase tracking-[0.2em]" style={{ color: PHOS.mid }}>
+            // PMG · Records
           </p>
           <h1 className="font-display text-[16vw] uppercase leading-[0.85] tracking-[-0.03em] md:text-[9vw]">
             Records
           </h1>
-          <p className="mt-3 max-w-md pr-36 text-sm leading-snug text-white/60 sm:pr-0">
-            Collaborative records, live cuts and renditions. Made with the artist, in the room.
+          <p className="mt-3 max-w-md pr-36 font-mono text-[11px] uppercase leading-5 tracking-[0.12em] sm:pr-0" style={{ color: PHOS.dim }}>
+            &gt; Collaborative records, live cuts and renditions.<br />&gt; Made with the artist, in the room.
           </p>
-          <div className="absolute bottom-6 right-6 sm:bottom-auto sm:top-24 md:right-10 md:top-32">
-            <Pill href={BOOKING_URL} tone="light" className="bg-white/10 text-white backdrop-blur-md hover:bg-white/20 [&>span]:bg-electric [&>span]:text-black" ariaLabel="Got a record? Book a free session">
-              <span className="hidden sm:inline">Got a record?</span>
-              <span className="sm:hidden">Got one?</span>
-            </Pill>
+          <div className="absolute bottom-6 right-6 font-mono uppercase sm:bottom-auto sm:top-24 md:right-10 md:top-32">
+            <HudLink href={BOOKING_URL}>Got a record?</HudLink>
           </div>
         </section>
 
         {/* Video carousel — first screen */}
-        <ReelCarousel />
+        <ReelCarousel hud />
 
         {/* Roster + playlists sit on one liquid-glass ambient field */}
-        <div className="pmg-ambient relative isolate overflow-hidden">
-          <Ambient />
+        <div className="relative">
           <section className="px-4 pb-6 pt-10 md:px-10 md:pt-14">
             <div className="mb-4 flex items-center justify-between gap-4 px-2 font-mono text-[10px] uppercase tracking-[0.2em]" style={{ color: PHOS.mid }}>
               <span>// The Roster</span>

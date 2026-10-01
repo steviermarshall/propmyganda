@@ -22,7 +22,8 @@ export const REELS = [
   { cat: "PMG-V-006", src: reel6.url, poster: poster6.url },
 ];
 
-export default function ReelCarousel() {
+export default function ReelCarousel({ hud = false }: { hud?: boolean }) {
+  const phos = { bright: "#D6FFE8", mid: "#8FE9B8", dim: "#4FA67C", faint: "#1F4A36" };
   const trackRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(0);
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
@@ -55,12 +56,12 @@ export default function ReelCarousel() {
   }
 
   return (
-    <section className="border-b border-foreground/10 bg-background py-8">
+    <section className={hud ? "relative py-8" : "border-b border-foreground/10 bg-background py-8"} style={hud ? { borderBottom: `1px solid ${phos.faint}` } : undefined}>
       <div className="container-content mb-4 flex items-end justify-between">
-        <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-          Visuals · {REELS[active].cat}
+        <p className={`font-mono text-[10px] uppercase tracking-[0.2em] ${hud ? "" : "text-muted-foreground"}`} style={hud ? { color: phos.mid } : undefined}>
+          {hud ? "// Visuals" : "Visuals"} · {REELS[active].cat}
         </p>
-        <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+        <p className={`font-mono text-[10px] uppercase tracking-[0.2em] ${hud ? "" : "text-muted-foreground"}`} style={hud ? { color: phos.mid } : undefined}>
           {String(active + 1).padStart(2, "0")} / {String(REELS.length).padStart(2, "0")}
         </p>
       </div>
@@ -72,7 +73,8 @@ export default function ReelCarousel() {
         {REELS.map((reel, i) => (
           <div
             key={reel.cat}
-            className="relative w-[78vw] max-w-[320px] flex-shrink-0 snap-center border border-foreground/15 bg-black"
+            className={`relative w-[78vw] max-w-[320px] flex-shrink-0 snap-center bg-black ${hud ? "" : "border border-foreground/15"}`}
+            style={hud ? { border: `1px solid ${i === active ? phos.mid : phos.faint}`, boxShadow: i === active ? `0 0 12px rgba(120,255,190,0.2)` : undefined } : undefined}
           >
             <video
               ref={(el) => {
@@ -88,8 +90,11 @@ export default function ReelCarousel() {
               preload="metadata"
               controls
             />
-            <span className="absolute left-0 top-0 bg-electric px-2 py-1 font-mono text-[10px] tracking-[0.18em] text-electric-foreground">
-              {reel.cat}
+            <span
+              className={`absolute left-0 top-0 px-2 py-1 font-mono text-[10px] tracking-[0.18em] ${hud ? "" : "bg-electric text-electric-foreground"}`}
+              style={hud ? { background: "rgba(5,16,11,0.9)", color: phos.bright, borderRight: `1px solid ${phos.faint}`, borderBottom: `1px solid ${phos.faint}` } : undefined}
+            >
+              {hud ? `// ${reel.cat}` : reel.cat}
             </span>
           </div>
         ))}
@@ -102,8 +107,9 @@ export default function ReelCarousel() {
             onClick={() => scrollTo(i)}
             aria-label={`Go to video ${i + 1}`}
             className={`h-1 flex-1 transition-colors duration-200 ${
-              i === active ? "bg-electric" : "bg-foreground/20"
+              hud ? "" : i === active ? "bg-electric" : "bg-foreground/20"
             }`}
+            style={hud ? { background: i === active ? phos.mid : phos.faint, boxShadow: i === active ? `0 0 6px ${phos.mid}` : undefined } : undefined}
           />
         ))}
       </div>
