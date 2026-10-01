@@ -3,7 +3,9 @@
 -- Run this in Cloud → Database → SQL Editor. Idempotent.
 -- 1. Adds source columns to publications (dedupe + credit line)
 -- 2. Fixes Data API grants on publications
--- 3. Schedules the scrape-news edge function every 4 hours (pg_cron)
+-- 3. Schedules the scrape-news edge function every 2 hours (pg_cron)
+--    (manual runs from /admin/wire are never throttled; the scheduler
+--    skips only if the bot posted within the last 15 minutes)
 -- ════════════════════════════════════════════════════════════════
 
 ALTER TABLE public.publications ADD COLUMN IF NOT EXISTS source_url text;
@@ -28,16 +30,16 @@ WHERE EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'pmg-scrape-news');
 
 SELECT cron.schedule(
   'pmg-scrape-news',
-  '0 */4 * * *',
+  '0 */2 * * *',
   $$
   SELECT net.http_post(
-    url := 'https://trwnqtgywfsalvismioi.supabase.co/functions/v1/scrape-news',
+    url := 'https://gfqcmtslhwkcwfkqjfqw.supabase.co/functions/v1/scrape-news',
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
-      'apikey', 'sb_publishable_xlw7vV9SYkSP3odres8gnA_BkOAYxk6',
-      'Authorization', 'Bearer sb_publishable_xlw7vV9SYkSP3odres8gnA_BkOAYxk6'
+      'apikey', 'sb_publishable_U9-8OD9ov1H0Wd4SIWwNBA_oQaNdSPu',
+      'Authorization', 'Bearer sb_publishable_U9-8OD9ov1H0Wd4SIWwNBA_oQaNdSPu'
     ),
-    body := '{}'::jsonb
+    body := '{"limit": 12}'::jsonb
   );
   $$
 );
