@@ -2,9 +2,11 @@ import { artists } from "@/lib/data";
 import SEO from "@/components/SEO";
 import ReelCarousel from "@/components/ReelCarousel";
 import { SpotifyPlayerProvider } from "@/components/records/SpotifyPlayer";
-import { ArtistTile, type RosterArtist } from "@/components/records/ArtistTile";
+import { RosterCoverFlow, type RosterEntry } from "@/components/records/RosterCoverFlow";
 import { PlaylistTile } from "@/components/records/PlaylistTile";
 import { Glow, Pill, Tile } from "@/components/records/ui";
+import { AmbientField } from "@/components/records/AmbientField";
+import { useSpotifyPlayer } from "@/components/records/SpotifyPlayer";
 import { PLAYLISTS, useSpotifyCatalog } from "@/lib/spotifyCatalog";
 
 type Artist = (typeof artists)[number] & {
@@ -18,18 +20,26 @@ const BOOKING_URL = "https://docs.google.com/forms/d/1dXl9gqipbr_dqlHaEP4XLhOs1Q
 
 // PMG Records roster — artists we release with (not distribution clients).
 const RECORDS = [
-  { id: "jahballa", cat: "PMG-R-001", tone: "sage" },
-  { id: "hammad", cat: "PMG-R-002", tone: "pink" },
-  { id: "stockz", cat: "PMG-R-003", tone: "navy" },
-  { id: "zoe", cat: "PMG-R-004", tone: "ember" },
+  { id: "jahballa", cat: "PMG-R-001" },
+  { id: "hammad", cat: "PMG-R-002" },
+  { id: "stockz", cat: "PMG-R-003" },
+  { id: "zoe", cat: "PMG-R-004" },
 ] as const;
 
+/** The field tints toward the playing track's tile colour and breathes while audio runs. */
+function Ambient() {
+  const player = useSpotifyPlayer();
+  const tone = player.owner?.startsWith("playlist:") ? PLAYLISTS.find((p) => `playlist:${p.id}` === player.owner)?.tone : undefined;
+  const accent = tone === "pink" ? "#FF2F9C" : tone === "navy" ? "#3C7BFF" : tone === "sage" ? "#1E6B4A" : tone === "ember" ? "#FF7A3D" : tone === "plum" ? "#B85CFF" : "#8F7CFF";
+  return <AmbientField accent={accent} active={!!player.current && !player.isPaused} />;
+}
+
 export default function Artists() {
-  const roster: RosterArtist[] = RECORDS.flatMap((r) => {
+  const roster: RosterEntry[] = RECORDS.flatMap((r) => {
     const a = artists.find((x) => x.id === r.id) as Artist | undefined;
     if (!a) return [];
     return [{
-      id: a.id, cat: r.cat, tone: r.tone, name: a.name, genre: a.genre, image: a.image,
+      id: a.id, cat: r.cat, name: a.name, genre: a.genre, image: a.image,
       albumCover: a.albumCover, spotifyArtistId: a.spotifyArtistId, spotifyTrackId: a.spotifyTrackId,
     }];
   });
@@ -70,26 +80,16 @@ export default function Artists() {
         {/* Video carousel — first screen */}
         <ReelCarousel />
 
-        {/* Roster */}
-        <section className="px-4 py-10 md:px-10">
-          <div className="mb-4 flex items-baseline justify-between px-2">
-            <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/40">The Roster</p>
-            <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/40">
-              {catalog?.configured ? "Live from Spotify" : "Spotify"}
-            </p>
-          </div>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
-            {roster.map((a) => (
-              <ArtistTile key={a.id} artist={a} catalog={catalog?.artists?.[a.id]} loading={loading} />
-            ))}
-          </div>
-        </section>
+        {/* Roster + playlists sit on one liquid-glass ambient field */}
+        <div className="pmg-ambient relative isolate overflow-hidden">
+          <Ambient />
+          <RosterCoverFlow roster={roster} catalog={catalog?.artists} loading={loading} />
 
         {/* Playlists */}
-        <section className="px-4 pb-10 md:px-10">
+        <section className="px-4 pb-14 md:px-10 md:pb-20">
           <div className="mb-4 flex items-baseline justify-between px-2">
-            <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/40">PMG Playlists</p>
-            <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/40">Follow on Spotify</p>
+            <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/60">PMG Playlists</p>
+            <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/60">Follow on Spotify</p>
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:gap-4 lg:grid-cols-3">
             {PLAYLISTS.map((p) => (
@@ -112,6 +112,7 @@ export default function Artists() {
             </Tile>
           </div>
         </section>
+        </div>
       </div>
     </SpotifyPlayerProvider>
   );

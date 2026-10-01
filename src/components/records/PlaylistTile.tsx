@@ -48,7 +48,7 @@ export function PlaylistTile({ id, name, tone, catalog, loading }: Props) {
 
   return (
     <Tile tone={tone} className="flex min-h-[420px] flex-col p-5 md:p-6">
-      <Glow tone={tone} className="left-1/2 top-[190px] h-[300px] w-[300px] -translate-x-1/2 -translate-y-1/2" />
+      <Glow tone={tone} active={!!mine && !player.isPaused} className="left-1/2 top-[190px] h-[300px] w-[300px] -translate-x-1/2 -translate-y-1/2" />
 
       <header className="flex items-start justify-between gap-3">
         <div>
@@ -71,7 +71,7 @@ export function PlaylistTile({ id, name, tone, catalog, loading }: Props) {
           <button
             type="button"
             onClick={() => player.play(track, owner)}
-            className="group relative h-36 w-36 overflow-hidden rounded-full border-4 border-white/25 shadow-[0_20px_50px_rgba(0,0,0,0.4)] md:h-40 md:w-40"
+            className="group relative h-36 w-36 overflow-hidden rounded-full border-4 border-white/35 shadow-[0_20px_50px_rgba(0,0,0,0.4)] transition-transform duration-500 group-hover/tile:scale-[1.04] md:h-40 md:w-40"
             aria-label={mine && !player.isPaused ? `Pause ${track.name}` : `Play ${track.name}`}
           >
             {track.image ? <img src={track.image} alt="" className="h-full w-full object-cover" loading="lazy" /> : <div className="h-full w-full bg-black/40" />}
@@ -101,13 +101,13 @@ export function PlaylistTile({ id, name, tone, catalog, loading }: Props) {
 
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <button type="button" onClick={() => step(-1)} disabled={tracks.length === 0} className="flex h-9 w-9 items-center justify-center rounded-full bg-black/20 hover:bg-black/35 disabled:opacity-40" aria-label="Previous track">
+          <button type="button" onClick={() => step(-1)} disabled={tracks.length === 0} className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20 backdrop-blur hover:bg-white/35 disabled:opacity-40" aria-label="Previous track">
             <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path d="M2 1h1.6v10H2zM10 1 4 6l6 5z" /></svg>
           </button>
-          <button type="button" onClick={() => track && player.play(track, owner)} disabled={!track} className="flex h-9 w-9 items-center justify-center rounded-full bg-black/20 hover:bg-black/35 disabled:opacity-40" aria-label={mine && !player.isPaused ? "Pause" : "Play"}>
+          <button type="button" onClick={() => track && player.play(track, owner)} disabled={!track} className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20 backdrop-blur hover:bg-white/35 disabled:opacity-40" aria-label={mine && !player.isPaused ? "Pause" : "Play"}>
             <PlayIcon paused={!mine || player.isPaused} />
           </button>
-          <button type="button" onClick={() => step(1)} disabled={tracks.length === 0} className="flex h-9 w-9 items-center justify-center rounded-full bg-black/20 hover:bg-black/35 disabled:opacity-40" aria-label="Next track">
+          <button type="button" onClick={() => step(1)} disabled={tracks.length === 0} className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20 backdrop-blur hover:bg-white/35 disabled:opacity-40" aria-label="Next track">
             <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><path d="M8.4 1H10v10H8.4zM2 1l6 5-6 5z" /></svg>
           </button>
           {catalog?.followers != null && <span className="ml-1 text-[10px] uppercase tracking-[0.16em] opacity-55">{formatCount(catalog.followers)} saves</span>}

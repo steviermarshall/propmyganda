@@ -13,26 +13,36 @@ export const TONES: Record<Tone | "ink", { base: string; glow: string; text: str
   ink:   { base: "#0C0C0E", glow: "#FFD230", text: "#FFFFFF", soft: "rgba(255,255,255,0.5)" },
 };
 
-export function Tile({ tone, children, className = "" }: { tone: Tone | "ink"; children: ReactNode; className?: string }) {
+export function Tile({ tone, children, className = "", lift = true }: { tone: Tone | "ink"; children: ReactNode; className?: string; lift?: boolean }) {
   const t = TONES[tone];
   return (
     <section
-      className={`relative isolate overflow-hidden rounded-[28px] border border-white/10 ${className}`}
-      style={{ background: t.base, color: t.text }}
+      className={`group/tile relative isolate overflow-hidden rounded-[28px] border border-white/25 shadow-[0_24px_60px_rgba(5,5,30,0.35)] backdrop-blur-2xl transition-transform duration-500 ${lift ? "hover:-translate-y-1" : ""} ${className}`}
+      style={{
+        background: `linear-gradient(160deg, ${t.base}B8 0%, ${t.base}73 55%, ${t.base}4D 100%)`,
+        color: t.text,
+      }}
     >
+      {/* liquid-glass highlight */}
+      <span aria-hidden="true" className="pointer-events-none absolute inset-0 rounded-[28px]" style={{ background: "linear-gradient(135deg, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0.08) 30%, rgba(255,255,255,0) 55%, rgba(255,255,255,0.12) 100%)" }} />
+      <span aria-hidden="true" className="pointer-events-none absolute inset-x-6 top-0 h-px bg-white/60" />
       {children}
     </section>
   );
 }
 
 /** Soft radial glow sitting behind a tile's centrepiece. */
-export function Glow({ tone, className = "" }: { tone: Tone | "ink"; className?: string }) {
+export function Glow({ tone, className = "", active = false }: { tone: Tone | "ink"; className?: string; active?: boolean }) {
   const t = TONES[tone];
   return (
     <div
       aria-hidden="true"
-      className={`pointer-events-none absolute -z-10 ${className}`}
-      style={{ background: `radial-gradient(closest-side, ${t.glow} 0%, ${t.glow}99 35%, transparent 72%)`, filter: "blur(18px)" }}
+      className={`pointer-events-none absolute -z-10 transition-opacity duration-700 ${className}`}
+      style={{
+        background: `radial-gradient(closest-side, ${t.glow} 0%, ${t.glow}99 35%, transparent 72%)`,
+        filter: "blur(18px)",
+        animation: active ? "pmg-breathe 2.2s ease-in-out infinite alternate" : undefined,
+      }}
     />
   );
 }
@@ -114,7 +124,7 @@ export function Ruler({ value, ticks = 41, accent = "#FFD230", className = "" }:
 export function Pill({
   children, href, onClick, tone = "dark", className = "", ariaLabel,
 }: { children: ReactNode; href?: string; onClick?: () => void; tone?: "dark" | "light"; className?: string; ariaLabel?: string }) {
-  const cls = `inline-flex items-center gap-3 rounded-full py-2.5 pl-5 pr-2 text-[13px] font-medium tracking-tight transition-transform active:scale-[0.98] ${
+  const cls = `inline-flex items-center gap-3 whitespace-nowrap rounded-full py-2.5 pl-5 pr-2 text-[13px] font-medium tracking-tight transition-transform active:scale-[0.98] ${
     tone === "dark" ? "bg-[#111113]/80 text-white hover:bg-[#111113]" : "bg-white/85 text-black hover:bg-white"
   } ${className}`;
   const plus = (
