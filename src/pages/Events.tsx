@@ -93,7 +93,6 @@ const IG_ASPECTS: Record<string, string> = {
   DHj0IMTpEw3: "4 / 5",
   DIM3RPhJsZr: "4 / 5",
   DK56lIeAHWm: "3 / 4",
-  DLDLIIXxeB4: "4 / 5",
   DMvqNELpNk6: "320 / 411",
   "C_BhAPApZB0": "4 / 5",
   DFn8akapqFC: "4 / 5",
@@ -101,7 +100,7 @@ const IG_ASPECTS: Record<string, string> = {
 };
 
 /** Instagram posts that were deleted or made private; their embeds only show an error. */
-const HIDDEN_IG_CODES = ["DDFwiTKSdWm"];
+const HIDDEN_IG_CODES = ["DDFwiTKSdWm", "DLDLIIXxeB4"];
 
 function igCode(url: string): string | undefined {
   return url.match(/instagram\.com\/(?:p|reel)\/([A-Za-z0-9_-]+)/)?.[1];
@@ -196,10 +195,7 @@ export default function Events() {
         // Posts removed on Instagram, or with a malformed link, only show an error in the embed.
         const rows = ((data ?? []) as IgPost[])
           .filter((post) => !HIDDEN_IG_CODES.some((code) => post.instagram_url.includes(code)));
-        let clean = rows.filter((post) => igCode(post.instagram_url));
-        // The fourth picture on the page has a broken link; if the pattern check above
-        // did not catch it, drop it by position.
-        if (clean.length === rows.length && clean.length > 3) clean = clean.filter((_, i) => i !== 3);
+        const clean = rows.filter((post) => igCode(post.instagram_url));
         setIgPosts(clean.map((post) => {
           const code = igCode(post.instagram_url);
           return { ...post, aspect: code ? IG_ASPECTS[code] : undefined };
