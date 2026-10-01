@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { artists } from "@/lib/data";
 import SEO from "@/components/SEO";
 import ReelCarousel from "@/components/ReelCarousel";
@@ -19,10 +20,10 @@ const BOOKING_URL = "https://docs.google.com/forms/d/1dXl9gqipbr_dqlHaEP4XLhOs1Q
 
 // PMG Records roster — artists we release with (not distribution clients).
 const RECORDS = [
-  { id: "jahballa", cat: "PMG-R-001", tone: "sage" },
-  { id: "hammad", cat: "PMG-R-002", tone: "pink" },
-  { id: "stockz", cat: "PMG-R-003", tone: "navy" },
-  { id: "zoe", cat: "PMG-R-004", tone: "ember" },
+  { id: "jahballa", cat: "PMG-R-001", tone: "navy" },
+  { id: "hammad", cat: "PMG-R-002", tone: "sage" },
+  { id: "stockz", cat: "PMG-R-003", tone: "ember" },
+  { id: "zoe", cat: "PMG-R-004", tone: "plum" },
 ] as const;
 
 /** The field tints toward the playing track's tile colour and breathes while audio runs. */
@@ -49,6 +50,13 @@ export default function Artists() {
     roster.map((a) => ({ id: a.id, artistId: a.spotifyArtistId, trackId: a.spotifyTrackId })),
   );
   const loading = isLoading;
+  const rowRef = useRef<HTMLDivElement>(null);
+  const scrollRow = (dir: number) => {
+    const el = rowRef.current;
+    if (!el) return;
+    const tile = el.firstElementChild as HTMLElement | null;
+    el.scrollBy({ left: dir * ((tile?.offsetWidth ?? 320) + 16), behavior: "smooth" });
+  };
 
   return (
     <SpotifyPlayerProvider>
@@ -85,13 +93,24 @@ export default function Artists() {
         <div className="pmg-ambient relative isolate overflow-hidden">
           <Ambient />
           <section className="px-4 pb-6 pt-10 md:px-10 md:pt-14">
-            <div className="mb-4 flex items-baseline justify-between px-2">
+            <div className="mb-4 flex items-center justify-between px-2">
               <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/60">The Roster</p>
-              <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/60">{catalog?.configured ? "Live from Spotify" : "Spotify"}</p>
+              <div className="flex items-center gap-3">
+                <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/60">{catalog?.configured ? "Live from Spotify" : "Spotify"}</p>
+                <button type="button" onClick={() => scrollRow(-1)} className="flex h-7 w-7 items-center justify-center rounded-full border border-white/25 bg-white/10 text-white backdrop-blur hover:bg-white/25" aria-label="Scroll roster left">
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6.5 1.5 3 5l3.5 3.5" /></svg>
+                </button>
+                <button type="button" onClick={() => scrollRow(1)} className="flex h-7 w-7 items-center justify-center rounded-full border border-white/25 bg-white/10 text-white backdrop-blur hover:bg-white/25" aria-label="Scroll roster right">
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3.5 1.5 7 5 3.5 8.5" /></svg>
+                </button>
+              </div>
             </div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:gap-4 lg:grid-cols-3">
+            {/* One row, same tile size as the playlist grid; scrolls sideways for more */}
+            <div ref={rowRef} className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 md:gap-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {roster.map((a) => (
-                <ArtistTile key={a.id} artist={a} catalog={catalog?.artists?.[a.id]} loading={loading} />
+                <div key={a.id} className="w-[88%] shrink-0 snap-start sm:w-[calc((100%-0.75rem)/2)] md:w-[calc((100%-1rem)/2)] lg:w-[calc((100%-2rem)/3)]">
+                  <ArtistTile artist={a} catalog={catalog?.artists?.[a.id]} loading={loading} />
+                </div>
               ))}
             </div>
           </section>
