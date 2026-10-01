@@ -1,11 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import Marquee from "@/components/Marquee";
 import ScrollReveal from "@/components/webgl/ScrollReveal";
-import BookingSheet from "@/components/BookingSheet";
 import InstagramFeed from "@/components/InstagramFeed";
 import SEO from "@/components/SEO";
+import billboard from "@/assets/events-billboard.jpg";
 
 type Event = Database["public"]["Tables"]["events"]["Row"];
 type IgPost = Database["public"]["Tables"]["instagram_posts"]["Row"];
@@ -20,108 +20,127 @@ function fmt(dateStr: string) {
   };
 }
 
-// ── Hero: next upcoming event ─────────────────────────────────────────────────
-function HeroEvent({ ev }: { ev: Event }) {
+// ── Billboard stage: the collage is the page; events live on the white board ──
+// The board's white face, measured from the collage (736×1308 px), as fractions of the image.
+const FACE = {
+  tl: [195 / 736, 129 / 1308], tr: [736 / 736, 413 / 1308],
+  br: [736 / 736, 622 / 1308], bl: [195 / 736, 438 / 1308],
+} as const;
+// The content is laid out flat at FACE_W × FACE_H (image px) and projected onto the face.
+const FACE_W = 736 - 195;
+const FACE_H = 438 - 129;
+
+/** CSS matrix3d that maps a w×h rectangle onto the quad [tl, tr, br, bl] (px). */
+function projectTo(w: number, h: number, q: number[][]): string {
+  const [[x0, y0], [x1, y1], [x2, y2], [x3, y3]] = q;
+  const sx = x0 - x1 + x2 - x3, sy = y0 - y1 + y2 - y3;
+  const dx1 = x1 - x2, dx2 = x3 - x2, dy1 = y1 - y2, dy2 = y3 - y2;
+  const det = dx1 * dy2 - dx2 * dy1 || 1e-9;
+  const g = (sx * dy2 - dx2 * sy) / det, hh = (dx1 * sy - sx * dy1) / det;
+  const a = x1 - x0 + g * x1, b = x3 - x0 + hh * x3, c = x0;
+  const d = y1 - y0 + g * y1, e = y3 - y0 + hh * y3, f = y0;
+  return `matrix3d(${a / w},${d / w},0,${g / w},${b / h},${e / h},0,${hh / h},0,0,1,0,${c},${f},0,1)`;
+}
+
+function BoardEvent({ ev }: { ev: Event }) {
   const d = fmt(ev.event_date);
   return (
-    <div className="relative min-h-[70vh] bg-primary text-primary-foreground overflow-hidden grid grid-cols-1 lg:grid-cols-2">
-      {/* Details */}
-      <div className="flex flex-col justify-end lg:justify-center px-8 md:px-16 pb-12 lg:pb-0 pt-36 lg:pt-24 z-10">
-        <p className="text-[9px] tracking-[0.5em] uppercase text-primary-foreground/40 mb-6">Next Event</p>
-        <h2 className="text-4xl md:text-6xl lg:text-7xl font-black uppercase tracking-tight leading-[0.9] mb-6">
-          {ev.title}
-        </h2>
-        <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-primary-foreground/60 mb-8">
-          <span>{d.full}</span>
-          {ev.doors_time && <><span>·</span><span>Doors {ev.doors_time}</span></>}
-          {ev.venue && <><span>·</span><span>{ev.venue}</span></>}
-          {ev.city && <><span>·</span><span>{ev.city}</span></>}
+    <div className="flex h-full gap-3 sm:gap-4">
+      {ev.flyer_url && (
+        <div className="w-[34%] shrink-0 overflow-hidden border border-[#0B0B0B]">
+          <img src={ev.flyer_url} alt="" className="h-full w-full object-cover" loading="eager" />
         </div>
-        {ev.description && (
-          <p className="text-sm text-primary-foreground/50 max-w-md mb-10 leading-relaxed">{ev.description}</p>
-        )}
-        {ev.ticket_url && (
+      )}
+      <div className="flex min-w-0 flex-1 flex-col justify-between">
+        <div className="min-w-0">
+          <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-[#0B0B0B]/60">
+            {d.month} {d.day} · {d.year}{ev.doors_time ? ` · Doors ${ev.doors_time}` : ""}
+          </p>
+          <h2 className="mt-1 font-display text-[clamp(18px,5cqw,34px)] uppercase leading-[0.9] tracking-[-0.03em] text-[#0B0B0B]">
+            {ev.title}
+          </h2>
+          <p className="mt-1 truncate font-mono text-[9px] uppercase tracking-[0.16em] text-[#0B0B0B]/60">
+            {[ev.venue, ev.city].filter(Boolean).join(" · ")}
+          </p>
+        </div>
+        {ev.ticket_url ? (
           <a
             href={ev.ticket_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="self-start border border-primary-foreground px-8 py-4 text-xs tracking-[0.25em] uppercase font-bold hover:bg-primary-foreground hover:text-primary transition-colors"
+            className="self-start bg-[#0B0B0B] px-3 py-2 font-mono text-[9px] uppercase tracking-[0.2em] text-[#FFD230]"
           >
-            Get Tickets →
+            Tickets →
           </a>
+        ) : (
+          <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-[#0B0B0B]/60">Details soon</p>
         )}
       </div>
-
-      {/* Flyer */}
-      {ev.flyer_url ? (
-        <div className="relative overflow-hidden lg:h-full h-64 order-first lg:order-last">
-          <img
-            src={ev.flyer_url}
-            alt={ev.title}
-            className="w-full h-full object-cover object-center"
-          />
-          <div className="absolute inset-0 lg:bg-gradient-to-r lg:from-primary/60 bg-gradient-to-t from-primary/80 via-transparent" />
-        </div>
-      ) : (
-        /* No flyer — big date display */
-        <div className="hidden lg:flex items-center justify-center opacity-5 select-none">
-          <p className="text-[20rem] font-black leading-none tabular-nums">{d.day}</p>
-        </div>
-      )}
     </div>
   );
 }
 
-// ── Upcoming card ─────────────────────────────────────────────────────────────
-function UpcomingCard({ ev }: { ev: Event }) {
-  const d = fmt(ev.event_date);
+function BillboardStage({ upcoming, loading }: { upcoming: Event[]; loading: boolean }) {
+  const [i, setI] = useState(0);
+  const ev = upcoming[i];
+  const step = (d: number) => upcoming.length && setI((n) => (n + d + upcoming.length) % upcoming.length);
+  const imgBox = useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState({ w: 0, h: 0 });
+  useEffect(() => {
+    const el = imgBox.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => setSize({ w: entry.contentRect.width, h: entry.contentRect.height }));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const w = size.w * FACE_W / 736, h = size.w * FACE_H / 736;
+  const quad = [FACE.tl, FACE.tr, FACE.br, FACE.bl].map(([x, y]) => [x * size.w, y * size.h]);
+  const matrix = size.w ? projectTo(w, h, quad) : "none";
   return (
-    <ScrollReveal y={30}>
-      <div className="group border border-border hover:border-foreground transition-colors overflow-hidden grid grid-cols-[auto_1fr_auto] gap-0">
-        {/* Date column */}
-        <div className="bg-primary text-primary-foreground flex flex-col items-center justify-center px-6 py-8 min-w-[80px]">
-          <span className="text-4xl font-black leading-none">{d.day}</span>
-          <span className="text-[9px] tracking-[0.3em] uppercase mt-1 opacity-60">{d.month}</span>
-          <span className="text-[9px] opacity-40 mt-0.5">{d.year}</span>
-        </div>
+    <section className="flex min-h-[100svh] justify-center overflow-hidden bg-black" aria-label="Events">
+      {/* The collage, full height, centred; the black either side is left alone. */}
+      <div className="relative h-[100svh] w-full max-w-[calc(100svh*736/1308)]">
+        <img src={billboard} alt="" className="h-full w-full object-cover object-top" draggable={false} />
 
-        {/* Info */}
-        <div className="p-6 flex flex-col justify-center min-w-0">
-          <h3 className="font-black text-lg uppercase tracking-tight truncate group-hover:opacity-70 transition-opacity">
-            {ev.title}
-          </h3>
-          <p className="text-xs text-muted-foreground mt-1">
-            {[ev.venue, ev.city].filter(Boolean).join(" · ")}
-          </p>
-          {ev.doors_time && (
-            <p className="text-[10px] text-muted-foreground mt-0.5">Doors {ev.doors_time}</p>
-          )}
-          {ev.description && (
-            <p className="text-sm text-muted-foreground mt-3 line-clamp-1">{ev.description}</p>
-          )}
-        </div>
-
-        {/* Flyer thumbnail + ticket CTA */}
-        <div className="flex flex-col">
-          {ev.flyer_url && (
-            <div className="w-24 h-full overflow-hidden hidden md:block">
-              <img src={ev.flyer_url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+        {/* Only the white board carries content: a flat panel projected onto the face. */}
+        <div ref={imgBox} className="absolute inset-0">
+          <div
+            className="absolute left-0 top-0 overflow-hidden"
+            style={{ width: size.w * FACE_W / 736, height: size.w * FACE_H / 736, transformOrigin: "0 0", transform: matrix, containerType: "inline-size" }}
+          >
+            <div className="flex h-full w-full flex-col px-[5%] py-[4%]">
+              <div className="mb-2 flex items-center justify-between font-mono text-[9px] uppercase tracking-[0.2em] text-[#0B0B0B]/60">
+                <span>Nonstop NY · Events</span>
+                {upcoming.length > 1 && (
+                  <span className="flex items-center gap-1">
+                    <button type="button" onClick={() => step(-1)} className="border border-[#0B0B0B] px-1.5" aria-label="Previous event">◀</button>
+                    <span>{String(i + 1).padStart(2, "0")}/{String(upcoming.length).padStart(2, "0")}</span>
+                    <button type="button" onClick={() => step(1)} className="border border-[#0B0B0B] px-1.5" aria-label="Next event">▶</button>
+                  </span>
+                )}
+              </div>
+              <div className="min-h-0 flex-1">
+                {loading ? (
+                  <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-[#0B0B0B]/60">Loading…</p>
+                ) : ev ? (
+                  <BoardEvent ev={ev} />
+                ) : (
+                  <div className="flex h-full flex-col justify-between">
+                    <div>
+                      <h2 className="font-display text-[clamp(22px,7cqw,44px)] uppercase leading-[0.9] tracking-[-0.03em] text-[#0B0B0B]">Next date: soon</h2>
+                      <p className="mt-2 font-mono text-[9px] uppercase tracking-[0.16em] text-[#0B0B0B]/60">No skips. The archive is below.</p>
+                    </div>
+                    <a href="https://www.instagram.com/nonstopnewyork" target="_blank" rel="noopener noreferrer" className="self-start bg-[#0B0B0B] px-3 py-2 font-mono text-[9px] uppercase tracking-[0.2em] text-[#FFD230]">
+                      @nonstopnewyork →
+                    </a>
+                  </div>
+                )}
+              </div>
             </div>
-          )}
-          {ev.ticket_url && (
-            <a
-              href={ev.ticket_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="shrink-0 flex items-center self-center mr-6 text-[10px] tracking-[0.2em] uppercase font-bold border border-foreground px-5 py-3 hover:bg-foreground hover:text-background transition-colors whitespace-nowrap ml-4"
-              onClick={e => e.stopPropagation()}
-            >
-              Tickets
-            </a>
-          )}
+          </div>
         </div>
       </div>
-    </ScrollReveal>
+    </section>
   );
 }
 
@@ -218,9 +237,6 @@ export default function Events() {
   const [igPosts, setIgPosts] = useState<IgPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [igLoading, setIgLoading] = useState(true);
-  const [bookingOpen, setBookingOpen] = useState(false);
-  const [bookingService, setBookingService] = useState<"security"|"dj"|"venue"|"promoter"|"event_recap"|"artist"|"bartender">("dj");
-  const openBooking = (svc: typeof bookingService) => { setBookingService(svc); setBookingOpen(true); };
 
   useEffect(() => {
     supabase
@@ -257,7 +273,6 @@ export default function Events() {
   const past = events.filter(e => e.status === "past").sort(
     (a, b) => new Date(b.event_date).getTime() - new Date(a.event_date).getTime()
   );
-  const [hero, ...rest] = upcoming;
 
   const eventJsonLd = upcoming.map((ev) => ({
     "@context": "https://schema.org",
@@ -279,41 +294,19 @@ export default function Events() {
   }));
 
   return (
-    <div className="bg-background">
+    <div className="bg-black">
       <SEO
         title="Events — Nonstop NY Shows | PMG"
         description="Upcoming and past Nonstop NY events presented by PROPMYGANDA. Brooklyn-rooted independent music, shows, and culture."
         path="/events"
         jsonLd={eventJsonLd.length > 0 ? eventJsonLd : undefined}
       />
-      {/* Page header */}
-      <div className="bg-primary text-primary-foreground pt-32 pb-12 px-8 md:px-16">
-        <p className="text-[9px] tracking-[0.5em] uppercase text-primary-foreground/40 mb-3">Nonstop NY</p>
-        <h1 className="text-5xl md:text-7xl font-black uppercase tracking-tight leading-[0.9]">Events</h1>
-      </div>
+      {/* The collage is the page; events sit on the billboard */}
+      <BillboardStage upcoming={upcoming} loading={loading} />
 
-      {/* Hero */}
-      {!loading && hero && <HeroEvent ev={hero} />}
-
-      {/* Upcoming events */}
-      {!loading && upcoming.length > 0 && (
-        <section className="section-padding border-b border-border">
-          <div className="container-content">
-            <p className="text-[9px] tracking-[0.5em] uppercase text-muted-foreground mb-8">Upcoming</p>
-            {rest.length > 0 ? (
-              <div className="space-y-3 max-w-4xl">
-                {rest.map(ev => <UpcomingCard key={ev.id} ev={ev} />)}
-              </div>
-            ) : (
-              <p className="text-xs text-muted-foreground uppercase tracking-widest">More dates coming soon</p>
-            )}
-          </div>
-        </section>
-      )}
-
-      {/* Gram + Book/Hire — IG grid sits beside sticky sidebar */}
+      {/* From the Gram */}
       <section className="py-10 lg:py-12">
-        <div className="container-content grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-8 lg:gap-10 items-start">
+        <div className="container-content">
           <div>
             <div className="flex items-center gap-4 mb-5">
               <p className="text-[9px] tracking-[0.4em] uppercase text-muted-foreground">From the Gram</p>
@@ -334,38 +327,6 @@ export default function Events() {
             ) : <InstagramFeed posts={igPosts} loading={igLoading} limit={9} cols="grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" />}
           </div>
 
-          <aside className="bg-primary text-primary-foreground p-6 lg:sticky lg:top-24 lg:self-start">
-            <p className="text-[9px] tracking-[0.5em] uppercase text-primary-foreground/40 mb-2">Services</p>
-            <h2 className="text-2xl lg:text-3xl font-black uppercase tracking-tight leading-[0.9] mb-3">
-              Book or Hire
-            </h2>
-            <p className="text-[11px] text-primary-foreground/60 leading-relaxed mb-5">
-              Booth to door — DJ, security, venue, promotion.
-            </p>
-            <div className="flex flex-col gap-2">
-              {[
-                { label: "DJ", desc: "Underground to main stage", svc: "dj" as const },
-                { label: "Security", desc: "Crowd management", svc: "security" as const },
-                { label: "Venue", desc: "Spaces that fit", svc: "venue" as const },
-                { label: "Promoter", desc: "Sell-out strategy", svc: "promoter" as const },
-                { label: "Event Recap", desc: "Photo & video coverage", svc: "event_recap" as const },
-                { label: "Artist", desc: "Live performances", svc: "artist" as const },
-                { label: "Bartender", desc: "Professional bar service", svc: "bartender" as const },
-              ].map(({ label, desc, svc }) => (
-                <button
-                  key={label}
-                  onClick={() => openBooking(svc)}
-                  className="group flex items-center justify-between border border-primary-foreground/20 px-3 py-2.5 hover:border-primary-foreground hover:bg-primary-foreground/5 transition-colors text-left"
-                >
-                  <div>
-                    <p className="font-black uppercase tracking-tight text-xs">{label}</p>
-                    <p className="text-[9px] text-primary-foreground/40 mt-0.5">{desc}</p>
-                  </div>
-                  <span className="text-primary-foreground/30 group-hover:text-primary-foreground transition-colors">→</span>
-                </button>
-              ))}
-            </div>
-          </aside>
         </div>
 
         {/* Past flyer wall */}
@@ -393,7 +354,6 @@ export default function Events() {
       </section>
 
       <Marquee />
-      <BookingSheet open={bookingOpen} onOpenChange={setBookingOpen} initialService={bookingService} />
     </div>
   );
 }
