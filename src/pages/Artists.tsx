@@ -4,7 +4,7 @@ import SEO from "@/components/SEO";
 import ReelCarousel from "@/components/ReelCarousel";
 import { SpotifyPlayerProvider } from "@/components/records/SpotifyPlayer";
 import { ArtistTile, PlaylistTile, type RosterEntry } from "@/components/records/PlaylistTile";
-import { Glow, Pill, Tile } from "@/components/records/ui";
+import { HudLink, LogLine, PHOS, Pill, Tile } from "@/components/records/ui";
 import { AmbientField } from "@/components/records/AmbientField";
 import { useSpotifyPlayer } from "@/components/records/SpotifyPlayer";
 import { PLAYLISTS, useSpotifyCatalog } from "@/lib/spotifyCatalog";
@@ -26,14 +26,10 @@ const RECORDS = [
   { id: "zoe", cat: "PMG-R-004", tone: "plum" },
 ] as const;
 
-/** The field tints toward the playing track's tile colour and breathes while audio runs. */
+/** The CRT field brightens while audio runs. */
 function Ambient() {
   const player = useSpotifyPlayer();
-  const tone = player.owner?.startsWith("playlist:")
-    ? PLAYLISTS.find((p) => `playlist:${p.id}` === player.owner)?.tone
-    : RECORDS.find((r) => `artist:${r.id}` === player.owner)?.tone;
-  const accent = tone === "pink" ? "#FF2F9C" : tone === "navy" ? "#3C7BFF" : tone === "sage" ? "#1E6B4A" : tone === "ember" ? "#FF7A3D" : tone === "plum" ? "#B85CFF" : "#8F7CFF";
-  return <AmbientField accent={accent} active={!!player.current && !player.isPaused} />;
+  return <AmbientField active={!!player.current && !player.isPaused} />;
 }
 
 export default function Artists() {
@@ -93,17 +89,15 @@ export default function Artists() {
         <div className="pmg-ambient relative isolate overflow-hidden">
           <Ambient />
           <section className="px-4 pb-6 pt-10 md:px-10 md:pt-14">
-            <div className="mb-4 flex items-center justify-between px-2">
-              <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/60">The Roster</p>
-              <div className="flex items-center gap-3">
-                <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/60">{catalog?.configured ? "Live from Spotify" : "Spotify"}</p>
-                <button type="button" onClick={() => scrollRow(-1)} className="flex h-7 w-7 items-center justify-center rounded-full border border-white/25 bg-white/10 text-white backdrop-blur hover:bg-white/25" aria-label="Scroll roster left">
-                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6.5 1.5 3 5l3.5 3.5" /></svg>
-                </button>
-                <button type="button" onClick={() => scrollRow(1)} className="flex h-7 w-7 items-center justify-center rounded-full border border-white/25 bg-white/10 text-white backdrop-blur hover:bg-white/25" aria-label="Scroll roster right">
-                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3.5 1.5 7 5 3.5 8.5" /></svg>
-                </button>
-              </div>
+            <div className="mb-4 flex items-center justify-between gap-4 px-2 font-mono text-[10px] uppercase tracking-[0.2em]" style={{ color: PHOS.mid }}>
+              <span>// The Roster</span>
+              <span className="hidden flex-1 overflow-hidden whitespace-nowrap opacity-40 sm:block" aria-hidden="true">{"................................................................................................"}</span>
+              <span className="flex items-center gap-3">
+                <span>Signal: {catalog?.configured ? "Live" : "Weak"}</span>
+                <button type="button" onClick={() => scrollRow(-1)} className="border px-2 py-0.5 hover:bg-[rgba(120,255,190,0.15)]" style={{ borderColor: PHOS.dim, color: PHOS.bright }} aria-label="Scroll roster left">◀</button>
+                <button type="button" onClick={() => scrollRow(1)} className="border px-2 py-0.5 hover:bg-[rgba(120,255,190,0.15)]" style={{ borderColor: PHOS.dim, color: PHOS.bright }} aria-label="Scroll roster right">▶</button>
+                <span className="opacity-60">: Move</span>
+              </span>
             </div>
             {/* One row, same tile size as the playlist grid; scrolls sideways for more */}
             <div ref={rowRef} className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 md:gap-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -117,28 +111,36 @@ export default function Artists() {
 
         {/* Playlists */}
         <section className="px-4 pb-14 md:px-10 md:pb-20">
-          <div className="mb-4 flex items-baseline justify-between px-2">
-            <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/60">PMG Playlists</p>
-            <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/60">Follow on Spotify</p>
+          <div className="mb-4 flex items-center justify-between gap-4 px-2 font-mono text-[10px] uppercase tracking-[0.2em]" style={{ color: PHOS.mid }}>
+            <span>// PMG Playlists</span>
+            <span className="hidden flex-1 overflow-hidden whitespace-nowrap opacity-40 sm:block" aria-hidden="true">{"................................................................................................"}</span>
+            <span>Battlefield status: {catalog?.configured ? "Live" : "Silent"}</span>
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:gap-4 lg:grid-cols-3">
             {PLAYLISTS.map((p) => (
               <PlaylistTile key={p.id} id={p.id} name={p.name} tone={p.tone} catalog={catalog?.playlists?.[p.id]} loading={loading} />
             ))}
-            {/* Got a record? — same tile language, closes the grid */}
-            <Tile tone="ink" className="flex min-h-[420px] flex-col justify-between p-5 md:p-6">
-              <Glow tone="ink" className="left-1/2 top-1/2 h-[280px] w-[280px] -translate-x-1/2 -translate-y-1/2 opacity-40" />
-              <p className="text-[10px] uppercase tracking-[0.18em] opacity-60">PMG Records</p>
-              <div>
-                <h2 className="font-display text-4xl uppercase leading-[0.85] tracking-[-0.03em] md:text-5xl">Got a record?</h2>
-                <p className="mt-3 font-mono text-[11px] uppercase tracking-[0.18em] text-white/55">
-                  Sessions · Video · Release · $0.00 (Free)
+            {/* Got a record? — same panel language, closes the grid */}
+            <Tile className="flex min-h-[380px] flex-col p-4 md:p-5">
+              <header className="mb-3 flex items-center justify-between border-b pb-2 font-mono text-[10px] uppercase" style={{ borderColor: PHOS.faint }}>
+                <span style={{ color: PHOS.mid }}>// PMG-RECORDS</span>
+                <span className="opacity-70">OPEN CALL</span>
+              </header>
+              <h2 className="font-mono text-[20px] font-bold uppercase leading-none tracking-[0.08em]">Got a record?</h2>
+              <div className="my-4 flex-1 space-y-0.5 font-mono uppercase">
+                <LogLine label="SESSIONS" value="OPEN" />
+                <LogLine label="VIDEO" value="OPEN" />
+                <LogLine label="RELEASE" value="OPEN" />
+                <LogLine label="COST" value="$0.00 (FREE)" />
+                <LogLine label="ZONE" value="BROOKLYN" dim />
+                <p className="pt-4 text-[10px] leading-5">
+                  <span style={{ color: PHOS.mid }}>&gt;</span> BRING THE RECORD. WE BUILD THE REST.
                 </p>
               </div>
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-[10px] uppercase tracking-[0.18em] opacity-55">Brooklyn, in the room</p>
-                <Pill href={BOOKING_URL} tone="light">Book a session</Pill>
-              </div>
+              <footer className="mt-3 flex items-center justify-between gap-2 border-t pt-3 font-mono text-[10px] uppercase" style={{ borderColor: PHOS.faint }}>
+                <span className="opacity-60">OK : BOOK</span>
+                <HudLink href={BOOKING_URL}>Book a session</HudLink>
+              </footer>
             </Tile>
           </div>
         </section>

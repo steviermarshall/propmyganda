@@ -1,39 +1,30 @@
-// Liquid-glass ambient field: a deep gradient with slow-drifting colour blobs
-// that the translucent tiles and cards blur over. `accent` tints one blob so
-// the field responds to whatever is playing.
-export function AmbientField({ accent = "#B85CFF", active = false }: { accent?: string; active?: boolean }) {
-  const blobs = [
-    { c: "#6A4BD8", x: "12%", y: "8%", s: 520, d: 26, delay: 0 },
-    { c: "#3C4FE0", x: "78%", y: "18%", s: 460, d: 32, delay: -8 },
-    { c: accent, x: "50%", y: "46%", s: 560, d: 22, delay: -4 },
-    { c: "#8A3BB8", x: "20%", y: "72%", s: 420, d: 36, delay: -14 },
-    { c: "#1F8F8A", x: "84%", y: "80%", s: 380, d: 30, delay: -20 },
-  ];
+// CRT field: black with a faint phosphor grid, scanlines and a soft vignette.
+// `active` brightens the glow slightly while something is playing.
+export function AmbientField({ active = false }: { accent?: string; active?: boolean }) {
   return (
-    <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 overflow-hidden" style={{ background: "#000" }}>
-      {blobs.map((b, i) => (
-        <span
-          key={i}
-          className="absolute block rounded-full mix-blend-screen"
-          style={{
-            left: b.x, top: b.y, width: b.s, height: b.s,
-            marginLeft: -b.s / 2, marginTop: -b.s / 2,
-            background: `radial-gradient(circle at 40% 40%, ${b.c} 0%, ${b.c}80 35%, transparent 70%)`,
-            filter: "blur(40px)",
-            opacity: active && i === 2 ? 0.6 : 0.35,
-            animation: `pmg-drift-${i % 3} ${b.d}s ease-in-out ${b.delay}s infinite alternate${active && i === 2 ? ", pmg-breathe 2.4s ease-in-out infinite alternate" : ""}`,
-            transition: "opacity 1.2s ease, background 1.2s ease",
-          }}
-        />
-      ))}
-      {/* fine grain so the glass has something to catch */}
-      <span className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence baseFrequency='0.9' numOctaves='2'/></filter><rect width='120' height='120' filter='url(%23n)' opacity='0.6'/></svg>\")" }} />
+    <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 overflow-hidden bg-black">
+      <span
+        className="absolute inset-0"
+        style={{
+          backgroundImage:
+            "linear-gradient(rgba(120,255,190,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(120,255,190,0.06) 1px, transparent 1px)",
+          backgroundSize: "28px 28px",
+        }}
+      />
+      <span
+        className="absolute inset-0 transition-opacity duration-1000"
+        style={{
+          background: "radial-gradient(ellipse at 50% 35%, rgba(90,220,150,0.18) 0%, rgba(90,220,150,0.06) 35%, transparent 70%)",
+          opacity: active ? 1 : 0.6,
+          animation: active ? "pmg-breathe 2.4s ease-in-out infinite alternate" : undefined,
+        }}
+      />
+      <span className="absolute inset-0" style={{ background: "repeating-linear-gradient(0deg, rgba(0,0,0,0.35) 0 1px, transparent 1px 3px)" }} />
+      <span className="absolute inset-0" style={{ background: "radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.75) 100%)" }} />
       <style>{`
-        @keyframes pmg-drift-0 { from { transform: translate(0,0) scale(1) } to { transform: translate(90px,60px) scale(1.15) } }
-        @keyframes pmg-drift-1 { from { transform: translate(0,0) scale(1.1) } to { transform: translate(-110px,40px) scale(0.9) } }
-        @keyframes pmg-drift-2 { from { transform: translate(0,0) scale(0.95) } to { transform: translate(60px,-90px) scale(1.2) } }
-        @keyframes pmg-breathe { from { transform: scale(1) } to { transform: scale(1.12) } }
-        @media (prefers-reduced-motion: reduce) { .pmg-ambient span { animation: none !important } }
+        @keyframes pmg-breathe { from { transform: scale(1) } to { transform: scale(1.06) } }
+        @keyframes pmg-blink { 0%, 49% { opacity: 1 } 50%, 100% { opacity: 0 } }
+        @media (prefers-reduced-motion: reduce) { .pmg-ambient * { animation: none !important } }
       `}</style>
     </div>
   );
