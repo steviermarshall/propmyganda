@@ -158,16 +158,13 @@ export interface RosterEntry {
 
 /** A roster artist in the same tile, stepping through their songs straight from Spotify. */
 export function ArtistTile({ artist, catalog, loading }: { artist: RosterEntry; catalog?: ArtistCatalog; loading: boolean }) {
-  const tracks: Track[] =
-    catalog?.tracks?.length
-      ? catalog.tracks
-      : artist.spotifyTrackId
-        ? [{
-            id: artist.spotifyTrackId, uri: `spotify:track:${artist.spotifyTrackId}`, name: "Single", artists: artist.name,
-            album: "", image: artist.albumCover ?? artist.image, durationMs: 0, releaseDate: null, previewUrl: null,
-            url: `https://open.spotify.com/track/${artist.spotifyTrackId}`,
-          }]
-        : [];
+  // Until Spotify data arrives, the tile shows the same embed player the playlists use.
+  const tracks: Track[] = (catalog?.tracks ?? []).map((t) => ({ ...t, image: t.image ?? artist.albumCover ?? artist.image }));
+  const fallbackEmbed = artist.spotifyTrackId
+    ? `https://open.spotify.com/embed/track/${artist.spotifyTrackId}?utm_source=generator&theme=0`
+    : artist.spotifyArtistId
+      ? `https://open.spotify.com/embed/artist/${artist.spotifyArtistId}?utm_source=generator&theme=0`
+      : undefined;
   const url =
     catalog?.url ??
     (artist.spotifyArtistId
@@ -179,10 +176,11 @@ export function ArtistTile({ artist, catalog, loading }: { artist: RosterEntry; 
       label={`${artist.cat} · ${artist.genre}`}
       title={artist.name}
       tone={artist.tone}
-      tracks={tracks.map((t) => ({ ...t, image: t.image ?? artist.albumCover ?? artist.image }))}
+      tracks={tracks}
       url={url}
       count={catalog?.followers != null ? `${formatCount(catalog.followers)} followers` : null}
       loading={loading}
+      fallbackEmbed={fallbackEmbed}
     />
   );
 }
