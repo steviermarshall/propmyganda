@@ -45,7 +45,7 @@ const SocialDock = () => {
 
   return (
     <div
-      className={`fixed right-3 md:right-6 bottom-24 md:bottom-auto md:top-1/2 md:-translate-y-1/2 z-40 transition-all duration-1000 ${
+      className={`fixed right-3 md:right-6 bottom-3 md:bottom-auto md:top-1/2 md:-translate-y-1/2 z-40 transition-all duration-1000 ${
         mounted ? "opacity-100 translate-x-0" : "opacity-0 translate-x-8"
       }`}
       aria-label="Social links"
@@ -58,7 +58,7 @@ const SocialDock = () => {
         <span className="block w-px h-8 bg-gradient-to-b from-white/40 to-transparent mt-2" />
       </div>
 
-      <ul className="flex flex-col gap-3 md:gap-4">
+      <ul className="flex flex-row gap-2 md:flex-col md:gap-4">
         {links.map(({ label, href, Icon, handle }, i) => (
           <li
             key={label}
@@ -74,7 +74,7 @@ const SocialDock = () => {
               target="_blank"
               rel="noopener noreferrer"
               aria-label={`${label} — ${handle}`}
-              className="relative flex items-center justify-center w-11 h-11 md:w-12 md:h-12 border border-white/20 bg-black/40 backdrop-blur-md text-white/80 hover:text-black hover:bg-white hover:border-white transition-all duration-500 overflow-hidden"
+              className="relative flex items-center justify-center w-9 h-9 md:w-12 md:h-12 border border-white/20 bg-black/40 backdrop-blur-md text-white/80 hover:text-black hover:bg-white hover:border-white transition-all duration-500 overflow-hidden"
             >
               {/* scanline glow */}
               <span className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">

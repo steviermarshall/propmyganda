@@ -53,8 +53,9 @@ const Index = () => {
             </Link>
           </div>
 
+          {/* On phones the logo fills the middle, so the tagline and buttons sit above the footer line instead. */}
           <div
-            className={`transition-all duration-1000 ${
+            className={`mt-auto pb-8 md:mt-0 md:pb-0 transition-all duration-1000 ${
               loaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
             }`}
           >
@@ -80,7 +81,7 @@ const Index = () => {
           <div className="flex justify-between items-end text-[10px] md:text-xs tracking-[0.3em] uppercase text-white/60">
             <span>Scroll ↓</span>
             <span className="hidden md:block">Est. Independent</span>
-            <span>WebGL · v1.0</span>
+            <span className="hidden sm:block">WebGL · v1.0</span>
           </div>
         </div>
       </section>

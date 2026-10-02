@@ -179,7 +179,7 @@ const Distribution = () => {
       {/* Stats */}
       <section className="bg-electric">
         <div className="container-content py-5">
-          <div className="grid grid-cols-4 divide-x divide-black/20">
+          <div className="grid grid-cols-2 gap-y-6 md:grid-cols-4 md:gap-y-0 md:divide-x md:divide-black/20">
             {stats.map((s) => (
               <div key={s.label} className="text-center px-2">
                 <p className="font-display text-2xl md:text-4xl text-black leading-none">{s.value}</p>

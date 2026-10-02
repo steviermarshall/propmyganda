@@ -139,7 +139,7 @@ export function SpotifyPlayerProvider({ children }: { children: ReactNode }) {
       {children}
       {/* Now-playing dock. Lives on the page from the start so the embed can mount; slides up on first play. */}
       <div
-        className={`fixed inset-x-3 bottom-3 z-40 mx-auto max-w-md transition-all duration-500 md:inset-x-auto md:right-6 md:w-[420px] ${
+        className={`fixed inset-x-3 bottom-16 z-40 mx-auto max-w-md transition-all duration-500 md:inset-x-auto md:bottom-3 md:right-6 md:w-[420px] ${
           open ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-6 opacity-0"
         }`}
         aria-hidden={!open}
