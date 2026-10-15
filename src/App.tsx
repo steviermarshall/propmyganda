@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -112,6 +112,8 @@ const AppRoutes = () => {
           <Route path="/publication"        element={<Publication />} />
           <Route path="/publication/:slug"  element={<PublicationDetail />} />
           <Route path="/exclusive"          element={<Exclusive />} />
+          {/* Legacy bio-link typo — redirect so visitors don't 404 */}
+          <Route path="/exlusive"           element={<Navigate to="/exclusive" replace />} />
           <Route path="*"              element={<NotFound />} />
         </Routes>
       </PublicLayout>
