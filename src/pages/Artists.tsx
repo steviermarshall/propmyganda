@@ -16,7 +16,7 @@ type Artist = (typeof artists)[number] & {
   albumCover?: string;
 };
 
-const BOOKING_URL = "https://docs.google.com/forms/d/1dXl9gqipbr_dqlHaEP4XLhOs1Q3ruVAPSST_khyfcPg/viewform";
+const BOOKING_URL = "/start";
 
 // PMG Records roster — artists we release with (not distribution clients).
 const RECORDS = [

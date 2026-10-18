@@ -53,6 +53,7 @@ async function buildEntries(): Promise<SitemapEntry[]> {
     { path: "/exclusive", changefreq: "weekly", priority: "0.9" },
     { path: "/propworld", changefreq: "monthly", priority: "0.6" },
     { path: "/contact", changefreq: "monthly", priority: "0.6" },
+    { path: "/start", changefreq: "monthly", priority: "0.9" },
   ];
 
   // Artist + product detail pages (static catalogue in src/lib/data.ts)

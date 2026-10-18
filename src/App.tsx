@@ -21,6 +21,8 @@ import Contact from "./pages/Contact";
 import Propworld from "./pages/Propworld";
 import Events from "./pages/Events";
 import Publication from "./pages/Publication";
+import Start from "./pages/Start";
+import StartDone from "./pages/StartDone";
 import PublicationDetail from "./pages/PublicationDetail";
 import Exclusive from "./pages/Exclusive";
 import NotFound from "./pages/NotFound";
@@ -112,6 +114,8 @@ const AppRoutes = () => {
           <Route path="/publication"        element={<Publication />} />
           <Route path="/publication/:slug"  element={<PublicationDetail />} />
           <Route path="/exclusive"          element={<Exclusive />} />
+          <Route path="/start"              element={<Start />} />
+          <Route path="/start/done"         element={<StartDone />} />
           {/* Legacy bio-link typo — redirect so visitors don't 404 */}
           <Route path="/exlusive"           element={<Navigate to="/exclusive" replace />} />
           <Route path="*"              element={<NotFound />} />

@@ -104,11 +104,12 @@ export function Key({ children, onClick, disabled, ariaLabel, active = false }: 
 
 /** "→ CONTINUE_" link in the HUD footer. */
 export function HudLink({ href, children }: { href: string; children: ReactNode }) {
+  const external = /^https?:/.test(href);
   return (
     <a
       href={href}
-      target="_blank"
-      rel="noreferrer"
+      target={external ? "_blank" : undefined}
+      rel={external ? "noreferrer" : undefined}
       className="inline-flex items-center gap-2 border px-3 py-1.5 text-[10px] tracking-[0.18em] transition-colors hover:bg-[rgba(120,255,190,0.15)]"
       style={{ borderColor: PHOS.mid, color: PHOS.bright, clipPath: "polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px)" }}
     >
