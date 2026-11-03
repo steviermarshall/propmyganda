@@ -5,6 +5,7 @@ import Marquee from "@/components/Marquee";
 import ScrollReveal from "@/components/webgl/ScrollReveal";
 import InstagramFeed from "@/components/InstagramFeed";
 import SEO from "@/components/SEO";
+import BookingSheet from "@/components/BookingSheet";
 
 type Event = Database["public"]["Tables"]["events"]["Row"];
 type IgPost = Database["public"]["Tables"]["instagram_posts"]["Row"];
@@ -230,6 +231,10 @@ export default function Events() {
     url: ev.ticket_url ?? undefined,
   }));
 
+  const [bookingOpen, setBookingOpen] = useState(false);
+  const [bookingService, setBookingService] = useState<BookService>("dj");
+  const openBooking = (s: BookService) => { setBookingService(s); setBookingOpen(true); };
+
   return (
     <div className="min-h-screen bg-[#0B0B0B]">
       <SEO
@@ -305,7 +310,27 @@ export default function Events() {
 
       </section>
 
+      <section aria-labelledby="book-hire" className="container mx-auto px-4 py-16">
+        <h2 id="book-hire" className="font-display text-3xl md:text-5xl uppercase text-foreground mb-6">Book or Hire</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+          {BOOK_SERVICES.map(([v, label]) => (
+            <button key={v} type="button" onClick={() => openBooking(v)}
+              className="border border-border bg-card px-4 py-5 text-left uppercase tracking-wide text-sm text-foreground hover:border-primary hover:text-primary transition-colors">
+              {label}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <BookingSheet key={bookingService} open={bookingOpen} onOpenChange={setBookingOpen} initialService={bookingService} />
+
       <Marquee />
     </div>
   );
 }
+
+type BookService = "dj" | "security" | "venue" | "promoter" | "event_recap" | "artist" | "bartender";
+const BOOK_SERVICES: [BookService, string][] = [
+  ["dj", "DJ"], ["security", "Security"], ["venue", "Venue"], ["promoter", "Promoter"],
+  ["event_recap", "Event Recap"], ["artist", "Artist"], ["bartender", "Bartender"],
+];

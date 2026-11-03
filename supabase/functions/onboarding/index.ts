@@ -139,8 +139,11 @@ Deno.serve(async (req) => {
       if (p?.email) { const m = email(p.email); if (m) patch.email = m; }
       if ("post_at" in p) patch.post_at = p.post_at ? new Date(String(p.post_at)).toISOString() : null;
       if ("session_at" in p) patch.session_at = p.session_at ? new Date(String(p.session_at)).toISOString() : null;
-      if ("plan" in p || "adBudgetCents" in p) {
-        const q = quote(order.tier, Number(p.adBudgetCents ?? order.ad_budget_cents), (str(p.plan, 10) as PaymentPlan) || order.payment_plan);
+      const newTier = p?.tier ? getTier(str(p.tier, 20)) : null;
+      if (p?.tier && !newTier) return bad("Pick a tier");
+      if (newTier) patch.tier = newTier.id;
+      if (newTier || "plan" in p || "adBudgetCents" in p) {
+        const q = quote(newTier?.id ?? order.tier, Number(p.adBudgetCents ?? order.ad_budget_cents), (str(p.plan, 10) as PaymentPlan) || order.payment_plan);
         Object.assign(patch, { ad_budget_cents: q.adBudgetCents, total_cents: q.totalCents, payment_plan: q.plan, due_now_cents: q.dueNowCents });
       }
       if (order.status !== "draft" && order.status !== "pending_payment") {
