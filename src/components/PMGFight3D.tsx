@@ -2468,6 +2468,8 @@ export default function PMGFight3D({ onExit }: { onExit?: () => void } = {}) {
 
   useEffect(() => { if (screen !== "intro" && !portraits) renderPortraits().then(setPortraits); }, [screen, portraits]);
   useEffect(() => { getLogo(); }, []);
+  // Leaving the game (e.g. back to Propworld) must silence the soundtrack.
+  useEffect(() => () => { Sound.music?.pause(); }, []);
   useEffect(() => { if (screen === "stage" && !stagePics) renderStagePreviews().then(setStagePics); }, [screen, stagePics]);
 
   const choose = (i: number) => {
