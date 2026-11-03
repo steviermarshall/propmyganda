@@ -402,7 +402,7 @@ export default function Start() {
     setBusy(true); setErr(null); setDetails(d);
     try {
       if (session) {
-        const { order: o } = await api.update(session, { ...d, adBudgetCents: adBudget });
+        const { order: o } = await api.update(session, { ...d, tier, adBudgetCents: adBudget });
         setOrder(o);
       } else {
         const r = await api.create({ tier, adBudgetCents: adBudget, ...d });
