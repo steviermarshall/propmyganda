@@ -43,6 +43,8 @@ export const api = {
   availability: (s: Session, kind: "post" | "session") => call<{ slots: Slot[] }>("availability", { orderId: s.orderId, token: s.token, kind }),
   checkout: (s: Session, plan: "full" | "deposit") => call<{ url?: string; error?: string; configured?: boolean }>("checkout", { orderId: s.orderId, token: s.token, plan }),
   status: (s: Session) => call<{ order: Order; tier: Tier }>("status", { orderId: s.orderId, token: s.token }),
+  confirm: (s: Session) => call<{ ok: boolean; errors?: string[] }>("confirm", { orderId: s.orderId, token: s.token }),
+  inviteCheck: (invite: string) => call<{ ok: boolean; tier?: string; label?: string | null; reason?: string }>("invite-check", { invite }),
   async upload(s: Session, file: File, onProgress?: (pct: number) => void): Promise<Upload> {
     const { path, token } = await call<{ path: string; signedUrl: string; token: string }>("upload-url", { orderId: s.orderId, token: s.token, filename: file.name, size: file.size, type: file.type });
     onProgress?.(5);

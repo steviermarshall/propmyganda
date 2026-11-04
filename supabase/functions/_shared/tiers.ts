@@ -1,7 +1,7 @@
 // PMG onboarding tiers. Single source of truth for the site and the edge functions.
 // Prices are in US cents. Edit here to lock pricing.
 
-export type TierId = "basic" | "mid" | "viral";
+export type TierId = "dsp" | "basic" | "mid" | "viral" | "comp";
 export type PaymentPlan = "full" | "deposit";
 
 export interface Tier {
@@ -18,9 +18,44 @@ export interface Tier {
   financing: boolean;
   /** Which calendar bookings this tier needs. */
   bookings: ("post" | "session")[];
+  /** Shown on the public tier list. */
+  public: boolean;
+  /** Only reachable with a single-use invite code (/start?invite=CODE). */
+  inviteOnly?: boolean;
+  /** The distribution block and the release agreement are required, not optional. */
+  distribution?: boolean;
+  /** Paid out of the streaming split, not up front. */
+  revenueShare?: boolean;
 }
 
+const MID_INCLUDES = [
+  "One long-form video, one short-form video",
+  "Posted as collabs on PMG channels and yours",
+  "Ad platform placements",
+  "Guaranteed plays",
+  "Ad report or live shared dashboard",
+];
+
 export const TIERS: Tier[] = [
+  {
+    id: "dsp",
+    name: "DSP Release",
+    priceCents: 0,
+    tagline: "$0 up front. Split on streams.",
+    includes: [
+      "Everything in Mid",
+      "A record released under Propmyganda on every DSP",
+      "PMG Streaming Release Agreement, signed in the flow",
+      "Splits agreed up front, in writing",
+    ],
+    adBudgetAddOn: false,
+    depositAllowed: false,
+    financing: false,
+    bookings: ["post", "session"],
+    public: true,
+    distribution: true,
+    revenueShare: true,
+  },
   {
     id: "basic",
     name: "Basic",
@@ -36,23 +71,19 @@ export const TIERS: Tier[] = [
     depositAllowed: false,
     financing: false,
     bookings: ["post"],
+    public: true,
   },
   {
     id: "mid",
     name: "Mid",
     priceCents: 100_000,
     tagline: "Long-form + short-form, placed and guaranteed.",
-    includes: [
-      "One long-form video, one short-form video",
-      "Posted as collabs on PMG channels and yours",
-      "Ad platform placements",
-      "Guaranteed plays",
-      "Ad report or live shared dashboard",
-    ],
+    includes: MID_INCLUDES,
     adBudgetAddOn: false,
     depositAllowed: true,
     financing: false,
     bookings: ["post", "session"],
+    public: true,
   },
   {
     id: "viral",
@@ -69,8 +100,24 @@ export const TIERS: Tier[] = [
     depositAllowed: true,
     financing: true,
     bookings: ["post", "session"],
+    public: true,
+  },
+  {
+    id: "comp",
+    name: "Invited",
+    priceCents: 0,
+    tagline: "On us. Everything in Mid.",
+    includes: MID_INCLUDES,
+    adBudgetAddOn: false,
+    depositAllowed: false,
+    financing: false,
+    bookings: ["post", "session"],
+    public: false,
+    inviteOnly: true,
   },
 ];
+
+export const PUBLIC_TIERS = TIERS.filter((t) => t.public);
 
 /** Deposit share for tiers that allow it. The open question: change to 1 to force full pay. */
 export const DEPOSIT_SHARE = 0.5;

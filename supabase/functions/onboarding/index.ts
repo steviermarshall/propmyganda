@@ -9,14 +9,17 @@
 //   upload-done   record the uploaded file                      { orderId, token, name, path, size }
 //   availability  open posting dates and session slots          { orderId, token, kind: 'post'|'session' }
 //   checkout      Stripe Checkout Session (card; Affirm on Viral){ orderId, token, plan }
+//   confirm       $0 plans (DSP Release, Invited): mark paid and fulfil { orderId, token }
+//   invite-check  is this invite code usable?                   { invite }
 //   status        the order, for the done page                  { orderId, token }
 //
 // Secrets: STRIPE_SECRET_KEY, SITE_URL (https://propmyganda.com), optional
 // IG_ACCESS_TOKEN + IG_BUSINESS_ID, plus LOVABLE_API_KEY + GOOGLE_CALENDAR_API_KEY (already set for the CRM).
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { GCAL_BASE, gcalHeaders } from "../_shared/gcal.ts";
+import { fulfil } from "../_shared/fulfil.ts";
 import { TIERS, formatUsd, getTier, quote, type PaymentPlan } from "../_shared/tiers.ts";
-import { catalogueNo, formEncode, postSlots, sessionSlots, type Busy } from "../_shared/onboarding.ts";
+import { catalogueNo, formEncode, postSlots, sessionSlots, type Busy, type OrderRow } from "../_shared/onboarding.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -66,6 +69,18 @@ function cleanDetails(input: Record<string, unknown>) {
   return out;
 }
 
+const inviteCode = (v: unknown) => str(v, 24).toUpperCase().replace(/[^A-Z0-9]/g, "");
+
+/** An invite is usable when it exists, has uses left and has not expired. */
+async function checkInvite(code: string) {
+  if (!code) return { ok: false as const, reason: "No invite code" };
+  const { data } = await db().from("onboarding_invites").select("*").eq("code", code).maybeSingle();
+  if (!data) return { ok: false as const, reason: "That invite link isn't valid" };
+  if (data.expires_at && new Date(data.expires_at) < new Date()) return { ok: false as const, reason: "That invite has expired" };
+  if (data.used_count >= data.max_uses) return { ok: false as const, reason: "That invite has already been used" };
+  return { ok: true as const, invite: data as { code: string; label: string | null; tier: string; max_uses: number; used_count: number } };
+}
+
 async function igLookup(handle: string) {
   const token = Deno.env.get("IG_ACCESS_TOKEN");
   const businessId = Deno.env.get("IG_BUSINESS_ID");
@@ -108,19 +123,42 @@ Deno.serve(async (req) => {
   try {
     if (action === "tiers") return json({ tiers: TIERS });
 
+    if (action === "invite-check") {
+      const r = await checkInvite(inviteCode(body.invite));
+      return r.ok ? json({ ok: true, tier: r.invite.tier, label: r.invite.label }) : json({ ok: false, reason: r.reason });
+    }
+
     if (action === "create") {
       const tier = getTier(str(body.tier, 20));
       if (!tier) return bad("Pick a tier");
+      let invite: string | null = null;
+      if (tier.inviteOnly) {
+        const r = await checkInvite(inviteCode(body.invite));
+        if (!r.ok) return bad(r.reason, 403);
+        if (r.invite.tier !== tier.id) return bad("That invite is for a different plan", 403);
+        invite = r.invite.code;
+      }
       const details = cleanDetails(body);
+      if (tier.distribution) details.wants_distribution = true;
       if (!details.artist_name || !details.legal_name) return bad("Artist name and legal name are required");
       const mail = email(body.email);
       if (!mail) return bad("A valid email is required");
+      if (details.wants_distribution && (!details.agreement_accepted || !details.signature)) return bad("The release agreement must be accepted and signed");
+      // One email, one order: a second submission resumes the open order instead of making a duplicate row.
+      const { data: open } = await supabase.from("onboarding_orders").select("id, client_token, catalogue_no, tier")
+        .eq("email", mail).in("status", ["draft", "pending_payment"]).order("created_at", { ascending: false }).limit(1).maybeSingle();
       const q = quote(tier.id, Number(body.adBudgetCents ?? 0), (str(body.plan, 10) as PaymentPlan) || "full");
-      const { count } = await supabase.from("onboarding_orders").select("id", { count: "exact", head: true });
-      const { data, error } = await supabase.from("onboarding_orders").insert({
+      const fields = {
         ...details, email: mail, tier: tier.id, ad_budget_cents: q.adBudgetCents, total_cents: q.totalCents,
-        payment_plan: q.plan, due_now_cents: q.dueNowCents, catalogue_no: catalogueNo((count ?? 0) + 1), status: "draft",
-      }).select("id, client_token, catalogue_no").single();
+        payment_plan: q.plan, due_now_cents: q.dueNowCents, status: "draft", invite_code: invite, updated_at: new Date().toISOString(),
+      };
+      if (open) {
+        const { error } = await supabase.from("onboarding_orders").update(fields).eq("id", open.id);
+        if (error) throw error;
+        return json({ orderId: open.id, token: open.client_token, catalogueNo: open.catalogue_no, quote: q, resumed: true });
+      }
+      const { count } = await supabase.from("onboarding_orders").select("id", { count: "exact", head: true });
+      const { data, error } = await supabase.from("onboarding_orders").insert({ ...fields, catalogue_no: catalogueNo((count ?? 0) + 1) }).select("id, client_token, catalogue_no").single();
       if (error) throw error;
       return json({ orderId: data.id, token: data.client_token, catalogueNo: data.catalogue_no, quote: q });
     }
@@ -135,7 +173,8 @@ Deno.serve(async (req) => {
 
     if (action === "update") {
       const patch = cleanDetails((body.patch as Record<string, unknown>) ?? {});
-      const p = body.patch as Record<string, unknown>;
+      const p = (body.patch as Record<string, unknown>) ?? {};
+      if (getTier(order.tier)?.distribution) patch.wants_distribution = true;
       if (p?.email) { const m = email(p.email); if (m) patch.email = m; }
       if ("post_at" in p) patch.post_at = p.post_at ? new Date(String(p.post_at)).toISOString() : null;
       if ("session_at" in p) patch.session_at = p.session_at ? new Date(String(p.session_at)).toISOString() : null;
@@ -194,6 +233,7 @@ Deno.serve(async (req) => {
       if (!key) return json({ error: "Payments are not switched on yet (STRIPE_SECRET_KEY missing)", configured: false }, 503);
       const site = Deno.env.get("SITE_URL") ?? "https://propmyganda.com";
       const q = quote(order.tier, order.ad_budget_cents, (str(body.plan, 10) as PaymentPlan) || order.payment_plan);
+      if (q.dueNowCents <= 0) return bad("Nothing to pay on this plan — use confirm");
       await supabase.from("onboarding_orders").update({ payment_plan: q.plan, due_now_cents: q.dueNowCents, total_cents: q.totalCents, status: "pending_payment" }).eq("id", order.id);
       const label = q.plan === "deposit" ? `${q.tier.name} — 50% deposit` : `${q.tier.name} tier`;
       const description = [`PMG ${q.tier.name} · ${order.catalogue_no}`, q.adBudgetCents ? `incl. ${formatUsd(q.adBudgetCents)} extra ad budget` : "", q.plan === "deposit" ? `Balance ${formatUsd(q.balanceCents)} due before posting` : ""].filter(Boolean).join(" · ");
@@ -210,12 +250,31 @@ Deno.serve(async (req) => {
         cancel_url: `${site}/start?resume=${order.id}&token=${order.client_token}`,
       };
       const res = await fetch("https://api.stripe.com/v1/checkout/sessions", {
-        method: "POST", headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/x-www-form-urlencoded" }, body: formEncode(params),
+        method: "POST",
+        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/x-www-form-urlencoded", "Idempotency-Key": `order:${order.id}:${q.plan}:${q.dueNowCents}` },
+        body: formEncode(params),
       });
       const session = await res.json();
       if (!res.ok) return json({ error: session.error?.message ?? "Stripe error" }, 502);
       await supabase.from("onboarding_orders").update({ stripe_session_id: session.id }).eq("id", order.id);
       return json({ url: session.url, dueNowCents: q.dueNowCents });
+    }
+
+    if (action === "confirm") {
+      const q = quote(order.tier, order.ad_budget_cents, "full");
+      if (q.dueNowCents > 0) return bad("This plan needs payment — use checkout");
+      if (order.paid_at) return json({ ok: true, already: true });
+      if (order.wants_distribution && (!order.agreement_accepted || !order.signature)) return bad("The release agreement must be accepted and signed");
+      if (order.invite_code) {
+        const r = await checkInvite(order.invite_code);
+        if (!r.ok) return bad(r.reason, 403);
+        await supabase.from("onboarding_invites").update({ used_count: r.invite.used_count + 1 }).eq("code", order.invite_code);
+      }
+      const paidAt = new Date().toISOString();
+      await supabase.from("onboarding_orders").update({ status: "paid", paid_at: paidAt, payment_plan: "full", due_now_cents: 0, total_cents: 0 }).eq("id", order.id);
+      const { patch, errors } = await fulfil(supabase, { ...(order as OrderRow), status: "paid" }, "paid");
+      await supabase.from("onboarding_orders").update(patch).eq("id", order.id);
+      return json({ ok: true, errors });
     }
 
     if (action === "status") {

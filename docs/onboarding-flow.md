@@ -9,16 +9,26 @@ the sheets and the confirmation email.
 
 | Step | What happens | Where |
 | --- | --- | --- |
-| 1 Tier | Basic $550 (+ optional extra ad budget), Mid $1,000, Viral $15,000 | `supabase/functions/_shared/tiers.ts` |
+| 1 Tier | DSP Release ($0 up front, split on streams, distribution + agreement required), Basic $550 (+ optional extra ad budget), Mid $1,000, Viral $15,000. Invited ($0, everything in Mid) is hidden and only opens from `/start?invite=CODE` | `supabase/functions/_shared/tiers.ts` |
 | 2 Details | Contact, Instagram lookup, TikTok/YouTube, track, explicit, ad-report preference, optional distribution block with PRO/IPI/producer + e-signature | `src/pages/Start.tsx` → `onboarding` function `create` |
 | 3 Upload | Files go straight to the private `onboarding-uploads` bucket via signed URLs | `upload-url` / `upload-done` |
 | 4 Schedule | Posting dates (one per day, 7-day lead, no double booking) and 2-hour weekday sessions, both checked against the PMG Google Calendar free/busy | `availability` |
-| 5 Pay | Stripe Checkout; card everywhere, Affirm on Viral; full pay or 50% deposit on Mid/Viral | `checkout` |
+| 5 Pay | Stripe Checkout; card everywhere, Affirm on Viral; full pay or 50% deposit on Mid/Viral. $0 plans skip Stripe: `confirm` marks the order paid and runs the same fulfilment | `checkout` / `confirm` |
 | Done | Webhook marks the order paid, books both calendar events, appends the editing sheet row and (if chosen) the distribution sheet row, emails the artist | `stripe-webhook` |
 
 Everything is stored in `public.onboarding_orders` (migration
 `20261018_014_onboarding.sql`). The public site never reads the table
 directly; the function does, keyed by `id` + `client_token`.
+
+## Three populations
+
+| Who | How they get in | What they see | Agreement |
+| --- | --- | --- | --- |
+| Paying artists | `/start`, pick Basic / Mid / Viral | prices, Stripe | optional distribution block |
+| DSP artists | `/start`, pick DSP Release (first card) | "$0 up front · split on streams" | required: PRO, IPI, producer, e-signature |
+| Free artists | a single-use link from `/admin/invites` (`/start?invite=CODE`) | only the Invited card, $0 | optional |
+
+Invite codes live in `onboarding_invites` (migration `20261104_015`); a code is consumed when the order is confirmed. A second submission from the same email resumes the open order instead of creating a duplicate row.
 
 ## Secrets to set in Lovable Cloud
 

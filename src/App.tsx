@@ -46,6 +46,7 @@ import DeliverablesReport from "./pages/admin/DeliverablesReport";
 import RoadmapBoard from "./pages/admin/RoadmapBoard";
 import ContactInquiries from "./pages/admin/ContactInquiries";
 import NewsWire from "./pages/admin/NewsWire";
+import Invites from "./pages/admin/Invites";
 import OAuthConsent from "./pages/OAuthConsent";
 
 const queryClient = new QueryClient();
@@ -94,6 +95,7 @@ const AppRoutes = () => {
         <Route path="/admin/roadmap" element={<CrmProtectedRoute allowedRoles={["admin","mike","steven","jay","editor"]}><RoadmapBoard /></CrmProtectedRoute>} />
         <Route path="/admin/contact" element={<CrmProtectedRoute allowedRoles={["admin","jay"]}><ContactInquiries /></CrmProtectedRoute>} />
         <Route path="/admin/wire" element={<CrmProtectedRoute allowedRoles={["admin","jay","editor"]}><NewsWire /></CrmProtectedRoute>} />
+        <Route path="/admin/invites" element={<CrmProtectedRoute allowedRoles={["admin","jay"]}><Invites /></CrmProtectedRoute>} />
       </Routes>
     );
   }

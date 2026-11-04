@@ -14,8 +14,16 @@ const order: OrderRow = {
 };
 
 describe("tiers", () => {
-  it("has the three draft tiers at draft prices", () => {
-    expect(TIERS.map((t) => [t.id, t.priceCents])).toEqual([["basic", 55_000], ["mid", 100_000], ["viral", 1_500_000]]);
+  it("lists DSP first, then the three paid tiers, with Invited hidden from the public", () => {
+    expect(TIERS.map((t) => [t.id, t.priceCents, t.public])).toEqual([
+      ["dsp", 0, true], ["basic", 55_000, true], ["mid", 100_000, true], ["viral", 1_500_000, true], ["comp", 0, false],
+    ]);
+    expect(TIERS.find((t) => t.id === "dsp")).toMatchObject({ distribution: true, revenueShare: true });
+    expect(TIERS.find((t) => t.id === "comp")).toMatchObject({ inviteOnly: true });
+  });
+  it("quotes $0 due for DSP and Invited, never a deposit", () => {
+    expect(quote("dsp", 50_000, "deposit")).toMatchObject({ totalCents: 0, dueNowCents: 0, plan: "full", adBudgetCents: 0 });
+    expect(quote("comp").dueNowCents).toBe(0);
   });
   it("quotes full pay by default and a 50% deposit where allowed", () => {
     expect(quote("basic").dueNowCents).toBe(55_000);

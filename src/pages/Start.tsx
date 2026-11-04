@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import SEO from "@/components/SEO";
-import { AD_BUDGET_MAX, AD_BUDGET_MIN, TIERS, formatUsd, quote, type PaymentPlan, type TierId } from "@/lib/tiers";
+import { AD_BUDGET_MAX, AD_BUDGET_MIN, PUBLIC_TIERS, TIERS, formatUsd, getTier, quote, type PaymentPlan, type Tier, type TierId } from "@/lib/tiers";
 import { api, fmtBytes, fmtSlot, loadSession, saveSession, type IgProfile, type Order, type Session, type Slot, type Upload } from "@/lib/onboarding";
 import { Button, ErrorLine, Input, Note, Select, Textarea, Toggle } from "@/components/start/ui";
 
@@ -21,19 +21,31 @@ function Stepper({ step }: { step: number }) {
 }
 
 // ── 1. Tier ────────────────────────────────────────────────────────────────
-function TierStep({ tier, setTier, adBudget, setAdBudget, onNext }: { tier: TierId; setTier: (t: TierId) => void; adBudget: number; setAdBudget: (n: number) => void; onNext: () => void }) {
+function priceLabel(t: Tier): string {
+  if (t.revenueShare) return "$0 up front";
+  if (t.inviteOnly) return "On us";
+  return formatUsd(t.priceCents);
+}
+
+function TierStep({ tier, setTier, adBudget, setAdBudget, onNext, invite }: { tier: TierId; setTier: (t: TierId) => void; adBudget: number; setAdBudget: (n: number) => void; onNext: () => void; invite: { label: string | null } | null }) {
   const q = quote(tier, adBudget);
+  const shown = invite ? TIERS.filter((t) => t.inviteOnly) : PUBLIC_TIERS;
   return (
     <div>
-      <div className="grid gap-3 md:grid-cols-3">
-        {TIERS.map((t) => {
+      {invite && (
+        <p className="mb-4 inline-block bg-[#FFD230] px-3 py-2 font-mono text-[10px] uppercase tracking-[0.2em] text-[#0B0B0B]">
+          Invite accepted{invite.label ? ` · ${invite.label}` : ""}
+        </p>
+      )}
+      <div className={`grid gap-3 ${shown.length > 1 ? "md:grid-cols-2 lg:grid-cols-4" : "max-w-md"}`}>
+        {shown.map((t) => {
           const active = t.id === tier;
           return (
             <button key={t.id} type="button" onClick={() => setTier(t.id)} aria-pressed={active} className="flex flex-col border p-5 text-left transition-colors" style={{ borderColor: active ? "#FFD230" : "rgba(242,239,233,0.3)", background: active ? "rgba(255,210,48,0.06)" : "transparent" }}>
               <span className="flex items-baseline justify-between font-mono text-[10px] uppercase tracking-[0.18em]" style={{ color: active ? "#FFD230" : "#9A9A9E" }}>
                 <span>{t.name}</span><span>PMG-T-{String(TIERS.indexOf(t) + 1).padStart(2, "0")}</span>
               </span>
-              <span className="mt-3 font-display text-4xl uppercase leading-none tracking-[-0.03em] text-[#F2EFE9]">{formatUsd(t.priceCents)}</span>
+              <span className="mt-3 font-display text-4xl uppercase leading-none tracking-[-0.03em] text-[#F2EFE9]">{priceLabel(t)}</span>
               <span className="mt-2 text-sm text-[#F2EFE9]/80">{t.tagline}</span>
               <ul className="mt-4 space-y-1.5 font-mono text-[10px] uppercase leading-4 tracking-[0.12em] text-[#9A9A9E]">
                 {t.includes.map((i) => <li key={i}>› {i}</li>)}
@@ -60,8 +72,13 @@ function TierStep({ tier, setTier, adBudget, setAdBudget, onNext }: { tier: Tier
 
       <div className="mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-[#F2EFE9]/20 pt-6">
         <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#F2EFE9]">
-          Total <span className="text-[#FFD230]">{formatUsd(q.totalCents)}</span>
-          {q.tier.depositAllowed && <span className="text-[#9A9A9E]"> · deposit option at checkout</span>}
+          {q.tier.revenueShare ? (
+            <>Due today <span className="text-[#FFD230]">$0</span><span className="text-[#9A9A9E]"> · PMG is paid from the streaming split you sign</span></>
+          ) : q.tier.inviteOnly ? (
+            <>Due today <span className="text-[#FFD230]">$0</span></>
+          ) : (
+            <>Total <span className="text-[#FFD230]">{formatUsd(q.totalCents)}</span>{q.tier.depositAllowed && <span className="text-[#9A9A9E]"> · deposit option at checkout</span>}</>
+          )}
         </p>
         <Button onClick={onNext}>Continue →</Button>
       </div>
@@ -96,8 +113,8 @@ function IgCard({ p }: { p: IgProfile }) {
   );
 }
 
-function DetailsStep({ initial, busy, onBack, onSubmit }: { initial: Details; busy: boolean; onBack: () => void; onSubmit: (d: Details) => void }) {
-  const [d, setD] = useState<Details>(initial);
+function DetailsStep({ initial, busy, onBack, onSubmit, forceDistribution }: { initial: Details; busy: boolean; onBack: () => void; onSubmit: (d: Details) => void; forceDistribution: boolean }) {
+  const [d, setD] = useState<Details>(forceDistribution ? { ...initial, wants_distribution: true } : initial);
   const [ig, setIg] = useState<IgProfile | null>(null);
   const [igBusy, setIgBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -151,7 +168,14 @@ function DetailsStep({ initial, busy, onBack, onSubmit }: { initial: Details; bu
         <option value="both">Both</option>
       </Select>
 
-      <Toggle label="Add PMG distribution to DSPs" hint="Spotify, Apple, Tidal and the rest · fills the release agreement" checked={d.wants_distribution} onChange={(v) => set("wants_distribution", v)} />
+      {forceDistribution ? (
+        <div className="border border-[#FFD230] px-3 py-3">
+          <span className="block text-[15px] text-[#F2EFE9]">DSP Release · PMG distribution included</span>
+          <span className="block font-mono text-[10px] uppercase tracking-[0.14em] text-[#9A9A9E]">Released under Propmyganda on every DSP · the release agreement below is part of this plan</span>
+        </div>
+      ) : (
+        <Toggle label="Add PMG distribution to DSPs" hint="Spotify, Apple, Tidal and the rest · fills the release agreement" checked={d.wants_distribution} onChange={(v) => set("wants_distribution", v)} />
+      )}
       {d.wants_distribution && (
         <div className="space-y-4 border border-[#F2EFE9]/30 p-4">
           <Note>DSP title: "{d.artist_name || "Your Artist Name"}" Propmyganda Performance</Note>
@@ -312,10 +336,17 @@ function PayStep({ session, order, onBack }: { session: Session; order: Order; o
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const q = quote(order.tier, order.ad_budget_cents, plan);
+  const free = q.dueNowCents === 0;
 
   async function pay() {
     setBusy(true); setErr(null);
     try {
+      if (free) {
+        await api.confirm(session);
+        saveSession(null);
+        window.location.href = `/start/done?order=${session.orderId}&token=${session.token}`;
+        return;
+      }
       const r = await api.checkout(session, plan);
       if (r.url) window.location.href = r.url;
       else setErr(r.error ?? "Checkout is not available yet.");
@@ -333,13 +364,13 @@ function PayStep({ session, order, onBack }: { session: Session; order: Order; o
       <div className="border border-[#F2EFE9]/30 p-5">
         <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.18em] text-[#FFD230]">{order.catalogue_no} · receipt preview</p>
         {row("Artist", order.artist_name)}
-        {row("Tier", `${q.tier.name} · ${formatUsd(q.tier.priceCents)}`)}
+        {row("Plan", `${q.tier.name} · ${priceLabel(q.tier)}`)}
         {q.adBudgetCents > 0 && row("Extra ad budget", formatUsd(q.adBudgetCents))}
         {row("Posting date", order.post_at ? fmtSlot(order.post_at, false) : "to be placed")}
         {order.session_at && row("Session", fmtSlot(order.session_at))}
         {row("Files", String(order.uploads?.length ?? 0))}
         {order.wants_distribution && row("Distribution", "yes · agreement signed")}
-        {row("Total", formatUsd(q.totalCents))}
+        {q.tier.revenueShare ? row("PMG's share", "from the streaming split you signed") : row("Total", formatUsd(q.totalCents))}
         {row("Due now", formatUsd(q.dueNowCents))}
         {q.balanceCents > 0 && row("Balance before posting", formatUsd(q.balanceCents))}
       </div>
@@ -360,11 +391,15 @@ function PayStep({ session, order, onBack }: { session: Session; order: Order; o
         </div>
       )}
 
-      <Note>Checkout runs on Stripe. Card{q.tier.financing ? ", or Affirm to pay over time" : ""}. Receipt by email. No payola · 0.00.</Note>
+      {free ? (
+        <Note>Nothing to charge. Confirm and your date is held, the calendar is booked and the agreement goes out by email.</Note>
+      ) : (
+        <Note>Checkout runs on Stripe. Card{q.tier.financing ? ", or Affirm to pay over time" : ""}. Receipt by email. No payola · 0.00.</Note>
+      )}
       {err && <ErrorLine>{err}</ErrorLine>}
       <div className="flex items-center justify-between gap-4 border-t border-[#F2EFE9]/20 pt-6">
         <Button tone="ghost" onClick={onBack}>← Back</Button>
-        <Button onClick={pay} disabled={busy}>{busy ? "Opening checkout…" : `Pay ${formatUsd(q.dueNowCents)} →`}</Button>
+        <Button onClick={pay} disabled={busy}>{busy ? (free ? "Confirming…" : "Opening checkout…") : free ? "Confirm order →" : `Pay ${formatUsd(q.dueNowCents)} →`}</Button>
       </div>
     </div>
   );
@@ -374,7 +409,9 @@ function PayStep({ session, order, onBack }: { session: Session; order: Order; o
 export default function Start() {
   const [params] = useSearchParams();
   const [step, setStep] = useState(0);
-  const [tier, setTier] = useState<TierId>((params.get("tier") as TierId) || "mid");
+  const [tier, setTier] = useState<TierId>(getTier(params.get("tier") ?? "")?.public ? (params.get("tier") as TierId) : "dsp");
+  const [invite, setInvite] = useState<{ code: string; label: string | null } | null>(null);
+  const [inviteErr, setInviteErr] = useState<string | null>(null);
   const [adBudget, setAdBudget] = useState(0);
   const [details, setDetails] = useState<Details>(EMPTY);
   const [session, setSession] = useState<Session | null>(null);
@@ -382,6 +419,16 @@ export default function Start() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const uploads = useMemo(() => order?.uploads ?? [], [order]);
+
+  // Invite link: /start?invite=CODE unlocks the Invited plan and hides the public tiers.
+  useEffect(() => {
+    const code = params.get("invite");
+    if (!code) return;
+    api.inviteCheck(code).then((r) => {
+      if (r.ok) { setInvite({ code: code.toUpperCase(), label: r.label ?? null }); setTier((r.tier as TierId) || "comp"); }
+      else setInviteErr(r.reason ?? "That invite link isn't valid.");
+    }).catch((e) => setInviteErr((e as Error).message));
+  }, [params]);
 
   // Resume: from the Stripe cancel link or from a saved session on this device.
   useEffect(() => {
@@ -405,7 +452,7 @@ export default function Start() {
         const { order: o } = await api.update(session, { ...d, tier, adBudgetCents: adBudget });
         setOrder(o);
       } else {
-        const r = await api.create({ tier, adBudgetCents: adBudget, ...d });
+        const r = await api.create({ tier, adBudgetCents: adBudget, invite: invite?.code, ...d });
         const s = { orderId: r.orderId, token: r.token, step: 2 };
         setSession(s); saveSession(s);
         const { order: o } = await api.status(s);
@@ -431,7 +478,7 @@ export default function Start() {
         <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-[#FFD230]">Propmyganda · Release onboarding</p>
         <h1 className="font-display text-5xl uppercase leading-[0.85] tracking-[-0.03em] md:text-8xl">{step === 0 ? "You're in." : STEPS[step]}</h1>
         <p className="mt-3 max-w-md font-mono text-[11px] uppercase leading-5 tracking-[0.14em] text-[#9A9A9E]">
-          {step === 0 ? "Pick a tier. Fill it out once. Pick a date and hold it. We do the rest." : `${tierDef.name} · ${order?.catalogue_no ?? "PMG-R-###"}`}
+          {step === 0 ? "Pick a plan. Fill it out once. Pick a date and hold it. We do the rest." : `${tierDef.name} · ${order?.catalogue_no ?? "PMG-R-###"}`}
         </p>
       </header>
 
@@ -440,8 +487,9 @@ export default function Start() {
           <Stepper step={step} />
           <div className="mt-8">
             {err && <div className="mb-4"><ErrorLine>{err}</ErrorLine></div>}
-            {step === 0 && <TierStep tier={tier} setTier={setTier} adBudget={adBudget} setAdBudget={setAdBudget} onNext={() => go(1)} />}
-            {step === 1 && <DetailsStep initial={order ? { ...details, artist_name: order.artist_name, legal_name: order.legal_name, email: order.email, phone: order.phone ?? "", instagram_handle: order.instagram_handle ?? "", tiktok_url: order.tiktok_url ?? "", youtube_url: order.youtube_url ?? "", track_title: order.track_title ?? "", explicit: order.explicit, wants_distribution: order.wants_distribution } : details} busy={busy} onBack={() => go(0)} onSubmit={submitDetails} />}
+            {inviteErr && <div className="mb-4"><ErrorLine>{inviteErr} — showing the public plans instead.</ErrorLine></div>}
+            {step === 0 && <TierStep tier={tier} setTier={setTier} adBudget={adBudget} setAdBudget={setAdBudget} onNext={() => go(1)} invite={invite} />}
+            {step === 1 && <DetailsStep initial={order ? { ...details, artist_name: order.artist_name, legal_name: order.legal_name, email: order.email, phone: order.phone ?? "", instagram_handle: order.instagram_handle ?? "", tiktok_url: order.tiktok_url ?? "", youtube_url: order.youtube_url ?? "", track_title: order.track_title ?? "", explicit: order.explicit, wants_distribution: order.wants_distribution } : details} busy={busy} onBack={() => go(0)} onSubmit={submitDetails} forceDistribution={!!tierDef.distribution} />}
             {step === 2 && session && <UploadStep session={session} uploads={uploads} setUploads={(u) => setOrder((o) => (o ? { ...o, uploads: u } : o))} onBack={() => go(1)} onNext={() => go(3)} />}
             {step === 3 && session && <ScheduleStep session={session} needsSession={tierDef.bookings.includes("session")} postAt={order?.post_at ?? null} sessionAt={order?.session_at ?? null} onBack={() => go(2)} onNext={submitSchedule} />}
             {step === 4 && session && order && <PayStep session={session} order={order} onBack={() => go(3)} />}
