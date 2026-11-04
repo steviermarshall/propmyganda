@@ -132,7 +132,7 @@ export interface Slot { start: string; end: string }
 
 export const NY = "America/New_York";
 /** Shoots: Monday–Friday, 30 minutes, starting on the hour from 2pm; the last starts at 7pm. */
-export const SESSION_HOURS = [14, 15, 16, 17, 18, 19];
+export const SESSION_HOURS = [13, 14, 15, 16, 17, 18, 19]; // shoots start on the hour, 1pm to 7pm, so the room is clear by 8pm
 export const SESSION_MINUTES = 30;
 /** A 30-minute shoot plus a 30-minute gap: each booking blocks a full hour. */
 export const SESSION_BLOCK_MINUTES = 60;

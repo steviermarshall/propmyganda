@@ -22,7 +22,7 @@ directly; the function does, keyed by `id` + `client_token`.
 
 ## The prep page
 
-`/start/prep` tells the artist what to do before and in the first five minutes after the collab posts, how to get to 81 Prospect Street (F to York St, A/C to High St, ferry to Pier 1), that 2–8pm parking is peak with garages on Jay and Front, and what's around to make a day of it (Pebble Beach, Time Out Market, Washington Street, Jane's Carousel, Empire Stores, St. Ann's). Linked from the schedule step, the done page and the confirmation email. Check the parking lines against what you'd tell someone yourself; I wrote them from the neighbourhood, not from a garage's own listing.
+`/start/prep` tells the artist what to do before and in the first five minutes after the collab posts, how to get to 81 Prospect Street (F to York St, A/C to High St, ferry to Pier 1), that 1–8pm parking is peak with garages on Jay and Front, and what's around to make a day of it (Pebble Beach, Time Out Market, Washington Street, Jane's Carousel, Empire Stores, St. Ann's). Linked from the schedule step, the done page and the confirmation email. Check the parking lines against what you'd tell someone yourself; I wrote them from the neighbourhood, not from a garage's own listing.
 
 ## Three populations
 

@@ -4,6 +4,7 @@ import SEO from "@/components/SEO";
 import { api, fmtSlot, saveSession, type Order } from "@/lib/onboarding";
 import { formatUsd, getTier } from "@/lib/tiers";
 import { Note } from "@/components/start/ui";
+import { AreaBlocks, TipsBlocks } from "@/components/start/prep";
 
 export default function StartDone() {
   const [params] = useSearchParams();
@@ -67,8 +68,18 @@ export default function StartDone() {
             <p>03 — Your record goes out on the date you picked. Collab posts push to TikTok, Instagram and YouTube.</p>
             <p>04 — Ad report or dashboard link lands the way you asked.</p>
             <p className="pt-2 text-[#9A9A9E]">Before your date: accounts public, collab requests on, accept the invite when it comes through.</p>
-            <p className="pt-2"><Link to="/start/prep" className="text-[#FFD230] underline">Read the prep page</Link> — the first five minutes, parking, and how to make a day of it in DUMBO.</p>
           </div>
+        </div>
+
+        <div className="mt-12">
+          <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-[#9A9A9E]">Your day in DUMBO</p>
+          <AreaBlocks from={1} />
+          <p className="mt-10 font-mono text-[10px] uppercase tracking-[0.3em] text-[#9A9A9E]">Make it land</p>
+          <TipsBlocks from={3} />
+          <p className="mt-4 font-mono text-[11px] uppercase tracking-[0.14em] text-[#9A9A9E]">Keep this: <Link to="/start/prep" className="text-[#FFD230] underline">propmyganda.com/start/prep</Link></p>
+        </div>
+
+        <div className="max-w-xl">
 
           <div className="mt-10 flex flex-wrap gap-3">
             <Link to="/artists" className="bg-[#FFD230] px-6 py-4 font-mono text-[11px] uppercase tracking-[0.2em] text-[#0B0B0B]">The roster →</Link>

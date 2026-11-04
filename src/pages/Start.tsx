@@ -5,6 +5,7 @@ import { AGREEMENT_TEXT, STANDARD_SPLITS } from "@/lib/agreement";
 import { AD_BUDGET_MAX, AD_BUDGET_MIN, PUBLIC_TIERS, TIERS, formatUsd, getTier, quote, type PaymentPlan, type Tier, type TierId } from "@/lib/tiers";
 import { api, fmtBytes, fmtSlot, loadSession, saveSession, type IgProfile, type Order, type Session, type Slot, type Upload } from "@/lib/onboarding";
 import { Button, ErrorLine, Input, Note, Select, Textarea, Toggle } from "@/components/start/ui";
+import { AreaBlocks } from "@/components/start/prep";
 
 const STEPS = ["Tier", "Details", "Upload", "Schedule", "Pay"] as const;
 const PRO_OPTIONS = ["", "BMI", "ASCAP", "SESAC", "Other", "None"];
@@ -366,6 +367,7 @@ function DayTimePicker({ slots, value, onPick, allTimes, max = 14 }: { slots: Sl
 }
 
 const RELEASE_TIMES = ["3:00 PM", "4:00 PM", "6:00 PM"];
+const SHOOT_TIMES = ["1:00 PM", "2:00 PM", "3:00 PM", "4:00 PM", "5:00 PM", "6:00 PM", "7:00 PM"];
 
 function ScheduleStep({ session, needsSession, postAt, sessionAt, onBack, onNext }: { session: Session; needsSession: boolean; postAt: string | null; sessionAt: string | null; onBack: () => void; onNext: (post: string | null, sess: string | null) => void }) {
   const [post, setPost] = useState<Slot[] | null>(null);
@@ -389,8 +391,8 @@ function ScheduleStep({ session, needsSession, postAt, sessionAt, onBack, onNext
       {needsSession && (
         <div>
           <p className="mb-1 font-display text-2xl uppercase leading-none tracking-[-0.03em] text-[#F2EFE9]">Book your shoot</p>
-          <Note>30 minutes in the room, DUMBO. Monday to Friday, 2 to 8pm. Live from the PMG calendar, so a time you can't see is already taken.</Note>
-          <div className="mt-4"><DayTimePicker slots={sess} value={pickSess} onPick={setPickSess} /></div>
+          <Note>30 minutes in the room, DUMBO. Monday to Friday, 1 to 8pm, on the hour. Live from the PMG calendar: a struck-out time is already taken.</Note>
+          <div className="mt-4"><DayTimePicker slots={sess} value={pickSess} onPick={setPickSess} allTimes={SHOOT_TIMES} /></div>
           {pickSess && <p className="mt-3 font-mono text-[11px] uppercase tracking-[0.18em] text-[#FFD230]">Shoot · {fmtSlot(pickSess)} ET · 30 min</p>}
           <p className="mt-3 font-mono text-[10px] uppercase tracking-[0.18em] text-[#9A9A9E]">
             Parking, the subway and what to do before and after: <Link to="/start/prep" target="_blank" className="text-[#FFD230] underline">the prep page</Link>.
@@ -476,6 +478,11 @@ function PayStep({ session, order, onBack }: { session: Session; order: Order; o
       <div className="flex items-center justify-between gap-4 border-t border-[#F2EFE9]/20 pt-6">
         <Button tone="ghost" onClick={onBack}>← Back</Button>
         <Button onClick={pay} disabled={busy}>{busy ? (free ? "Confirming…" : "Opening checkout…") : free ? "Confirm order →" : `Pay ${formatUsd(q.dueNowCents)} →`}</Button>
+      </div>
+
+      <div className="pt-4">
+        <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-[#9A9A9E]">While you're here · the area</p>
+        <AreaBlocks compact from={1} />
       </div>
     </div>
   );

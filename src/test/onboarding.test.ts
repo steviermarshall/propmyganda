@@ -88,14 +88,14 @@ describe("availability", () => {
     expect(nyTime(2026, 9, 19, 14).toISOString()).toBe("2026-10-19T18:00:00.000Z"); // 2pm EDT
     expect(nyTime(2026, 11, 7, 14).toISOString()).toBe("2026-12-07T19:00:00.000Z"); // 2pm EST
   });
-  it("offers Mon–Fri 30-minute shoots from 2pm to 7pm and blocks the full hour", () => {
+  it("offers Mon–Fri 30-minute shoots on the hour from 1pm to 7pm and blocks the full hour", () => {
     const slots = sessionSlots(from, 7, [sessionBlock("2026-10-19T18:00:00.000Z")]);
     const monday = slots.filter((s) => s.start.startsWith("2026-10-19"));
-    // 2pm EDT (18:00Z) is taken; 3pm..7pm remain.
-    expect(monday.map((s) => s.start)).toEqual(["2026-10-19T19:00:00.000Z", "2026-10-19T20:00:00.000Z", "2026-10-19T21:00:00.000Z", "2026-10-19T22:00:00.000Z", "2026-10-19T23:00:00.000Z"]);
+    // 2pm EDT (18:00Z) is taken; 1pm and 3pm..7pm remain.
+    expect(monday.map((s) => s.start)).toEqual(["2026-10-19T17:00:00.000Z", "2026-10-19T19:00:00.000Z", "2026-10-19T20:00:00.000Z", "2026-10-19T21:00:00.000Z", "2026-10-19T22:00:00.000Z", "2026-10-19T23:00:00.000Z"]);
     expect(new Date(monday[0].end).getTime() - new Date(monday[0].start).getTime()).toBe(30 * 60_000);
     expect(slots.every((s) => { const d = new Date(s.start).getUTCDay(); return d >= 1 && d <= 5; })).toBe(true);
-    expect(slots.filter((s) => s.start.startsWith("2026-10-20")).length).toBe(6);
+    expect(slots.filter((s) => s.start.startsWith("2026-10-20")).length).toBe(7);
   });
   it("a calendar event inside the hour block hides the slot", () => {
     const busy = [{ start: "2026-10-19T19:40:00.000Z", end: "2026-10-19T19:50:00.000Z" }]; // 3:40pm EDT

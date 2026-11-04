@@ -63,6 +63,7 @@ export const TIERS: Tier[] = [
     priceCents: 55_000,
     tagline: "Post + small ad spend.",
     includes: [
+      "30-minute shoot in DUMBO",
       "Collab post to TikTok, Instagram and YouTube",
       "Small ad spend behind the post",
       "Full ad report when the run ends",
@@ -71,7 +72,7 @@ export const TIERS: Tier[] = [
     adBudgetAddOn: true,
     depositAllowed: false,
     financing: false,
-    bookings: ["post"],
+    bookings: ["post", "session"],
     public: true,
   },
   {
