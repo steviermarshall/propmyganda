@@ -43,6 +43,13 @@
       "when": 1793771201727,
       "tag": "0005_onboarding_orders_and_invites",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793771225257,
+      "tag": "0006_onboarding_uploads_storage_policies",
+      "breakpoints": true
     }
   ]
 }
