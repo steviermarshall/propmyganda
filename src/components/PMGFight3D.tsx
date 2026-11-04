@@ -15,7 +15,7 @@
  * First fight downloads about 2.5 MB (two fighters + one stage) instead of the old 20 MB: only the picked fighters and the chosen stage load.
  * Lovable: lives at  src/components/PMGFight3D.tsx ; Propworld renders <PMGFight3D onExit={...} />.
  */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { PointerEvent as RPointerEvent, ReactNode } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
@@ -45,6 +45,13 @@ import portrait_hammadPic from "@/assets/pmg/portrait-hammad.jpg.asset.json";
 import stage_streetsPic from "@/assets/pmg/stage-streets.jpg.asset.json";
 import stage_subwayPic from "@/assets/pmg/stage-subway.jpg.asset.json";
 import sign34Pic from "@/assets/pmg/sign-34th.jpg.asset.json";
+import voice_fight from "@/assets/pmg/voice-fight.mp3.asset.json";
+import voice_final from "@/assets/pmg/voice-final.mp3.asset.json";
+import voice_finisher from "@/assets/pmg/voice-finisher.mp3.asset.json";
+import voice_ko from "@/assets/pmg/voice-ko.mp3.asset.json";
+import voice_perfect from "@/assets/pmg/voice-perfect.mp3.asset.json";
+import voice_round1 from "@/assets/pmg/voice-round1.mp3.asset.json";
+import voice_round2 from "@/assets/pmg/voice-round2.mp3.asset.json";
 import dirtyDanTrack from "@/assets/pmg/song-dirty-dan.mp3.asset.json";
 import stockzTrack from "@/assets/pmg/song-fine-tiino-stockz.mp3.asset.json";
 import jahballaPrideTrack from "@/assets/pmg/song-jahballa-pride.mp3.asset.json";
@@ -61,6 +68,9 @@ const LOGO_URL = pmgGraffitiLogo.url;
 /** Pre-rendered pictures for the select screens (made with tools/render-cards). If one is missing the game renders it from the 3D model instead. */
 const PORTRAIT_URL = (id: string) => assetUrl(`portrait-${id}`);
 const STAGE_PIC_URL = (id: string) => assetUrl(`stage-${id}`);
+/** Announcer and fighter voice lines (ElevenLabs clips): round1 round2 final fight ko perfect finisher wins-<id> quote-<id>. A missing clip is skipped. */
+const VOICE_URLS: Record<string, string> = { "fight": voice_fight.url, "final": voice_final.url, "finisher": voice_finisher.url, "ko": voice_ko.url, "perfect": voice_perfect.url, "round1": voice_round1.url, "round2": voice_round2.url };
+const voiceUrl = (name: string) => VOICE_URLS[name] ?? "";
 
 /** Every .glb is meshopt-compressed (about 4× smaller than the originals), so each loader gets the decoder. */
 function gltfLoader() { const l = new GLTFLoader(); l.setMeshoptDecoder(MeshoptDecoder); return l; }
@@ -223,8 +233,12 @@ interface Game {
   ai: { t: number; walk: number; guard: number; low: boolean; react: number; crouch: number; airKick: boolean };
   aiLevel: number;                 // 0 easy, 1 medium, 2 hard — set by the turf
   cine: { who: 0 | 1; t: number } | null;   // the 4-second finisher cutscene
+  ev: string[];                    // what happened this tick ("hit:0:LP", "blocked:1", "ducked:0" …) — the tutorial reads these
+  tut: Tut | null;                 // first-play tutorial, see TUT_STEPS
+  touch: boolean;                  // phone controls — picks the wording of hints
   onOver: () => void;
 }
+interface Tut { step: number; t: number; wait: number }
 
 const newCtl = (): Ctl => ({ left: false, right: false, up: false, down: false, queue: [] });
 
@@ -259,7 +273,7 @@ function newGame(p1: FighterDef, p2: FighterDef, cpu: boolean, onOver: () => voi
     wins: [0, 0], roundWinner: -1, msg: "", frame: 0, sparks: [], proj: [],
     comboShow: [{ n: 0, t: 0 }, { n: 0, t: 0 }], hype: 0, slow: 0, shake: 0, sfx: [], dust: [], camX: (W - W / ZOOM) / 2, camY: H - H / ZOOM,
     callout: [{ text: "", t: 0 }, { text: "", t: 0 }], impacts: [],
-    ai: { t: 20, walk: 0, guard: 0, low: false, react: 0, crouch: 0, airKick: false }, aiLevel, cine: null, onOver,
+    ai: { t: 20, walk: 0, guard: 0, low: false, react: 0, crouch: 0, airKick: false }, aiLevel, cine: null, ev: [], tut: null, touch: false, onOver,
   };
   startRound(g);
   return g;
@@ -351,9 +365,11 @@ function landHit(g: Game, i: 0 | 1, o: HitOpts) {
     d.vx = o.dir * o.knockback * 0.5;
     setState(d, "blockstun", o.blockstun);
     a.sta = Math.min(100, a.sta + 1.5);
+    g.ev.push(`blocked:${1 - i}`);
     return;
   }
   a.combo++; a.sta = Math.min(100, a.sta + 6);
+  g.ev.push(`combo:${i}:${a.combo}`);
   g.comboShow[i] = { n: a.combo, t: 70 };
   g.hype = Math.min(90, g.hype + 14 + a.combo * 4);
   if (d.hp <= 0) {
@@ -373,10 +389,10 @@ function tryHit(g: Game, i: 0 | 1) {
   const dist = (d.x - a.x) * a.facing;
   if (dist < -10 || dist > m.reach + 22) return;
   if (dodging(d)) {                                             // slipped it: the move whiffs
-    a.hitDone = true; g.callout[1 - i] = { text: "EVADED!", t: 40 }; g.sfx.push("dodge"); return;
+    a.hitDone = true; g.callout[1 - i] = { text: "EVADED!", t: 40 }; g.sfx.push("dodge"); g.ev.push(`evaded:${1 - i}`); return;
   }
   if (ducking(d) && duckable(m)) {                              // ducked under it
-    a.hitDone = true; g.callout[1 - i] = { text: "DUCKED!", t: 40 }; g.sfx.push("dodge"); return;
+    a.hitDone = true; g.callout[1 - i] = { text: "DUCKED!", t: 40 }; g.sfx.push("dodge"); g.ev.push(`ducked:${1 - i}`); return;
   }
   if (invulnerable(d)) return;
   if (m.btn === "grab") {
@@ -385,7 +401,7 @@ function tryHit(g: Game, i: 0 | 1) {
     const guardBreak = d.state === "block" || d.state === "blockstun" || (d.back && canBlockState(d));
     landHit(g, i, { damage: m.damage * (guardBreak ? 1.3 : 1), hitstun: 0, blockstun: 0, hitstop: m.hitstop, knockback: m.knockback, knockdown: true,
       sx: a.x + a.facing * 40, sy: GROUND - 120, blocked: false, proj: false, dir: a.facing });
-    g.sfx.push("grab");
+    g.sfx.push("grab"); g.ev.push(`grab:${i}`);
     if (guardBreak) g.callout[i] = { text: "GUARD BREAK!", t: 50 };
     if (archOf(a.def).kind === "SUBMISSION") { d.heat = Math.max(0, d.heat - 25); if (!guardBreak) g.callout[i] = { text: "HEAT DRAINED", t: 45 }; }
     return;
@@ -399,6 +415,7 @@ function tryHit(g: Game, i: 0 | 1) {
   a.hitDone = true; a.connected = true;
   const levelOk = m.level === "low" ? d.crouch : m.level === "air" ? !d.crouch : true;
   const blocked = d.back && canBlockState(d) && levelOk;
+  if (!blocked) g.ev.push(`hit:${i}:${m.id}`);
   landHit(g, i, {
     damage: m.damage, hitstun: m.hitstun, blockstun: m.blockstun, hitstop: m.hitstop, knockback: m.knockback,
     knockdown: m.knockdown, sx: a.x + a.facing * Math.max(12, Math.min(dist, m.reach) * 0.85), sy: GROUND + hy,
@@ -413,14 +430,14 @@ function parried(g: Game, di: 0 | 1) {
   if (!a.air) { a.move = null; setState(a, "hitstun", 45); a.vx = -a.facing * 3; }
   a.combo = 0;
   g.sparks.push({ x: (a.x + d.x) / 2, y: GROUND - 150, t: 14, blocked: true });
-  g.callout[di] = { text: "PARRY!", t: 50 }; g.sfx.push("parry"); g.slow = 10;
+  g.callout[di] = { text: "PARRY!", t: 50 }; g.sfx.push("parry"); g.slow = 10; g.ev.push(`parry:${di}`);
 }
 
 function spawnProjectile(g: Game, i: 0 | 1) {
   const f = g.f[i];
   g.sfx.push("special");
   g.proj.push({ x: f.x + f.facing * 70, y: -140, dir: f.facing, owner: i, speed: 6 + f.def.speed * 0.25, dmg: f.move!.damage, spin: 0, kind: f.def.sig.kind, col: f.def.color });
-  g.callout[i] = { text: f.def.sig.name + "!", t: 60 };
+  g.callout[i] = { text: f.def.sig.name + "!", t: 60 }; g.ev.push(`special:${i}`);
 }
 
 function stepProjectiles(g: Game) {
@@ -500,6 +517,8 @@ function stepFighter(g: Game, i: 0 | 1) {
   switch (f.state) {
     case "attack": {
       const m = f.move!, fr = f.sf - 1;
+      // the chained punches step in: the first jab's knockback pushes the rival just out of a Brawler's reach otherwise
+      if (m.chainOnly && !f.air && fr < m.startup) f.x += f.facing * 3.2;
       if (m.projectile) { if (fr === m.startup) spawnProjectile(g, i); }
       else if (!f.hitDone && fr >= m.startup && fr < m.startup + m.active) tryHit(g, i);
       if (f.state === "attack" && fr >= m.startup + m.active + m.recovery - 1) { f.move = null; setState(f, f.air ? "jump" : "idle"); }
@@ -559,7 +578,7 @@ function startFinisher(g: Game, i: 0 | 1) {
   f.heat = 0; f.move = f.moves.SP; f.hitDone = true; setState(f, "attack"); f.sf = 9;   // wind-up pose, hands glowing
   g.cine = { who: i, t: 0 }; g.proj = [];
   g.ctl.forEach((c) => { c.queue.length = 0; }); g.f.forEach((x) => { x.buffer = []; });
-  g.sfx.push("finisher");
+  g.sfx.push("finisher"); g.sfx.push("say:finisher"); g.ev.push(`finisher:${i}`);
 }
 function tickCine(g: Game) {
   const c = g.cine!; c.t++;
@@ -656,6 +675,49 @@ function cpuThink(g: Game) {
   walk(ai.walk);
 }
 
+/* ---------- first-play tutorial: ten short lessons on a sparring dummy, about a minute ---------- */
+interface TutStep { text: string; keys: string; touch: string; done: (g: Game) => boolean; jab?: boolean; prep?: (g: Game) => void; timeout: number }
+const TUT_STEPS: TutStep[] = [
+  { text: "WALK UP TO YOUR RIVAL", keys: "D or →", touch: "push the stick toward them", done: (g) => Math.abs(g.f[0].x - g.f[1].x) < 150, timeout: 900 },
+  { text: "MASH PUNCH FOR THE COMBO", keys: "J · J · J", touch: "P · P · P", done: (g) => g.ev.some((e) => e === "hit:0:LP2" || e === "hit:0:LP3" || (e.startsWith("combo:0:") && Number(e.split(":")[2]) >= 2)), timeout: 900 },
+  { text: "KICK — IT KNOCKS THEM DOWN", keys: "K  (crouch + K = sweep)", touch: "K", done: (g) => g.ev.some((e) => /^hit:0:(HK|CK|JK)$/.test(e)), timeout: 720 },
+  { text: "BLOCK THE JAB: HOLD BACK (AWAY FROM YOUR RIVAL)", keys: "hold A or ←", touch: "hold the stick away from them", done: (g) => g.ev.includes("blocked:0"), jab: true, timeout: 720 },
+  { text: "DUCK UNDER THE NEXT JAB", keys: "O", touch: "swipe ↓ on the arena", done: (g) => g.ev.includes("ducked:0"), jab: true, timeout: 720 },
+  { text: "DODGE THE NEXT JAB", keys: "U", touch: "swipe ← or → on the arena", done: (g) => g.ev.includes("evaded:0"), jab: true, timeout: 720 },
+  { text: "PARRY: PRESS JUST AS THE JAB LANDS", keys: "Space", touch: "two-finger tap on the arena", done: (g) => g.ev.includes("parry:0"), jab: true, timeout: 720 },
+  { text: "SPECIAL — YOUR BARS ARE FULL", keys: "L", touch: "S", done: (g) => g.ev.includes("special:0"), prep: (g) => { g.f[0].sta = 100; }, timeout: 600 },
+  { text: "GRAB AND SLAM — IT BREAKS A BLOCK", keys: "I", touch: "G", done: (g) => g.ev.includes("grab:0"), timeout: 600 },
+  { text: "YOUR HEAT IS FULL — HIT THE FINISHER", keys: "L", touch: "S", done: (g) => g.ev.includes("finisher:0"), prep: (g) => { g.f[0].heat = 100; }, timeout: 600 },
+];
+function startTutorial(g: Game) {
+  g.tut = { step: 0, t: 0, wait: 0 };
+  g.phase = "fight"; g.msg = ""; g.timer = 99 * 60;
+}
+function finishTutorial(g: Game) {
+  g.tut = null; store.set("tutorial-done", true);
+  g.round = 1; g.wins = [0, 0]; g.msg = "";
+  startRound(g);
+}
+function tickTutorial(g: Game) {
+  const t = g.tut!, p = g.f[0], d = g.f[1], c = g.ctl[1];
+  g.timer = 99 * 60;                                                  // the clock waits
+  p.hp = Math.max(p.hp, 60); d.lag = d.hp = Math.max(d.hp, 50);      // nobody gets knocked out in class
+  const step = TUT_STEPS[t.step];
+  t.t++;
+  if (t.t === 1) { step.prep?.(g); g.sfx.push("round"); } else if (t.t % 30 === 0) step.prep?.(g);
+  // the sparring dummy: walks into range, stands there, and only jabs when the lesson asks for it
+  c.left = c.right = c.up = c.down = false;
+  const dist = Math.abs(d.x - p.x), toward = p.x > d.x ? 1 : -1;
+  if (t.step > 0 && dist > 120 && isFree(d)) { if (toward > 0) c.right = true; else c.left = true; }
+  if (step.jab && t.t % 100 === 40 && isFree(d) && dist < 130) c.queue.push("punch");
+  if (t.wait > 0) {
+    if (--t.wait === 0) { t.step++; t.t = 0; if (t.step >= TUT_STEPS.length) finishTutorial(g); }
+    return;
+  }
+  if (step.done(g)) { t.wait = 50; g.callout[0] = { text: "NICE!", t: 50 }; g.sfx.push("fight"); }
+  else if (t.t >= step.timeout) { t.wait = 50; g.callout[0] = { text: "WE'LL PRACTISE THAT LATER", t: 60 }; }
+}
+
 function endRound(g: Game, winner: number, label: string) {
   g.phase = "roundEnd"; g.pf = 0; g.msg = label; g.roundWinner = winner; g.proj = [];
   if (winner >= 0) g.wins[winner as 0 | 1]++;
@@ -670,8 +732,10 @@ function tick(g: Game) {
     g.callout.forEach((c) => { if (c.t > 0) c.t--; });
     return;
   }
-  if (g.cpu) cpuThink(g);
+  if (g.cpu && !g.tut) cpuThink(g);
   stepFighter(g, 0); stepFighter(g, 1); stepProjectiles(g); keepApart(g);
+  if (g.tut) tickTutorial(g);
+  g.ev.length = 0;
 
   g.sparks.forEach((s) => s.t--); g.sparks = g.sparks.filter((s) => s.t > 0);
   g.dust.forEach((p) => { p.t++; p.x += p.vx; p.y += p.vy; p.vx *= 0.93; }); g.dust = g.dust.filter((p) => p.t < p.life);
@@ -681,17 +745,19 @@ function tick(g: Game) {
   g.hype = Math.max(0, g.hype - 0.4);
   if (g.shake > 0) g.shake--;
 
+  if (g.tut) return;                                          // the tutorial runs its own clock (see tickTutorial)
   switch (g.phase) {
     case "intro":
       g.pf++;
-      if (g.pf === 1) g.sfx.push("round"); if (g.pf === 70) g.sfx.push("fight");
+      if (g.pf === 1) { g.sfx.push("round"); g.sfx.push(`say:${g.round >= 3 ? "final" : g.round === 2 ? "round2" : "round1"}`); }
+      if (g.pf === 70) { g.sfx.push("fight"); g.sfx.push("say:fight"); }
       g.msg = g.pf < 70 ? `ROUND ${g.round}` : "FIGHT!";
       if (g.pf >= 105) { g.phase = "fight"; g.msg = ""; }
       break;
     case "fight": {
       g.timer--;
       const down = g.f.findIndex((f) => f.hp <= 0);
-      if (down >= 0) endRound(g, 1 - down, "K.O.");
+      if (down >= 0) { endRound(g, 1 - down, "K.O."); g.sfx.push("say:ko"); }
       else if (g.timer <= 0) {
         const a = g.f[0].hp, b = g.f[1].hp;
         endRound(g, Math.abs(a - b) < 0.01 ? -1 : a > b ? 0 : 1, "TIME");
@@ -705,6 +771,7 @@ function tick(g: Game) {
         else {
           const w = g.f[g.roundWinner as 0 | 1];
           g.msg = w.hp >= 100 ? "PERFECT" : `${w.def.name.toUpperCase()} WINS`;
+          g.sfx.push(w.hp >= 100 ? "say:perfect" : `say:wins-${w.def.id}`);
           if (isFree(w)) setState(w, "win");
         }
       }
@@ -872,11 +939,36 @@ const LOCATIONS: { id: LocationId; name: string; blurb: string; difficulty: Diff
   { id: "subway", name: "Subway Station", blurb: "34th Street platform after the last train", difficulty: "MEDIUM", credBonus: 250 },
 ];
 const AI_LEVEL: Record<Difficulty, number> = { EASY: 0, MEDIUM: 1, HARD: 2 };
+const BOUNTY: Record<Difficulty, number> = { EASY: 100, MEDIUM: 250, HARD: 500 };     // Street Cred for winning the match
+const DIFFICULTIES: Difficulty[] = ["EASY", "MEDIUM", "HARD"];
 
-/** Street Cred: earned by beating the computer, kept in this browser. */
+/** What Street Cred buys. HARD TURF is the one that changes the game; the other two are flex. */
+type UnlockId = "goldtag" | "altcolors" | "hardturf";
+const UNLOCKS: { id: UnlockId; name: string; cost: number; blurb: string }[] = [
+  { id: "goldtag",   name: "GOLD NAME PLATE", cost: 500,  blurb: "Your name and P1 tag in gold chrome on the fight HUD." },
+  { id: "altcolors", name: "ALT COLORS",      cost: 1500, blurb: "A second colour set for your fighter — glow, special, callouts and HUD. Switch it on and off here." },
+  { id: "hardturf",  name: "HARD TURF",       cost: 2500, blurb: "HARD difficulty on every location: the sharpest computer, and a +500 cred bounty per win." },
+];
+const ALT_COLOR: Record<string, string> = { jpeez: "#4FD1FF", jahballa: "#FF3B5C", stockz: "#39E075", zoe: "#B76BFF", katbot: "#C6FF3A", hammad: "#FF7A1F" };
+const withAlt = (d: FighterDef): FighterDef => ({ ...d, color: ALT_COLOR[d.id] ?? d.color });
+
+/** Street Cred: earned by beating the computer, spent on unlocks, kept in this browser. */
 const Cred = {
-  get(): number { try { const v = Number(localStorage.getItem("pmg-cred")); return Number.isFinite(v) && v > 0 ? v : 1200; } catch { return 1200; } },
-  add(n: number): number { const v = this.get() + n; try { localStorage.setItem("pmg-cred", String(v)); } catch { /* private mode */ } return v; },
+  get(): number { try { const v = Number(localStorage.getItem("pmg-cred")); return Number.isFinite(v) && v >= 0 ? v : 1200; } catch { return 1200; } },
+  set(v: number) { try { localStorage.setItem("pmg-cred", String(v)); } catch { /* private mode */ } },
+  add(n: number): number { const v = this.get() + n; this.set(v); return v; },
+  owned(): Set<UnlockId> { try { return new Set(JSON.parse(localStorage.getItem("pmg-unlocks") || "[]") as UnlockId[]); } catch { return new Set(); } },
+  has(id: UnlockId): boolean { return this.owned().has(id); },
+  /** Buy an unlock: false if it costs more than the balance. */
+  buy(id: UnlockId): boolean {
+    const u = UNLOCKS.find((x) => x.id === id); if (!u || this.has(id)) return false;
+    const bal = this.get(); if (bal < u.cost) return false;
+    this.set(bal - u.cost);
+    const o = this.owned(); o.add(id);
+    try { localStorage.setItem("pmg-unlocks", JSON.stringify([...o])); } catch { /* private mode */ }
+    return true;
+  },
+  altOn(): boolean { return this.has("altcolors") && store.get("altcolors", true); },
 };
 
 interface RatInst {
@@ -1138,9 +1230,10 @@ function makeRig(asset: Asset, color: string): Rig3 {
   // readability: a cool rim light just behind each fighter's shoulders, so the body outline reads against the dark set
   const rim = new THREE.PointLight(0x9fc4ff, 6, 4.5, 1.6); rim.position.set(0, 1.7, -0.9); root.add(rim);
   root.updateMatrixWorld(true);
-  const footRest = Math.min(footY(bones.LeftFoot), footY(bones.RightFoot));
+  const footRest = Math.min(footY(bones.LeftFoot), footY(bones.RightFoot));   // measured in the bind pose, before the clip runs
   const hipsRest = hipsInModel(model, bones.Hips);
-  return { root, model, mixer, bones, glow, stanceW: 0, hipsRest, footRest: Number.isFinite(footRest) ? footRest : 0.08, anatomy: new CharacterAnatomyController(), idle };
+  mixer.update(0.4 + Math.random() * 1.2);                      // prime the clip: no bind-pose (T-pose) frame, and the two fighters don't breathe in sync
+  return { root, model, mixer, bones, glow, stanceW: 1, hipsRest, footRest: Number.isFinite(footRest) ? footRest : 0.08, anatomy: new CharacterAnatomyController(), idle };
 }
 
 const _f = new THREE.Vector3();
@@ -1674,6 +1767,7 @@ function drawCinematic(c: CanvasRenderingContext2D, g: Game) {
   outlined(c, small, W / 2, y + size * 0.5 + 22, 16, f.def.color, "center", 0.12);
 }
 
+let GOLD_TAG = false;                                              // refreshed when a fight starts (Cred.has reads storage)
 function drawHud(c: CanvasRenderingContext2D, g: Game, touch: boolean, project: (x: number, y: number, z: number) => [number, number], pics: (HTMLImageElement | null)[], compact = false) {
   // compact = a phone: the arena is only ~600 px wide there, so text and bars draw about a third bigger
   const k = compact ? 1.35 : 1;
@@ -1716,7 +1810,8 @@ function drawHud(c: CanvasRenderingContext2D, g: Game, touch: boolean, project: 
 
     // name plate + player tag
     const ny = BY + BH + 20 * k, nameX = left ? bx + 4 : bx + BW - 4;
-    outlined(c, f.def.name.toUpperCase(), nameX, ny, 20 * k, "#ffffff", left ? "left" : "right");
+    const goldName = left && GOLD_TAG;                                            // the GOLD NAME PLATE unlock
+    outlined(c, f.def.name.toUpperCase(), nameX, ny, 20 * k, goldName ? gold(c, ny - 10 * k, ny + 10 * k) : "#ffffff", left ? "left" : "right");
     c.font = `${20 * k}px ${HUDF}`; const nw = c.measureText(f.def.name.toUpperCase()).width;
     c.fillStyle = f.def.color; c.fillRect(left ? nameX : nameX - nw, ny + 13 * k, nw, 3);
     outlined(c, f.tag, left ? nameX + nw + 14 : nameX - nw - 14, ny + 1, 12 * k, "#ffd23f", left ? "left" : "right");
@@ -1788,7 +1883,23 @@ function drawHud(c: CanvasRenderingContext2D, g: Game, touch: boolean, project: 
 
   for (const s of g.sparks) if (s.blocked) { const [bx, by] = project(X3(s.x), (GROUND - s.y) * U + 0.35, 0.4); outlined(c, "BLOCK", bx, by, 14 * k, "#bfe0ff"); }
 
-  if (g.round === 1 && g.frame < 420) {
+  // tutorial lesson card
+  if (g.tut) {
+    const st = TUT_STEPS[g.tut.step];
+    if (st) {
+      const y = 150 * k, hint = touch ? st.touch : st.keys;
+      c.save(); c.fillStyle = "rgba(0,0,0,0.62)";
+      c.beginPath(); c.moveTo(0, y - 34 * k); c.lineTo(W, y - 40 * k); c.lineTo(W, y + 36 * k); c.lineTo(0, y + 42 * k); c.closePath(); c.fill();
+      c.fillStyle = "#3AA0FF"; c.fillRect(0, y + 42 * k - 3, W, 3); c.restore();
+      outlined(c, `TUTORIAL ${g.tut.step + 1} / ${TUT_STEPS.length}`, W / 2, y - 20 * k, 11 * k, "#9fc4ff", "center", 0.1);
+      outlined(c, st.text, W / 2, y + 2 * k, (st.text.length > 34 ? 17 : 21) * k, "#ffffff", "center", 0.15);
+      outlined(c, hint.toUpperCase(), W / 2, y + 24 * k, 13 * k, gold(c, y + 16 * k, y + 32 * k), "center", 0.1);
+      // progress ticks
+      for (let i = 0; i < TUT_STEPS.length; i++) { c.fillStyle = i < g.tut.step ? "#ffc21a" : i === g.tut.step ? "#ffffff" : "#2a2e36"; c.fillRect(W / 2 - TUT_STEPS.length * 7 + i * 14, y + 36 * k, 10, 3); }
+    }
+  }
+
+  if (g.round === 1 && g.frame < 420 && !g.tut) {
     outlined(c, touch ? "HOLD THE STICK AWAY FROM YOUR RIVAL TO BLOCK" : "HOLD BACK (AWAY FROM YOUR RIVAL) TO BLOCK", W / 2, H - 92, 13 * k, "#ffcf7a", "center", 0.1);
     if (touch) outlined(c, "SWIPE ↓ DUCK · SWIPE ← → DODGE · TWO-FINGER TAP PARRY", W / 2, H - 92 + 20 * k, 12 * k, "#bfe0ff", "center", 0.1);
   }
@@ -1993,6 +2104,32 @@ const KEYS_P2: Record<string, Action> = {
   Semicolon: "grab", Quote: "dodge", Enter: "parry", KeyM: "duck", Numpad4: "grab", Numpad5: "dodge", Numpad6: "parry", Numpad0: "duck",
 };
 type Dir = { left: boolean; right: boolean; up: boolean; down: boolean };
+const noDir = (): Dir => ({ left: false, right: false, up: false, down: false });
+
+/* ---------- rebindable keys (saved in this browser) ---------- */
+const ACTIONS: Action[] = ["left", "right", "up", "down", "punch", "kick", "special", "grab", "dodge", "duck", "parry"];
+const ACTION_LABEL: Record<Action, string> = { left: "Walk left", right: "Walk right", up: "Jump", down: "Crouch", punch: "Punch", kick: "Kick", special: "Special / finisher", grab: "Grab", dodge: "Dodge", duck: "Duck", parry: "Parry" };
+const DEFAULT_KEYS: [Record<string, Action>, Record<string, Action>] = [KEYS_P1, KEYS_P2];
+function loadKeys(p: 0 | 1): Record<string, Action> {
+  try { const v = localStorage.getItem("pmg-keys-" + p); if (v) { const o = JSON.parse(v); if (o && typeof o === "object") return o as Record<string, Action>; } } catch { /* private mode */ }
+  return { ...DEFAULT_KEYS[p] };
+}
+/** The live maps — the fight reads these every key press, so a rebind takes effect at once. */
+const KEYMAPS: [Record<string, Action>, Record<string, Action>] = [loadKeys(0), loadKeys(1)];
+function saveKeys(p: 0 | 1) { try { localStorage.setItem("pmg-keys-" + p, JSON.stringify(KEYMAPS[p])); } catch { /* private mode */ } }
+function bindKey(p: 0 | 1, action: Action, code: string) {
+  const m = KEYMAPS[p];
+  for (const k of Object.keys(m)) if (m[k] === action || k === code) delete m[k];     // one key per action; a key does one thing
+  m[code] = action; saveKeys(p);
+}
+function resetKeys(p: 0 | 1) { const m = KEYMAPS[p]; for (const k of Object.keys(m)) delete m[k]; Object.assign(m, DEFAULT_KEYS[p]); saveKeys(p); }
+const keysFor = (p: 0 | 1, action: Action) => Object.keys(KEYMAPS[p]).filter((k) => KEYMAPS[p][k] === action);
+const KEY_NAMES: Record<string, string> = { ArrowLeft: "←", ArrowRight: "→", ArrowUp: "↑", ArrowDown: "↓", Space: "Space", Enter: "Enter", Comma: ",", Period: ".", Slash: "/", Semicolon: ";", Quote: "'", Backquote: "`", Minus: "-", Equal: "=", BracketLeft: "[", BracketRight: "]", Backslash: "\\", ShiftLeft: "L Shift", ShiftRight: "R Shift", ControlLeft: "L Ctrl", ControlRight: "R Ctrl", AltLeft: "L Alt", AltRight: "R Alt", Tab: "Tab", Backspace: "Bksp", CapsLock: "Caps" };
+function keyName(code: string) { return KEY_NAMES[code] ?? code.replace(/^Key/, "").replace(/^Digit/, "").replace(/^Numpad/, "Num "); }
+
+/* ---------- gamepads (standard mapping: PlayStation / Xbox layouts) ---------- */
+const PAD_BTN: Record<number, Btn> = { 2: "punch", 0: "kick", 3: "special", 1: "grab", 4: "dodge", 5: "parry", 6: "duck", 7: "duck" };
+const PAD_HINT = "□ / X punch · ✕ / A kick · △ / Y special · ○ / B grab · L1 dodge · R1 parry · L2 / R2 duck · stick or d-pad move · Start pause";
 
 /* ================================================================== */
 /*  REACT                                                              */
@@ -2065,8 +2202,7 @@ const CSS = `
 .pmg-loc img,.pmg-loc .ph{aspect-ratio:16/9 !important}
 .pmg-loc h3{font-size:24px}
 .pmg-canvas{display:block;touch-action:none;background:#000;border:3px solid #000;box-shadow:0 0 0 3px #6b7380,8px 8px 0 3px #000}
-.pmg-top{position:absolute;top:15.2%;left:50%;transform:translateX(-50%);display:flex;gap:6px;z-index:3}
-.pmg-stage.compact .pmg-top{top:auto;bottom:2.5%}
+.pmg-top{position:absolute;bottom:2.5%;left:50%;transform:translateX(-50%);display:flex;gap:6px;z-index:3}
 @media (pointer:coarse) and (orientation:portrait){.pmg{justify-content:flex-start;padding-top:10px}}
 .pmg-top .pmg-mini{font-size:clamp(9px,1.3vw,12px);padding:clamp(3px,.6vw,6px) clamp(8px,1.2vw,14px);letter-spacing:1px}
 .pmg-modal{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;padding:16px}
@@ -2084,6 +2220,18 @@ const CSS = `
 .pmg-ctl b{font:13px ${HUDF};color:#ffcf7a;letter-spacing:1px;text-align:right}
 .pmg-ctl h4{grid-column:1/-1;margin:8px 0 0;font:14px ${HUDF};color:#fff;letter-spacing:2px;border-bottom:1px solid #2f343d;padding-bottom:4px}
 .pmg-hint{color:#c9c2b6;font-size:13px;margin-top:10px;text-align:center}
+.pmg-keybtn{appearance:none;background:#15171c;border:2px solid #c9d1dc;border-radius:3px;padding:2px 8px;font:12px ${HUDF};color:#fff;cursor:pointer;margin:0 4px 2px 0;min-width:34px}
+.pmg-keybtn:hover{border-color:#ffc21a}
+.pmg-keybtn.listening{background:#ffc21a;color:#000;border-color:#000;animation:pmgblink 1s steps(1) infinite}
+.pmg-ctl .pmg-alt,.pmg-ctl .pmg-note{color:#9aa3b0;font-size:12px;margin-left:4px}
+.pmg-unlock{display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center;padding:10px 2px;border-bottom:1px solid #2f343d}
+.pmg-unlock h5{margin:0;font:15px ${HUDF};letter-spacing:1px;color:#fff}
+.pmg-unlock p{margin:2px 0 0;font-size:12.5px;color:#d9dde6;line-height:1.4}
+.pmg-unlock .cost{font:13px ${HUDF};color:#ffcf7a;letter-spacing:1px}
+.pmg-unlock .pmg-toggle{grid-row:1/3}
+.pmg-diff{display:flex;gap:8px;justify-content:center;margin:0 0 16px;flex-wrap:wrap}
+.pmg-diff .pmg-toggle{min-width:120px}
+.pmg-diff .pmg-toggle:disabled{opacity:.55;cursor:not-allowed}
 .pmg-link{appearance:none;background:none;border:0;color:#9aa3b0;font:12px ${HUDF};letter-spacing:2px;cursor:pointer;text-decoration:underline;padding:6px;margin-top:8px}
 .pmg-link:hover{color:#fff}
 .pmg-pad{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:14px;width:100%;max-width:100%;padding:0 4px}
@@ -2199,8 +2347,25 @@ function GestureLayer({ onGesture }: { onGesture: (b: Btn) => void }) {
 }
 
 /** The controls, laid out in one panel (opened with the ? button, also inside the pause menu). */
+const ACTION_NOTE: Partial<Record<Action, string>> = {
+  left: "hold away from your rival to block", punch: "tap three times for the combo", kick: "roundhouse; crouching = sweep",
+  special: "needs 3 bars · with full HEAT = the finisher", grab: "breaks a block", duck: "under punches and specials", parry: "the first 8 frames catch a strike",
+};
+/** The controls, laid out in one panel (opened with the ? button, also inside the pause menu).
+ *  On a keyboard every key is a button: click it, press the new key, done. Saved in this browser. */
 function ControlsHelp({ touch, cpu }: { touch: boolean; cpu: boolean }) {
-  const K = ({ k }: { k: string }) => <kbd>{k}</kbd>;
+  const [listening, setListening] = useState<{ p: 0 | 1; a: Action } | null>(null);
+  const [, bump] = useState(0);
+  useEffect(() => {
+    if (!listening) return;
+    const onKey = (e: KeyboardEvent) => {
+      e.preventDefault(); e.stopPropagation();
+      if (e.code !== "Escape") bindKey(listening.p, listening.a, e.code);
+      setListening(null); bump((n) => n + 1);
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [listening]);
   if (touch) return (
     <div className="pmg-ctl">
       <h4>MOVE</h4>
@@ -2214,31 +2379,34 @@ function ControlsHelp({ touch, cpu }: { touch: boolean; cpu: boolean }) {
       <b>SWIPE ↓</b><span>Duck under punches, high kicks and specials</span>
       <b>SWIPE ← →</b><span>Dodge: sidestep anything except a grab</span>
       <b>2 FINGERS</b><span>Tap with two fingers to parry a strike the moment it lands</span>
+      <h4>CONTROLLER</h4>
+      <b>PAD</b><span>{PAD_HINT}</span>
     </div>
   );
+  const rows = (p: 0 | 1) => ACTIONS.map((a) => (
+    <span key={a} style={{ display: "contents" }}>
+      <b>{ACTION_LABEL[a].toUpperCase()}</b>
+      <span>
+        {keysFor(p, a).map((k) => (
+          <button key={k} className={`pmg-keybtn${listening?.p === p && listening.a === a ? " listening" : ""}`} onClick={() => setListening({ p, a })} aria-label={`${ACTION_LABEL[a]}: ${keyName(k)}. Click to change`}>
+            {listening?.p === p && listening.a === a ? "PRESS A KEY…" : keyName(k)}
+          </button>
+        ))}
+        {keysFor(p, a).length === 0 && <button className={`pmg-keybtn${listening?.p === p && listening.a === a ? " listening" : ""}`} onClick={() => setListening({ p, a })}>{listening?.p === p && listening.a === a ? "PRESS A KEY…" : "SET"}</button>}
+        {p === 0 && cpu && keysFor(1, a).length > 0 && <small className="pmg-alt">or {keysFor(1, a).map(keyName).join(" / ")}</small>}
+        {ACTION_NOTE[a] && <small className="pmg-note">— {ACTION_NOTE[a]}</small>}
+      </span>
+    </span>
+  ));
   return (
     <div className="pmg-ctl">
-      <h4>{cpu ? "MOVE" : "PLAYER 1 · MOVE"}</h4>
-      <b>WALK</b><span><K k="A" /> <K k="D" />{cpu && <> or <K k="←" /> <K k="→" /></>} · hold away from your rival to block</span>
-      <b>JUMP</b><span><K k="W" />{cpu && <> or <K k="↑" /></>}</span>
-      <b>CROUCH</b><span><K k="S" />{cpu && <> or <K k="↓" /></>}</span>
-      <h4>{cpu ? "ATTACK" : "PLAYER 1 · ATTACK"}</h4>
-      <b>PUNCH</b><span><K k="J" /> — tap three times for the combo</span>
-      <b>KICK</b><span><K k="K" /> — roundhouse; crouching = sweep</span>
-      <b>SPECIAL</b><span><K k="L" /> (3 bars) or <K k="↓" /> <K k="→" /> <K k="J" /> · with full HEAT = finisher</span>
-      <b>GRAB</b><span><K k="I" /> — breaks a block</span>
-      <h4>{cpu ? "DEFEND" : "PLAYER 1 · DEFEND"}</h4>
-      <b>DODGE</b><span><K k="U" /></span>
-      <b>DUCK</b><span><K k="O" /> — under punches and specials</span>
-      <b>PARRY</b><span><K k="Space" /> — the first 8 frames catch a strike</span>
-      {!cpu && <>
-        <h4>PLAYER 2</h4>
-        <b>MOVE</b><span><K k="←" /> <K k="→" /> walk · <K k="↑" /> jump · <K k="↓" /> crouch</span>
-        <b>ATTACK</b><span><K k="," /> punch · <K k="." /> kick · <K k="/" /> special · <K k=";" /> grab</span>
-        <b>DEFEND</b><span><K k="'" /> dodge · <K k="M" /> duck · <K k="Enter" /> parry</span>
-      </>}
+      <h4>{cpu ? "KEYBOARD — CLICK A KEY TO CHANGE IT" : "PLAYER 1 — CLICK A KEY TO CHANGE IT"}</h4>
+      {rows(0)}
+      {!cpu && <><h4>PLAYER 2</h4>{rows(1)}</>}
       <h4>GAME</h4>
-      <b>PAUSE</b><span><K k="P" /> or <K k="Esc" /></span>
+      <b>PAUSE</b><span><kbd>P</kbd> or <kbd>Esc</kbd> · <small className="pmg-note">special also: <kbd>↓</kbd> <kbd>→</kbd> + punch</small></span>
+      <b>CONTROLLER</b><span><small className="pmg-note">{PAD_HINT}</small></span>
+      <b></b><span><button className="pmg-mini" onClick={() => { resetKeys(0); resetKeys(1); bump((n) => n + 1); }}>RESET TO DEFAULT KEYS</button></span>
     </div>
   );
 }
@@ -2391,10 +2559,55 @@ const Sound = {
   },
 };
 
+/** Voice lines: short mp3 clips, one <audio> each, cached. Follows the SOUND FX switch. */
+const Voice = {
+  cache: new Map<string, HTMLAudioElement>(),
+  say(name: string, vol = 0.9) {
+    if (!Sound.fxOn) return;
+    if (!voiceUrl(name)) return;
+    let a = this.cache.get(name);
+    if (!a) { a = new Audio(voiceUrl(name)); a.preload = "auto"; a.addEventListener("error", () => a!.dataset.missing = "1"); this.cache.set(name, a); }
+    if (a.dataset.missing) return;
+    a.volume = vol; a.currentTime = 0; a.play().catch(() => { /* blocked until a tap, or no clip */ });
+  },
+  preload(names: string[]) { for (const n of names) if (voiceUrl(n) && !this.cache.has(n)) { const a = new Audio(voiceUrl(n)); a.preload = "auto"; a.addEventListener("error", () => a.dataset.missing = "1"); this.cache.set(n, a); } },
+};
+
 function useSound() {
   const [, set] = useState(0);
   useEffect(() => { const l = () => set((n) => n + 1); Sound.listeners.add(l); return () => { Sound.listeners.delete(l); }; }, []);
   return Sound;
+}
+
+/** Street Cred shop: what the cred buys. */
+function UnlocksPanel({ onClose }: { onClose: () => void }) {
+  const [, bump] = useState(0);
+  const bal = Cred.get(), owned = Cred.owned();
+  return (
+    <div className="pmg-modal" role="dialog" aria-label="Unlocks">
+      <div className="pmg-panel">
+        <h2 className="pmg-h2" style={{ margin: "0 0 4px" }}>UNLOCKS</h2>
+        <p className="pmg-cred" style={{ margin: "0 0 10px" }}>STREET CRED · {bal.toLocaleString()}</p>
+        <div className="pmg-col">
+          {UNLOCKS.map((u) => {
+            const has = owned.has(u.id), can = bal >= u.cost;
+            return (
+              <div className="pmg-unlock" key={u.id}>
+                <h5>{u.name}</h5>
+                {has && u.id === "altcolors"
+                  ? <button className="pmg-toggle" aria-pressed={Cred.altOn()} onClick={() => { Sound.unlock(); store.set("altcolors", !Cred.altOn()); bump((n) => n + 1); }}>{Cred.altOn() ? "ON" : "OFF"}</button>
+                  : <button className="pmg-toggle" aria-pressed={has} disabled={has || !can} onClick={() => { Sound.unlock(); if (Cred.buy(u.id)) { Sound.play("round"); bump((n) => n + 1); } }}>{has ? "OWNED" : can ? "BUY" : "LOCKED"}</button>}
+                <p>{u.blurb}</p>
+                <span className="cost">{has ? "UNLOCKED" : `${u.cost.toLocaleString()} CRED`}</span>
+              </div>
+            );
+          })}
+          <p className="pmg-hint" style={{ margin: "4px 0 0" }}>Earn cred by beating the computer: EASY +100 · MEDIUM +250 · HARD +500 per match.</p>
+          <button className="pmg-btn ghost" onClick={onClose}>BACK</button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 /** Settings: music, sound effects, next song. Opened from the MENU button (fight) or SETTINGS (home screen). */
@@ -2595,7 +2808,9 @@ export default function PMGFight3D({ onExit }: { onExit?: () => void } = {}) {
   const [round, setRound] = useState(0);
   const [portraits, setPortraits] = useState<Record<string, string> | null>(null);
   const [settings, setSettings] = useState(false);
+  const [unlocks, setUnlocks] = useState(false);
   const [quickPick, setQuickPick] = useState(false);          // SELECT CHARACTER: you pick, the rival and the turf are random
+  const [diff, setDiff] = useState<Difficulty>("EASY");
   const isTouch = useIsTouch();
 
   useEffect(() => { if (screen !== "intro" && !portraits) renderPortraits().then(setPortraits); }, [screen, portraits]);
@@ -2606,10 +2821,15 @@ export default function PMGFight3D({ onExit }: { onExit?: () => void } = {}) {
   /** QUICK FIGHT: a random fighter against a random rival on a random turf — one tap from the title to the block. */
   const quickFight = (a = Math.floor(Math.random() * ROSTER.length)) => {
     let b = Math.floor(Math.random() * (ROSTER.length - 1)); if (b >= a) b++;
-    setMode("cpu"); setPicks([a, b]); setLoc(LOCATIONS[Math.floor(Math.random() * LOCATIONS.length)].id);
+    const pool = DIFFICULTIES.filter((d) => d !== "HARD" || Cred.has("hardturf"));
+    setMode("cpu"); setPicks([a, b]); setLoc(LOCATIONS[Math.floor(Math.random() * LOCATIONS.length)].id); setDiff(pool[Math.floor(Math.random() * pool.length)]);
     setQuickPick(false); setRound((r) => r + 1); setScreen("fight");
   };
   useEffect(() => { if (screen === "stage" && !stagePics) renderStagePreviews().then(setStagePics); }, [screen, stagePics]);
+
+  // alt colours (an unlock) recolour player 1; memoised so the fight doesn't restart on every render
+  const altOn = Cred.altOn();
+  const fighters = useMemo(() => picks.length === 2 ? [altOn ? withAlt(ROSTER[picks[0]]) : ROSTER[picks[0]], ROSTER[picks[1]]] : [], [picks, altOn]);
 
   const choose = (i: number) => {
     if (quickPick) { quickFight(i); return; }
@@ -2624,6 +2844,7 @@ export default function PMGFight3D({ onExit }: { onExit?: () => void } = {}) {
       <style>{CSS}</style>
       {screen === "intro" && <SprayIntro onDone={() => setScreen("menu")} />}
       {settings && <SettingsPanel onClose={() => setSettings(false)} />}
+      {unlocks && <UnlocksPanel onClose={() => setUnlocks(false)} />}
 
       {screen === "menu" && (
         <>
@@ -2647,6 +2868,7 @@ export default function PMGFight3D({ onExit }: { onExit?: () => void } = {}) {
             <button className="pmg-btn ghost" onClick={() => { setMode("2p"); setPicks([]); setQuickPick(false); setScreen("select"); }}>
               2 PLAYERS<small>Two people, one keyboard</small>
             </button>
+            <button className="pmg-btn ghost" onClick={() => setUnlocks(true)}>UNLOCKS<small>Spend your Street Cred · {Cred.owned().size} of {UNLOCKS.length} owned</small></button>
             <button className="pmg-btn ghost" onClick={() => setSettings(true)}>SETTINGS<small>Music · sound effects · next song</small></button>
           </div>
           <button className="pmg-link" onClick={() => setScreen("intro")}>REPLAY INTRO</button>
@@ -2690,13 +2912,21 @@ export default function PMGFight3D({ onExit }: { onExit?: () => void } = {}) {
           <h1 className="pmg-h2">SELECT YOUR TURF</h1>
           <p className="pmg-sub">{ROSTER[picks[0]].name} vs {ROSTER[picks[1]].name}. Where does it go down?</p>
           <p className="pmg-cred">CRED BALANCE · {Cred.get().toLocaleString()}</p>
+          {mode === "cpu" && (
+            <div className="pmg-diff" role="group" aria-label="Difficulty">
+              {DIFFICULTIES.map((d) => {
+                const locked = d === "HARD" && !Cred.has("hardturf");
+                return <button key={d} className="pmg-toggle" aria-pressed={diff === d} disabled={locked} title={locked ? "Unlock HARD TURF with Street Cred" : undefined} onClick={() => setDiff(d)}>{d}{locked ? " 🔒" : ` · +${BOUNTY[d]}`}</button>;
+              })}
+            </div>
+          )}
           <div className="pmg-locs">
             {LOCATIONS.map((l) => (
               <button key={l.id} className="pmg-card pmg-loc" onClick={() => { setLoc(l.id); setRound((r) => r + 1); setScreen("fight"); }}>
                 {stagePics?.[l.id] ? <img src={stagePics[l.id]} alt={`${l.name} preview`} /> : <div className="ph">{stagePics ? "PREVIEW UNAVAILABLE" : "LOADING…"}</div>}
                 <h3>{l.name.toUpperCase()}</h3>
                 <div className="meta">{l.blurb}</div>
-                <div className="turf"><span className={`diff ${l.difficulty.toLowerCase()}`}>{l.difficulty}</span>{mode === "cpu" ? <span>BOUNTY +{l.credBonus} CRED</span> : <span>2-player: no cred</span>}</div>
+                <div className="turf"><span className={`diff ${(mode === "cpu" ? diff : l.difficulty).toLowerCase()}`}>{mode === "cpu" ? diff : l.difficulty}</span>{mode === "cpu" ? <span>BOUNTY +{BOUNTY[diff]} CRED</span> : <span>2-player: no cred</span>}</div>
               </button>
             ))}
           </div>
@@ -2709,7 +2939,7 @@ export default function PMGFight3D({ onExit }: { onExit?: () => void } = {}) {
       {screen === "fight" && picks.length === 2 && (
         <FightView3D
           key={round}
-          p1={ROSTER[picks[0]]} p2={ROSTER[picks[1]]} cpu={mode === "cpu"} isTouch={isTouch} loc={loc}
+          p1={fighters[0]} p2={fighters[1]} cpu={mode === "cpu"} isTouch={isTouch} loc={loc} diff={mode === "cpu" ? diff : "MEDIUM"}
           onRematch={() => setRound((r) => r + 1)}
           onChange={() => { setPicks([]); setScreen("select"); }}
           onStage={() => setScreen("stage")}
@@ -2721,10 +2951,10 @@ export default function PMGFight3D({ onExit }: { onExit?: () => void } = {}) {
 }
 
 function FightView3D(props: {
-  p1: FighterDef; p2: FighterDef; cpu: boolean; isTouch: boolean; loc: LocationId;
+  p1: FighterDef; p2: FighterDef; cpu: boolean; isTouch: boolean; loc: LocationId; diff: Difficulty;
   onRematch: () => void; onChange: () => void; onMenu: () => void; onStage: () => void;
 }) {
-  const { p1, p2, cpu, isTouch, loc } = props;
+  const { p1, p2, cpu, isTouch, loc, diff } = props;
   const glRef = useRef<HTMLCanvasElement>(null);
   const hudRef = useRef<HTMLCanvasElement>(null);
   const gameRef = useRef<Game | null>(null);
@@ -2737,6 +2967,10 @@ function FightView3D(props: {
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [paused, setPaused] = useState(false);
   const [help, setHelp] = useState(false);
+  const [tutorial, setTutorial] = useState(false);
+  const tutRef = useRef(false);
+  const [padOn, setPadOn] = useState(false);
+  const touchDir = useRef<Dir>(noDir());
   const pausedRef = useRef(false), helpRef = useRef(false);
   useEffect(() => { pausedRef.current = paused || help; helpRef.current = help; if (gameRef.current) gameRef.current.ctl.forEach((c) => { c.left = c.right = c.up = c.down = false; c.queue.length = 0; }); }, [paused, help]);
   const [size, setSize] = useState({ w: 960, h: 540, landscape: true });
@@ -2764,10 +2998,12 @@ function FightView3D(props: {
       let a1: Asset, a2: Asset;
       await getLogo();
       const stagePreload = loc === "subway" ? Promise.all([loadGLB("subway"), loadGLB("bench"), loadGLB("rat")]) : Promise.all([loadGLB("dumpster"), loadGLB("rat")]);
-      // VS card: count the three loads, and hold the card at least 1.6 s so it reads
+      // VS card: count the three loads, and hold the card at least 2.2 s so it reads (fighter quote clips play here when they exist)
+      Voice.preload(["round1", "round2", "final", "fight", "ko", "perfect", "finisher", `wins-${p1.id}`, `wins-${p2.id}`]);
+      Voice.say(`quote-${p1.id}`); setTimeout(() => { if (alive) Voice.say(`quote-${p2.id}`); }, 1700);
       let done = 0; const step = <T,>(p: Promise<T>) => p.then((v) => { done++; if (alive) setLoadPct(Math.round((done / 3) * 100)); return v; });
       try {
-        const loads = await Promise.all([step(loadFighter(p1.id)), step(loadFighter(p2.id)), step(stagePreload as Promise<unknown>), new Promise((r) => setTimeout(r, 1600))]);
+        const loads = await Promise.all([step(loadFighter(p1.id)), step(loadFighter(p2.id)), step(stagePreload as Promise<unknown>), new Promise((r) => setTimeout(r, 2200))]);
         a1 = loads[0]; a2 = loads[1];
       }
       catch { if (alive) setStatus("error"); return; }
@@ -2792,30 +3028,63 @@ function FightView3D(props: {
       renderPortraits().then((pp) => [p1, p2].forEach((d, i) => { if (pp[d.id]) { const im = new Image(); im.src = pp[d.id]; pics[i] = im; } }));
 
       const g: Game = newGame(p1, p2, cpu, () => {
-        if (cpu && g.wins[0] >= 2) setCredWon({ won: turf.credBonus, total: Cred.add(turf.credBonus) });   // turf bounty
+        if (cpu && g.wins[0] >= 2) setCredWon({ won: BOUNTY[diff], total: Cred.add(BOUNTY[diff]) });   // bounty for the difficulty
         setOver(true);
-      }, AI_LEVEL[turf.difficulty]);
+      }, AI_LEVEL[diff]);
+      g.touch = isTouch; GOLD_TAG = Cred.has("goldtag");
+      if (cpu && !store.get("tutorial-done", false)) { startTutorial(g); tutRef.current = true; setTutorial(true); }   // first fight ever: a minute of lessons first
       gameRef.current = g;
       updateCamera(cam, g, true);
       setStatus("ready");
 
-      const map = new Map<string, [0 | 1, Action]>();
-      Object.entries(KEYS_P1).forEach(([k, a]) => map.set(k, [0, a]));
-      Object.entries(KEYS_P2).forEach(([k, a]) => map.set(k, [cpu ? 0 : 1, a]));
+      // inputs: keyboard (the live, rebindable KEYMAPS), gamepads and the touch stick all feed the same holds, merged every frame
+      const lookup = (code: string): [0 | 1, Action] | null => {
+        if (KEYMAPS[0][code]) return [0, KEYMAPS[0][code]];
+        if (KEYMAPS[1][code]) return [cpu ? 0 : 1, KEYMAPS[1][code]];
+        return null;
+      };
       const isHold = (a: Action): a is "left" | "right" | "up" | "down" => a === "left" || a === "right" || a === "up" || a === "down";
+      const kb: [Dir, Dir] = [noDir(), noDir()], pad: [Dir, Dir] = [noDir(), noDir()];
       const down = (e: KeyboardEvent) => {
         if (helpRef.current) { if (e.code === "Escape" || e.code === "KeyP") setHelp(false); return; }
         if (e.code === "Escape" || e.code === "KeyP") { setPaused((v) => !v); return; }
         if (pausedRef.current) return;
-        const hit = map.get(e.code); if (!hit) return;
+        const hit = lookup(e.code); if (!hit) return;
         e.preventDefault();
-        const [pi, a] = hit, c = g.ctl[pi];
-        if (isHold(a)) c[a] = true; else if (!e.repeat) c.queue.push(a);
+        const [pi, a] = hit;
+        if (isHold(a)) kb[pi][a] = true; else if (!e.repeat) g.ctl[pi].queue.push(a);
       };
-      const up = (e: KeyboardEvent) => { const hit = map.get(e.code); if (!hit) return; const [pi, a] = hit; if (isHold(a)) g.ctl[pi][a] = false; };
-      const blur = () => g.ctl.forEach((c) => { c.left = c.right = c.up = c.down = false; });
+      const up = (e: KeyboardEvent) => { const hit = lookup(e.code); if (!hit) return; const [pi, a] = hit; if (isHold(a)) kb[pi][a] = false; };
+      const blur = () => kb.forEach((d) => { d.left = d.right = d.up = d.down = false; });
       window.addEventListener("keydown", down); window.addEventListener("keyup", up); window.addEventListener("blur", blur);
       cleanups.push(() => { window.removeEventListener("keydown", down); window.removeEventListener("keyup", up); window.removeEventListener("blur", blur); });
+      const onPad = () => setPadOn([...(navigator.getGamepads?.() ?? [])].some((p) => p && p.connected));
+      window.addEventListener("gamepadconnected", onPad); window.addEventListener("gamepaddisconnected", onPad); onPad();
+      cleanups.push(() => { window.removeEventListener("gamepadconnected", onPad); window.removeEventListener("gamepaddisconnected", onPad); });
+      const padPrev: boolean[][] = [[], []];
+      const pollPads = () => {
+        const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+        let slot = 0;
+        pad[0] = noDir(); pad[1] = noDir();
+        for (const gp of pads) {
+          if (!gp || !gp.connected) continue;
+          const pi = slot as 0 | 1; if (pi > (cpu ? 0 : 1)) break;
+          const b = (i: number) => !!gp.buttons[i]?.pressed, ax = gp.axes[0] ?? 0, ay = gp.axes[1] ?? 0;
+          pad[pi] = { left: ax < -0.5 || b(14), right: ax > 0.5 || b(15), up: ay < -0.6 || b(12), down: ay > 0.5 || b(13) };
+          const prev = padPrev[pi];
+          for (const [idx, act] of Object.entries(PAD_BTN)) { const i = Number(idx), now = b(i); if (now && !prev[i] && !pausedRef.current) g.ctl[pi].queue.push(act); prev[i] = now; }
+          if (b(9) && !prev[9]) setPaused((v) => !v); prev[9] = b(9);
+          slot++;
+        }
+      };
+      const applyHolds = () => {
+        for (const pi of [0, 1] as const) {
+          if (pi === 1 && cpu) break;
+          const c = g.ctl[pi], t = pi === 0 ? touchDir.current : noDir();
+          c.left = kb[pi].left || pad[pi].left || t.left; c.right = kb[pi].right || pad[pi].right || t.right;
+          c.up = kb[pi].up || pad[pi].up || t.up; c.down = kb[pi].down || pad[pi].down || t.down;
+        }
+      };
 
       const v = new THREE.Vector3();
       const project = (x: number, y: number, z: number): [number, number] => { v.set(x, y, z).project(cam); return [(v.x * 0.5 + 0.5) * W, (-v.y * 0.5 + 0.5) * H]; };
@@ -2824,8 +3093,9 @@ function FightView3D(props: {
       const loop = (now: number) => {
         const dtMs = Math.min(now - last, 100); last = now; acc += dtMs; clock += dtMs / 1000;
         let n = 0;
-        if (pausedRef.current) acc = 0;
+        if (pausedRef.current) acc = 0; else { pollPads(); applyHolds(); }
         while (acc >= FRAME_MS && n < 5) { tick(g); acc -= FRAME_MS; n++; }
+        if (tutRef.current && !g.tut) { tutRef.current = false; setTutorial(false); }
         // size the drawing buffers to the element
         const cw = canvas.clientWidth, ch = canvas.clientHeight;
         if (cw && (canvas.width !== Math.round(cw * renderer.getPixelRatio()) || canvas.height !== Math.round(ch * renderer.getPixelRatio()))) {
@@ -2838,7 +3108,7 @@ function FightView3D(props: {
         rigs.forEach((r, i) => poseRig(r, g.f[i], (dtMs / 1000) * slow, clock));
         updateStage(stage, g, clock, pausedRef.current ? 0 : dtMs / 1000);
         updateFx(fx, g);
-        if (g.sfx.length) { const seen = new Set<string>(); for (const e of g.sfx) if (!seen.has(e)) { seen.add(e); Sound.play(e); } g.sfx.length = 0; }
+        if (g.sfx.length) { const seen = new Set<string>(); for (const e of g.sfx) if (!seen.has(e)) { seen.add(e); if (e.startsWith("say:")) Voice.say(e.slice(4)); else Sound.play(e); } g.sfx.length = 0; }
         updateCamera(cam, g);
         renderer.render(stage.scene, cam);
         hctx.setTransform(hud.width / W, 0, 0, hud.height / H, 0, 0);
@@ -2849,12 +3119,10 @@ function FightView3D(props: {
       raf = requestAnimationFrame(loop);
     })();
     return () => { alive = false; cancelAnimationFrame(raf); cleanups.forEach((f) => f()); };
-  }, [p1, p2, cpu, isTouch, loc]);
+  }, [p1, p2, cpu, isTouch, loc, diff]);
 
-  const setDir = (d: Dir) => {
-    const c = gameRef.current?.ctl[0]; if (!c) return;
-    c.left = d.left; c.right = d.right; c.up = d.up; c.down = d.down;
-  };
+  const setDir = (d: Dir) => { touchDir.current = d; };
+  const skipTutorial = () => { const g = gameRef.current; if (g?.tut) { finishTutorial(g); tutRef.current = false; setTutorial(false); } };
   const tap = (b: Btn) => { gameRef.current?.ctl[0].queue.push(b); };
 
   const overlay = isTouch && size.landscape;
@@ -2882,7 +3150,7 @@ function FightView3D(props: {
             ))}
             <div className="vs">VS</div>
             <div className="foot">
-              <div className="where">{turf.name.toUpperCase()} · {turf.difficulty}{cpu ? ` · BOUNTY +${turf.credBonus} CRED` : ""}</div>
+              <div className="where">{turf.name.toUpperCase()}{cpu ? ` · ${diff} · BOUNTY +${BOUNTY[diff]} CRED` : " · 2 PLAYERS"}</div>
               <div className="bar"><b style={{ width: `${loadPct}%` }} /></div>
               <small>LOADING {loadPct}%</small>
             </div>
@@ -2894,6 +3162,7 @@ function FightView3D(props: {
         <div className="pmg-top">
           <button className="pmg-mini" onClick={() => setPaused(true)}>MENU</button>
           <button className="pmg-mini" onClick={() => setHelp(true)} aria-label="Controls">? CONTROLS</button>
+          {tutorial && <button className="pmg-mini" onClick={skipTutorial}>SKIP TUTORIAL</button>}
         </div>
         {help && (
           <div className="pmg-modal" role="dialog" aria-label="Controls">
@@ -2908,6 +3177,7 @@ function FightView3D(props: {
           <SettingsPanel onClose={() => setPaused(false)} extra={<>
             <button className="pmg-btn" onClick={() => setPaused(false)}>RESUME</button>
             <button className="pmg-btn ghost" onClick={() => setHelp(true)}>CONTROLS</button>
+            {tutorial && <button className="pmg-btn ghost" onClick={() => { skipTutorial(); setPaused(false); }}>SKIP TUTORIAL</button>}
             <button className="pmg-btn ghost" onClick={props.onChange}>CHANGE FIGHTERS</button>
             <button className="pmg-btn ghost" onClick={props.onStage}>CHANGE LOCATION</button>
             <button className="pmg-btn ghost" onClick={props.onMenu}>QUIT TO TITLE</button>
@@ -2928,8 +3198,9 @@ function FightView3D(props: {
       {isTouch && !size.landscape && <div className="pmg-rotate">Swipe the arena to defend · turn sideways for a bigger arena</div>}
       {!isTouch && (
         <div className="pmg-hint">
-          {cpu ? <>Move <kbd>A</kbd> <kbd>D</kbd> · Jump <kbd>W</kbd> · Punch <kbd>J</kbd> · Kick <kbd>K</kbd> · Special <kbd>L</kbd> · Grab <kbd>I</kbd> · hold back to block — <kbd>? CONTROLS</kbd> has the rest</>
-            : <>P1 <kbd>A</kbd> <kbd>D</kbd> <kbd>W</kbd> + <kbd>J</kbd> <kbd>K</kbd> <kbd>L</kbd> · P2 arrows + <kbd>,</kbd> <kbd>.</kbd> <kbd>/</kbd> — <kbd>? CONTROLS</kbd> has the rest</>}
+          {padOn ? <>🎮 Controller connected — {PAD_HINT}</>
+            : cpu ? <>Move <kbd>{keysFor(0, "left").map(keyName).join(" ")}</kbd> <kbd>{keysFor(0, "right").map(keyName).join(" ")}</kbd> · Jump <kbd>{keysFor(0, "up").map(keyName).join(" ")}</kbd> · Punch <kbd>{keysFor(0, "punch").map(keyName).join(" ")}</kbd> · Kick <kbd>{keysFor(0, "kick").map(keyName).join(" ")}</kbd> · Special <kbd>{keysFor(0, "special").map(keyName).join(" ")}</kbd> · Grab <kbd>{keysFor(0, "grab").map(keyName).join(" ")}</kbd> · hold back to block — <kbd>? CONTROLS</kbd> has the rest and rebinds keys</>
+            : <>P1 <kbd>{keysFor(0, "left").map(keyName).join(" ")}</kbd> <kbd>{keysFor(0, "right").map(keyName).join(" ")}</kbd> + <kbd>{keysFor(0, "punch").map(keyName).join(" ")}</kbd> <kbd>{keysFor(0, "kick").map(keyName).join(" ")}</kbd> <kbd>{keysFor(0, "special").map(keyName).join(" ")}</kbd> · P2 <kbd>{keysFor(1, "left").map(keyName).join(" ")}</kbd> <kbd>{keysFor(1, "right").map(keyName).join(" ")}</kbd> + <kbd>{keysFor(1, "punch").map(keyName).join(" ")}</kbd> <kbd>{keysFor(1, "kick").map(keyName).join(" ")}</kbd> <kbd>{keysFor(1, "special").map(keyName).join(" ")}</kbd> — <kbd>? CONTROLS</kbd> has the rest and rebinds keys</>}
         </div>
       )}
     </>
