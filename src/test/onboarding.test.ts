@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { AD_BUDGET_MAX, AD_BUDGET_MIN, DEPOSIT_SHARE, TIERS, clampAdBudget, formatUsd, quote } from "../../supabase/functions/_shared/tiers";
-import { catalogueNo, distributionRow, editingRow, EDITING_COLUMNS, formEncode, parseStripeSignature, postSlots, sessionSlots, splitName, type OrderRow } from "../../supabase/functions/_shared/onboarding";
+import { catalogueNo, distributionRow, editingRow, EDITING_COLUMNS, formEncode, nyOffsetMinutes, nyTime, parseStripeSignature, postSlots, sessionBlock, sessionSlots, splitName, type OrderRow } from "../../supabase/functions/_shared/onboarding";
 
 const order: OrderRow = {
   id: "00000000-0000-0000-0000-000000000001", created_at: "2026-10-18T15:04:05.000Z", catalogue_no: "PMG-R-007", tier: "mid",
@@ -80,17 +80,33 @@ describe("sheet rows", () => {
 });
 
 describe("availability", () => {
-  const from = new Date("2026-10-18T12:00:00Z"); // a Sunday
-  it("offers weekday two-hour sessions and skips busy ones", () => {
-    const slots = sessionSlots(from, 7, [{ start: "2026-10-19T16:00:00.000Z", end: "2026-10-19T18:00:00.000Z" }]);
-    // Mon 19th 12:00 EDT = 16:00Z is busy, so the first slot is 14:00 EDT.
-    expect(slots[0]).toEqual({ start: "2026-10-19T18:00:00.000Z", end: "2026-10-19T20:00:00.000Z" });
-    expect(slots.every((s) => { const d = new Date(s.start).getUTCDay(); return d >= 1 && d <= 5; })).toBe(true);
-    expect(slots.filter((s) => s.start.startsWith("2026-10-19")).length).toBe(3);
+  const from = new Date("2026-10-18T12:00:00Z"); // a Sunday, EDT
+  it("knows New York's offset across DST", () => {
+    expect(nyOffsetMinutes(2026, 9, 18)).toBe(-240); // October: EDT
+    expect(nyOffsetMinutes(2026, 11, 18)).toBe(-300); // December: EST
+    expect(nyTime(2026, 9, 19, 14).toISOString()).toBe("2026-10-19T18:00:00.000Z"); // 2pm EDT
+    expect(nyTime(2026, 11, 7, 14).toISOString()).toBe("2026-12-07T19:00:00.000Z"); // 2pm EST
   });
-  it("offers one posting date per day after the lead time and skips taken days", () => {
-    const slots = postSlots(from, 3, ["2026-10-26T16:00:00.000Z"]);
-    expect(slots.map((s) => s.start.slice(0, 10))).toEqual(["2026-10-25", "2026-10-27", "2026-10-28"]);
+  it("offers Mon–Fri 30-minute shoots from 2pm to 7pm and blocks the full hour", () => {
+    const slots = sessionSlots(from, 7, [sessionBlock("2026-10-19T18:00:00.000Z")]);
+    const monday = slots.filter((s) => s.start.startsWith("2026-10-19"));
+    // 2pm EDT (18:00Z) is taken; 3pm..7pm remain.
+    expect(monday.map((s) => s.start)).toEqual(["2026-10-19T19:00:00.000Z", "2026-10-19T20:00:00.000Z", "2026-10-19T21:00:00.000Z", "2026-10-19T22:00:00.000Z", "2026-10-19T23:00:00.000Z"]);
+    expect(new Date(monday[0].end).getTime() - new Date(monday[0].start).getTime()).toBe(30 * 60_000);
+    expect(slots.every((s) => { const d = new Date(s.start).getUTCDay(); return d >= 1 && d <= 5; })).toBe(true);
+    expect(slots.filter((s) => s.start.startsWith("2026-10-20")).length).toBe(6);
+  });
+  it("a calendar event inside the hour block hides the slot", () => {
+    const busy = [{ start: "2026-10-19T19:40:00.000Z", end: "2026-10-19T19:50:00.000Z" }]; // 3:40pm EDT
+    const monday = sessionSlots(from, 1, busy).map((s) => s.start);
+    expect(monday).not.toContain("2026-10-19T19:00:00.000Z");
+    expect(monday).toContain("2026-10-19T18:00:00.000Z");
+  });
+  it("offers release times at 3, 4 and 6pm after the lead time and skips taken ones", () => {
+    const slots = postSlots(from, 1, ["2026-10-25T20:00:00.000Z"]); // 4pm EDT on the 25th is taken
+    const day = slots.filter((s) => s.start.startsWith("2026-10-25")).map((s) => s.start);
+    expect(day).toEqual(["2026-10-25T19:00:00.000Z", "2026-10-25T22:00:00.000Z"]);
+    expect(slots.filter((s) => s.start.startsWith("2026-10-26")).length).toBe(3);
   });
 });
 

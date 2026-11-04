@@ -12,13 +12,17 @@ the sheets and the confirmation email.
 | 1 Tier | DSP Release ($0 up front, split on streams, distribution + agreement required), Basic $550 (+ optional extra ad budget), Mid $1,000, Viral $15,000. Invited ($0, everything in Mid) is hidden and only opens from `/start?invite=CODE` | `supabase/functions/_shared/tiers.ts` |
 | 2 Details | Contact, Instagram lookup, TikTok/YouTube, track, explicit, ad-report preference, optional distribution block with PRO/IPI/producer + e-signature | `src/pages/Start.tsx` → `onboarding` function `create` |
 | 3 Upload | Files go straight to the private `onboarding-uploads` bucket via signed URLs | `upload-url` / `upload-done` |
-| 4 Schedule | Posting dates (one per day, 7-day lead, no double booking) and 2-hour weekday sessions, both checked against the PMG Google Calendar free/busy | `availability` |
+| 4 Schedule | Release: a date 7+ days out and one of three New York times, 3, 4 or 6pm; a time already taken that day is struck out. Shoot: Monday–Friday, 30 minutes, starts 2, 3, 4, 5, 6 or 7pm; each booking blocks the full hour (30 min shoot + 30 min gap) and anything on the PMG Google Calendar in that hour hides the slot. All times are true New York time across DST | `availability` |
 | 5 Pay | Stripe Checkout; card everywhere, Affirm on Viral; full pay or 50% deposit on Mid/Viral. $0 plans skip Stripe: `confirm` marks the order paid and runs the same fulfilment | `checkout` / `confirm` |
 | Done | Webhook marks the order paid, books both calendar events, appends the editing sheet row and (if chosen) the distribution sheet row, emails the artist | `stripe-webhook` |
 
 Everything is stored in `public.onboarding_orders` (migration
 `20261018_014_onboarding.sql`). The public site never reads the table
 directly; the function does, keyed by `id` + `client_token`.
+
+## The prep page
+
+`/start/prep` tells the artist what to do before and in the first five minutes after the collab posts, how to get to 81 Prospect Street (F to York St, A/C to High St, ferry to Pier 1), that 2–8pm parking is peak with garages on Jay and Front, and what's around to make a day of it (Pebble Beach, Time Out Market, Washington Street, Jane's Carousel, Empire Stores, St. Ann's). Linked from the schedule step, the done page and the confirmation email. Check the parking lines against what you'd tell someone yourself; I wrote them from the neighbourhood, not from a garage's own listing.
 
 ## Three populations
 

@@ -34,11 +34,11 @@ export default function StartDone() {
   return (
     <main className="min-h-screen bg-[#0B0B0B] text-[#F2EFE9]">
       <SEO title="You're in — PMG" description="Order received." path="/start/done" />
-      <header className="px-6 pb-6 pt-28 md:px-10 md:pt-32">
+      <header className="mx-auto max-w-4xl px-6 pb-6 pt-28 md:px-10 md:pt-32">
         <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-[#FFD230]">Propmyganda · {order?.catalogue_no ?? "Receipt"}</p>
         <h1 className="font-display text-5xl uppercase leading-[0.85] tracking-[-0.03em] md:text-8xl">{paid ? "Welcome to the machine." : "Confirming…"}</h1>
       </header>
-      <section className="px-6 pb-20 md:px-10">
+      <section className="mx-auto max-w-4xl px-6 pb-20 md:px-10">
         <div className="max-w-xl">
           {!order ? (
             <Note>{tries > 0 ? "Waiting on the payment confirmation…" : "Loading your order…"}</Note>
@@ -48,8 +48,8 @@ export default function StartDone() {
                 ["Artist", order.artist_name],
                 ["Tier", `${tier?.name ?? order.tier} · ${formatUsd(order.total_cents)}`],
                 ["Paid", paid ? `${formatUsd(order.due_now_cents)}${order.payment_plan === "deposit" ? " deposit" : ""}` : "pending"],
-                ["Posting date", order.post_at ? fmtSlot(order.post_at, false) : "we'll place you by email"],
-                ...(order.session_at ? [["Session", fmtSlot(order.session_at)]] : []),
+                ["Release", order.post_at ? `${fmtSlot(order.post_at)} ET` : "we'll place you by email"],
+                ...(order.session_at ? [["Shoot", `${fmtSlot(order.session_at)} ET · 30 min`]] : []),
                 ["Files", String(order.uploads?.length ?? 0)],
                 ["Status", order.status.replace("_", " ")],
               ].map(([k, v]) => (
@@ -67,6 +67,7 @@ export default function StartDone() {
             <p>03 — Your record goes out on the date you picked. Collab posts push to TikTok, Instagram and YouTube.</p>
             <p>04 — Ad report or dashboard link lands the way you asked.</p>
             <p className="pt-2 text-[#9A9A9E]">Before your date: accounts public, collab requests on, accept the invite when it comes through.</p>
+            <p className="pt-2"><Link to="/start/prep" className="text-[#FFD230] underline">Read the prep page</Link> — the first five minutes, parking, and how to make a day of it in DUMBO.</p>
           </div>
 
           <div className="mt-10 flex flex-wrap gap-3">

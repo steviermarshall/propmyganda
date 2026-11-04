@@ -19,14 +19,13 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { GCAL_BASE, gcalHeaders } from "../_shared/gcal.ts";
 import { fulfil } from "../_shared/fulfil.ts";
 import { TIERS, formatUsd, getTier, quote, type PaymentPlan } from "../_shared/tiers.ts";
-import { catalogueNo, formEncode, postSlots, sessionSlots, type Busy, type OrderRow } from "../_shared/onboarding.ts";
+import { catalogueNo, formEncode, postSlots, sessionBlock, sessionSlots, type Busy, type OrderRow } from "../_shared/onboarding.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 const BUCKET = "onboarding-uploads";
-const NY_OFFSET_MIN = -240; // America/New_York, EDT. Good enough for slot generation.
 
 /** Postgrest and fetch errors are plain objects, not Error instances; say what they say. */
 function errMsg(e: unknown): string {
@@ -231,11 +230,11 @@ Deno.serve(async (req) => {
         const to = new Date(now.getTime() + (days + 1) * 86400_000);
         const busy = await calendarBusy(now.toISOString(), to.toISOString());
         const { data: taken } = await supabase.from("onboarding_orders").select("session_at").not("session_at", "is", null).neq("id", order.id).gte("session_at", now.toISOString());
-        const takenBusy: Busy[] = (taken ?? []).map((r) => ({ start: r.session_at, end: new Date(new Date(r.session_at).getTime() + 2 * 3600_000).toISOString() }));
-        return json({ kind, slots: sessionSlots(now, days, [...busy, ...takenBusy], NY_OFFSET_MIN).slice(0, 60) });
+        const takenBusy: Busy[] = (taken ?? []).map((r) => sessionBlock(r.session_at));
+        return json({ kind, slots: sessionSlots(now, days, [...busy, ...takenBusy]) });
       }
       const { data: taken } = await supabase.from("onboarding_orders").select("post_at").not("post_at", "is", null).neq("id", order.id).in("status", ["pending_payment", "paid", "deposit_paid", "scheduled"]);
-      return json({ kind, slots: postSlots(now, days, (taken ?? []).map((r) => r.post_at), NY_OFFSET_MIN) });
+      return json({ kind, slots: postSlots(now, days, (taken ?? []).map((r) => r.post_at)) });
     }
 
     if (action === "checkout") {

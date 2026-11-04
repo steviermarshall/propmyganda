@@ -126,32 +126,79 @@ export function editingRow(o: OrderRow): string[] {
 export interface Busy { start: string; end: string }
 export interface Slot { start: string; end: string }
 
-/** Studio session slots: weekdays, 12:00–20:00 local, 2 hours each. tzOffsetMinutes is the UTC offset (New York EDT = -240). */
-export function sessionSlots(from: Date, days: number, busy: Busy[], tzOffsetMinutes = -240): Slot[] {
+export const NY = "America/New_York";
+/** Shoots: Monday–Friday, 30 minutes, starting on the hour from 2pm; the last starts at 7pm. */
+export const SESSION_HOURS = [14, 15, 16, 17, 18, 19];
+export const SESSION_MINUTES = 30;
+/** A 30-minute shoot plus a 30-minute gap: each booking blocks a full hour. */
+export const SESSION_BLOCK_MINUTES = 60;
+/** The only release times, New York time. */
+export const RELEASE_HOURS = [15, 16, 18];
+export const POST_LEAD_DAYS = 7;
+
+/** UTC offset of New York on a given calendar day (EDT −240, EST −300), via Intl so it's right across DST. */
+export function nyOffsetMinutes(y: number, m: number, d: number): number {
+  const probe = new Date(Date.UTC(y, m, d, 12));
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone: NY, timeZoneName: "shortOffset" }).formatToParts(probe);
+  const tz = parts.find((p) => p.type === "timeZoneName")?.value ?? "GMT-5";
+  const mt = tz.match(/GMT([+-])(\d{1,2})(?::(\d{2}))?/);
+  if (!mt) return -300;
+  const sign = mt[1] === "-" ? -1 : 1;
+  return sign * (Number(mt[2]) * 60 + Number(mt[3] ?? 0));
+}
+
+/** The instant of `hour:minute` New York time on the calendar day y-m-d. */
+export function nyTime(y: number, m: number, d: number, hour: number, minute = 0): Date {
+  return new Date(Date.UTC(y, m, d, hour, minute) - nyOffsetMinutes(y, m, d) * 60_000);
+}
+
+function nyWeekday(y: number, m: number, d: number): number {
+  return new Date(Date.UTC(y, m, d, 12)).getUTCDay();
+}
+
+/** Calendar day in New York of an instant, as [y, m, d]. */
+export function nyDay(at: Date): [number, number, number] {
+  const f = new Intl.DateTimeFormat("en-US", { timeZone: NY, year: "numeric", month: "numeric", day: "numeric" }).formatToParts(at);
+  const get = (t: string) => Number(f.find((p) => p.type === t)?.value);
+  return [get("year"), get("month") - 1, get("day")];
+}
+
+/** Shoot slots for the next `days` days, skipping weekends, calendar busy time and other bookings. */
+export function sessionSlots(from: Date, days: number, busy: Busy[]): Slot[] {
   const out: Slot[] = [];
+  const [y0, m0, d0] = nyDay(from);
   for (let d = 1; d <= days; d++) {
-    const day = new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), from.getUTCDate() + d));
-    const local = new Date(day.getTime() - tzOffsetMinutes * 60_000);
-    const weekday = local.getUTCDay();
+    const day = new Date(Date.UTC(y0, m0, d0 + d, 12));
+    const y = day.getUTCFullYear(), m = day.getUTCMonth(), dd = day.getUTCDate();
+    const weekday = nyWeekday(y, m, dd);
     if (weekday === 0 || weekday === 6) continue;
-    for (let h = 12; h <= 18; h += 2) {
-      const start = new Date(Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate(), h) - tzOffsetMinutes * 60_000);
-      const end = new Date(start.getTime() + 2 * 3600_000);
-      if (!overlaps(start, end, busy)) out.push({ start: start.toISOString(), end: end.toISOString() });
+    for (const h of SESSION_HOURS) {
+      const start = nyTime(y, m, dd, h);
+      const blockEnd = new Date(start.getTime() + SESSION_BLOCK_MINUTES * 60_000);
+      if (!overlaps(start, blockEnd, busy)) out.push({ start: start.toISOString(), end: new Date(start.getTime() + SESSION_MINUTES * 60_000).toISOString() });
     }
   }
   return out;
 }
 
-/** Posting dates: one per day, noon local, at most one order per day; skip days already taken. */
-export function postSlots(from: Date, days: number, taken: string[], tzOffsetMinutes = -240, leadDays = 7): Slot[] {
+/** A booked shoot blocks its full hour for everyone else. */
+export function sessionBlock(startISO: string): Busy {
+  return { start: startISO, end: new Date(new Date(startISO).getTime() + SESSION_BLOCK_MINUTES * 60_000).toISOString() };
+}
+
+/** Release slots: every day after the lead time, at 3, 4 and 6pm New York; a time already taken that day is left out. */
+export function postSlots(from: Date, days: number, taken: string[], leadDays = POST_LEAD_DAYS): Slot[] {
   const out: Slot[] = [];
-  const takenDays = new Set(taken.map((t) => t.slice(0, 10)));
+  const takenSet = new Set(taken.map((t) => new Date(t).toISOString()));
+  const [y0, m0, d0] = nyDay(from);
   for (let d = leadDays; d <= leadDays + days; d++) {
-    const day = new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), from.getUTCDate() + d));
-    const start = new Date(Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate(), 12) - tzOffsetMinutes * 60_000);
-    if (takenDays.has(start.toISOString().slice(0, 10))) continue;
-    out.push({ start: start.toISOString(), end: new Date(start.getTime() + 3600_000).toISOString() });
+    const day = new Date(Date.UTC(y0, m0, d0 + d, 12));
+    const y = day.getUTCFullYear(), m = day.getUTCMonth(), dd = day.getUTCDate();
+    for (const h of RELEASE_HOURS) {
+      const start = nyTime(y, m, dd, h);
+      if (takenSet.has(start.toISOString())) continue;
+      out.push({ start: start.toISOString(), end: new Date(start.getTime() + 3600_000).toISOString() });
+    }
   }
   return out;
 }

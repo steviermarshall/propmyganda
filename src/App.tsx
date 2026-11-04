@@ -23,6 +23,7 @@ import Events from "./pages/Events";
 import Publication from "./pages/Publication";
 import Start from "./pages/Start";
 import StartDone from "./pages/StartDone";
+import StartPrep from "./pages/StartPrep";
 import PublicationDetail from "./pages/PublicationDetail";
 import Exclusive from "./pages/Exclusive";
 import NotFound from "./pages/NotFound";
@@ -118,6 +119,7 @@ const AppRoutes = () => {
           <Route path="/exclusive"          element={<Exclusive />} />
           <Route path="/start"              element={<Start />} />
           <Route path="/start/done"         element={<StartDone />} />
+          <Route path="/start/prep"         element={<StartPrep />} />
           {/* Legacy bio-link typo — redirect so visitors don't 404 */}
           <Route path="/exlusive"           element={<Navigate to="/exclusive" replace />} />
           <Route path="*"              element={<NotFound />} />

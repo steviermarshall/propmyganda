@@ -5,7 +5,7 @@ import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { GCAL_BASE, gcalHeaders } from "./gcal.ts";
 import { appendRow, ensureHeader } from "./google.ts";
 import { formatUsd, getTier } from "./tiers.ts";
-import { EDITING_COLUMNS, distributionRow, editingRow, type OrderRow } from "./onboarding.ts";
+import { EDITING_COLUMNS, SESSION_MINUTES, distributionRow, editingRow, type OrderRow } from "./onboarding.ts";
 
 const DEFAULT_DISTRO_SHEET = "1-lGUtKmwAL7SmfaAHXbbPZK7715Detj1M6Ts_r6-kls";
 
@@ -61,7 +61,7 @@ export async function fulfil(supabase: SupabaseClient, order: OrderRow, paidStat
     const base = [`${order.catalogue_no} · ${tier?.name ?? order.tier} · ${moneyLine(order, paidStatus)}`, `Email: ${order.email}`, order.phone && `Phone: ${order.phone}`, order.instagram_url && `IG: ${order.instagram_url}`, order.track_title && `Track: ${order.track_title}${order.explicit ? " (explicit)" : ""}`, uploads.length ? `Files:\n${uploads.map((u) => u.url).join("\n")}` : ""].filter(Boolean).join("\n");
     const row = order as unknown as { google_post_event_id?: string | null; google_session_event_id?: string | null };
     if (order.post_at && !row.google_post_event_id) patch.google_post_event_id = await calendarEvent(calendarId, `🚀 POST — ${order.artist_name}`, base, order.post_at, 1, order.email);
-    if (order.session_at && !row.google_session_event_id) patch.google_session_event_id = await calendarEvent(calendarId, `🎬 SESSION — ${order.artist_name}`, base, order.session_at, 2, order.email);
+    if (order.session_at && !row.google_session_event_id) patch.google_session_event_id = await calendarEvent(calendarId, `🎬 SHOOT — ${order.artist_name}`, base, order.session_at, SESSION_MINUTES / 60, order.email);
     if (patch.google_post_event_id || patch.google_session_event_id) patch.status = "scheduled";
   } catch (e) { errors.push(`calendar: ${e instanceof Error ? e.message : e}`); }
 
@@ -86,6 +86,7 @@ export async function fulfil(supabase: SupabaseClient, order: OrderRow, paidStat
       `Posting date: ${when(order.post_at)}`, order.session_at ? `Session: ${when(order.session_at)}` : "",
       `Files received: ${uploads.length}`, "",
       "Before your date: accounts public, collab requests on, accept the invite when it lands.",
+      "Read this before the shoot and the post: https://propmyganda.com/start/prep",
       "Reply to this email for anything. One thread, start to finish.", "", "— PMG",
     ].filter((l) => l !== "").join("\n"));
   } catch (e) { errors.push(`email: ${e instanceof Error ? e.message : e}`); }

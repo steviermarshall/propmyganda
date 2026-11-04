@@ -274,57 +274,93 @@ function UploadStep({ session, uploads, setUploads, onBack, onNext }: { session:
 }
 
 // ── 4. Schedule ────────────────────────────────────────────────────────────
-function SlotPicker({ slots, value, onPick, withTime }: { slots: Slot[]; value: string | null; onPick: (s: string) => void; withTime: boolean }) {
-  if (slots.length === 0) return <Note>No open slots right now. Continue and we'll place you by email.</Note>;
+const NY = "America/New_York";
+const dayKey = (iso: string) => new Date(iso).toLocaleDateString("en-US", { timeZone: NY, weekday: "short", month: "short", day: "numeric" });
+const timeKey = (iso: string) => new Date(iso).toLocaleTimeString("en-US", { timeZone: NY, hour: "numeric", minute: "2-digit" });
+
+function groupByDay(slots: Slot[]): { day: string; slots: Slot[] }[] {
+  const map = new Map<string, Slot[]>();
+  for (const s of slots) { const k = dayKey(s.start); map.set(k, [...(map.get(k) ?? []), s]); }
+  return [...map.entries()].map(([day, slots]) => ({ day, slots }));
+}
+
+/** Pick a day, then a time on that day. `allTimes` lists every possible time so taken ones show as struck out. */
+function DayTimePicker({ slots, value, onPick, allTimes, max = 14 }: { slots: Slot[] | null; value: string | null; onPick: (s: string) => void; allTimes?: string[]; max?: number }) {
+  const days = useMemo(() => (slots ? groupByDay(slots) : []), [slots]);
+  const [showAll, setShowAll] = useState(false);
+  const [day, setDay] = useState<string | null>(value ? dayKey(value) : null);
+  useEffect(() => { if (value) setDay(dayKey(value)); }, [value]);
+  if (slots === null) return <Note>Checking the calendar…</Note>;
+  if (days.length === 0) return <Note>No open slots right now. Continue and we'll place you by email.</Note>;
+  const shown = showAll ? days : days.slice(0, max);
+  const current = days.find((d) => d.day === day) ?? null;
+  const times = current ? (allTimes ?? current.slots.map((s) => timeKey(s.start))) : [];
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
-      {slots.map((s) => {
-        const active = value === s.start;
-        return (
-          <button key={s.start} type="button" onClick={() => onPick(s.start)} aria-pressed={active} className="border px-3 py-2.5 text-left font-mono text-[11px] uppercase tracking-[0.12em]" style={{ borderColor: active ? "#FFD230" : "rgba(242,239,233,0.3)", background: active ? "#FFD230" : "transparent", color: active ? "#0B0B0B" : "#F2EFE9" }}>
-            {fmtSlot(s.start, withTime)}
-          </button>
-        );
-      })}
+    <div>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 md:grid-cols-7">
+        {shown.map((d) => {
+          const active = day === d.day;
+          return (
+            <button key={d.day} type="button" onClick={() => setDay(d.day)} aria-pressed={active} className="border px-2 py-2.5 text-center font-mono text-[11px] uppercase tracking-[0.1em]" style={{ borderColor: active ? "#FFD230" : "rgba(242,239,233,0.3)", background: active ? "#FFD230" : "transparent", color: active ? "#0B0B0B" : "#F2EFE9" }}>
+              {d.day}
+            </button>
+          );
+        })}
+      </div>
+      {days.length > max && !showAll && <button type="button" onClick={() => setShowAll(true)} className="mt-3 font-mono text-[10px] uppercase tracking-[0.18em] text-[#FFD230]">More dates →</button>}
+      {current && (
+        <div className="mt-4 flex flex-wrap gap-2">
+          {times.map((t) => {
+            const slot = current.slots.find((s) => timeKey(s.start) === t);
+            const active = !!slot && value === slot.start;
+            return (
+              <button key={t} type="button" disabled={!slot} onClick={() => slot && onPick(slot.start)} aria-pressed={active} className="border px-4 py-2.5 font-mono text-[11px] uppercase tracking-[0.12em] disabled:line-through disabled:opacity-40" style={{ borderColor: active ? "#FFD230" : "rgba(242,239,233,0.3)", background: active ? "#FFD230" : "transparent", color: active ? "#0B0B0B" : "#F2EFE9" }}>
+                {t}{!slot ? " · taken" : ""}
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
+
+const RELEASE_TIMES = ["3:00 PM", "4:00 PM", "6:00 PM"];
 
 function ScheduleStep({ session, needsSession, postAt, sessionAt, onBack, onNext }: { session: Session; needsSession: boolean; postAt: string | null; sessionAt: string | null; onBack: () => void; onNext: (post: string | null, sess: string | null) => void }) {
   const [post, setPost] = useState<Slot[] | null>(null);
   const [sess, setSess] = useState<Slot[] | null>(null);
   const [pickPost, setPickPost] = useState(postAt);
   const [pickSess, setPickSess] = useState(sessionAt);
-  const [showAll, setShowAll] = useState(false);
   useEffect(() => {
     api.availability(session, "post").then((r) => setPost(r.slots)).catch(() => setPost([]));
     if (needsSession) api.availability(session, "session").then((r) => setSess(r.slots)).catch(() => setSess([]));
   }, [session, needsSession]);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       <div>
-        <p className="mb-1 font-display text-2xl uppercase leading-none tracking-[-0.03em] text-[#F2EFE9]">Pick your date</p>
-        <Note>The date you pick is the date. It comes off the board for everyone else. Pick the one you can be ready for.</Note>
-        <div className="mt-4">
-          {post === null ? <Note>Checking the calendar…</Note> : <SlotPicker slots={showAll ? post : post.slice(0, 12)} value={pickPost} onPick={setPickPost} withTime={false} />}
-          {post && post.length > 12 && !showAll && <button type="button" onClick={() => setShowAll(true)} className="mt-3 font-mono text-[10px] uppercase tracking-[0.18em] text-[#FFD230]">More dates →</button>}
-        </div>
+        <p className="mb-1 font-display text-2xl uppercase leading-none tracking-[-0.03em] text-[#F2EFE9]">Release date and time</p>
+        <Note>Posts go out at 3, 4 or 6pm New York. The date you pick is the date. It comes off the board for everyone else.</Note>
+        <div className="mt-4"><DayTimePicker slots={post} value={pickPost} onPick={setPickPost} allTimes={RELEASE_TIMES} /></div>
+        {pickPost && <p className="mt-3 font-mono text-[11px] uppercase tracking-[0.18em] text-[#FFD230]">Release · {fmtSlot(pickPost)} ET</p>}
       </div>
 
       {needsSession && (
         <div>
-          <p className="mb-1 font-display text-2xl uppercase leading-none tracking-[-0.03em] text-[#F2EFE9]">Book your session</p>
-          <Note>Two hours in the room, DUMBO. Weekdays 12–8pm. Live availability from the PMG calendar.</Note>
-          <div className="mt-4">
-            {sess === null ? <Note>Checking the calendar…</Note> : <SlotPicker slots={sess.slice(0, 24)} value={pickSess} onPick={setPickSess} withTime />}
-          </div>
+          <p className="mb-1 font-display text-2xl uppercase leading-none tracking-[-0.03em] text-[#F2EFE9]">Book your shoot</p>
+          <Note>30 minutes in the room, DUMBO. Monday to Friday, 2 to 8pm. Live from the PMG calendar, so a time you can't see is already taken.</Note>
+          <div className="mt-4"><DayTimePicker slots={sess} value={pickSess} onPick={setPickSess} /></div>
+          {pickSess && <p className="mt-3 font-mono text-[11px] uppercase tracking-[0.18em] text-[#FFD230]">Shoot · {fmtSlot(pickSess)} ET · 30 min</p>}
+          <p className="mt-3 font-mono text-[10px] uppercase tracking-[0.18em] text-[#9A9A9E]">
+            Parking, the subway and what to do before and after: <Link to="/start/prep" target="_blank" className="text-[#FFD230] underline">the prep page</Link>.
+          </p>
         </div>
       )}
 
       <div className="flex items-center justify-between gap-4 border-t border-[#F2EFE9]/20 pt-6">
         <Button tone="ghost" onClick={onBack}>← Back</Button>
-        <Button onClick={() => onNext(pickPost, pickSess)} disabled={!pickPost && (post?.length ?? 0) > 0}>Continue →</Button>
+        <Button onClick={() => onNext(pickPost, pickSess)} disabled={(!pickPost && (post?.length ?? 0) > 0) || (needsSession && !pickSess && (sess?.length ?? 0) > 0)}>Continue →</Button>
       </div>
     </div>
   );
@@ -366,8 +402,8 @@ function PayStep({ session, order, onBack }: { session: Session; order: Order; o
         {row("Artist", order.artist_name)}
         {row("Plan", `${q.tier.name} · ${priceLabel(q.tier)}`)}
         {q.adBudgetCents > 0 && row("Extra ad budget", formatUsd(q.adBudgetCents))}
-        {row("Posting date", order.post_at ? fmtSlot(order.post_at, false) : "to be placed")}
-        {order.session_at && row("Session", fmtSlot(order.session_at))}
+        {row("Release", order.post_at ? `${fmtSlot(order.post_at)} ET` : "to be placed")}
+        {order.session_at && row("Shoot", `${fmtSlot(order.session_at)} ET · 30 min`)}
         {row("Files", String(order.uploads?.length ?? 0))}
         {order.wants_distribution && row("Distribution", "yes · agreement signed")}
         {q.tier.revenueShare ? row("PMG's share", "from the streaming split you signed") : row("Total", formatUsd(q.totalCents))}
@@ -474,7 +510,7 @@ export default function Start() {
   return (
     <main className="min-h-screen bg-[#0B0B0B] text-[#F2EFE9]">
       <SEO title="Start — PMG" description="Pick a tier, pay, book, upload. Done. The PMG release flow." path="/start" />
-      <header className="px-6 pb-6 pt-28 md:px-10 md:pt-32">
+      <header className="mx-auto max-w-4xl px-6 pb-6 pt-28 md:px-10 md:pt-32">
         <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-[#FFD230]">Propmyganda · Release onboarding</p>
         <h1 className="font-display text-5xl uppercase leading-[0.85] tracking-[-0.03em] md:text-8xl">{step === 0 ? "You're in." : STEPS[step]}</h1>
         <p className="mt-3 max-w-md font-mono text-[11px] uppercase leading-5 tracking-[0.14em] text-[#9A9A9E]">
@@ -482,8 +518,8 @@ export default function Start() {
         </p>
       </header>
 
-      <section className="px-6 pb-20 md:px-10">
-        <div className="max-w-4xl">
+      <section className="mx-auto max-w-4xl px-6 pb-20 md:px-10">
+        <div>
           <Stepper step={step} />
           <div className="mt-8">
             {err && <div className="mb-4"><ErrorLine>{err}</ErrorLine></div>}
