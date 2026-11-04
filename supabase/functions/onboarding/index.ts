@@ -28,6 +28,16 @@ const corsHeaders = {
 const BUCKET = "onboarding-uploads";
 const NY_OFFSET_MIN = -240; // America/New_York, EDT. Good enough for slot generation.
 
+/** Postgrest and fetch errors are plain objects, not Error instances; say what they say. */
+function errMsg(e: unknown): string {
+  if (e instanceof Error) return e.message;
+  if (e && typeof e === "object" && "message" in e && typeof (e as { message: unknown }).message === "string") {
+    const o = e as { message: string; code?: string; details?: string; hint?: string };
+    return [o.message, o.details, o.hint, o.code && `(${o.code})`].filter(Boolean).join(" · ");
+  }
+  try { return JSON.stringify(e); } catch { return String(e); }
+}
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 }
@@ -285,6 +295,13 @@ Deno.serve(async (req) => {
     return bad("Unknown action");
   } catch (e) {
     console.error(action, e);
-    return json({ error: e instanceof Error ? e.message : String(e) }, 500);
+    const message = errMsg(e);
+    // The two setup failures people actually hit, said plainly.
+    const hint = /relation .* does not exist/.test(message)
+      ? " — the onboarding migration has not been applied to the database yet (supabase/migrations/20261018_014 and 20261104_015)."
+      : /violates check constraint "onboarding_orders_tier_check"/.test(message)
+        ? " — migration 20261104_015 (DSP and Invited tiers) has not been applied yet."
+        : /onboarding_invites/.test(message) ? " — migration 20261104_015 has not been applied yet." : "";
+    return json({ error: message + hint }, 500);
   }
 });

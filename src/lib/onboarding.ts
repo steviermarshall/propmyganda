@@ -29,10 +29,13 @@ export async function call<T = Record<string, unknown>>(action: string, body: Re
   const { data, error } = await supabase.functions.invoke("onboarding", { body: { action, ...body } });
   if (error) {
     let message = error.message;
-    try { const ctx = (error as { context?: Response }).context; if (ctx) message = (await ctx.json()).error ?? message; } catch { /* keep */ }
+    try {
+      const ctx = (error as { context?: Response }).context;
+      if (ctx) { const body = await ctx.json(); message = typeof body?.error === "string" ? body.error : body?.error ? JSON.stringify(body.error) : message; }
+    } catch { /* keep the transport message */ }
     throw new Error(message);
   }
-  if (data?.error) throw new Error(data.error);
+  if (data?.error) throw new Error(typeof data.error === "string" ? data.error : JSON.stringify(data.error));
   return data as T;
 }
 
