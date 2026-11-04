@@ -54,7 +54,7 @@ export default class ChunkBoundary extends Component<Props, State> {
         <button
           type="button"
           onClick={this.retry}
-          className="border border-sidebar-border bg-sidebar-foreground px-6 py-2 font-display text-sm uppercase tracking-[0.2em] text-sidebar-background transition-opacity hover:opacity-80"
+          className="border border-sidebar-border bg-sidebar-foreground px-6 py-2 font-display text-sm uppercase tracking-[0.2em] text-sidebar transition-opacity hover:opacity-80"
         >
           Reload
         </button>
