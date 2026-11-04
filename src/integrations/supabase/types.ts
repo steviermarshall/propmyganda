@@ -1254,6 +1254,36 @@ export type Database = {
           },
         ]
       }
+      pmg_fight_profiles: {
+        Row: {
+          code: string
+          cred: number
+          keys: Json | null
+          matches: number
+          tutorial_done: boolean
+          unlocks: Json
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          cred?: number
+          keys?: Json | null
+          matches?: number
+          tutorial_done?: boolean
+          unlocks?: Json
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          cred?: number
+          keys?: Json | null
+          matches?: number
+          tutorial_done?: boolean
+          unlocks?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       pmg_tasks: {
         Row: {
           area: string | null

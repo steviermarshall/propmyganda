@@ -694,7 +694,7 @@ function startTutorial(g: Game) {
   g.phase = "fight"; g.msg = ""; g.timer = 99 * 60;
 }
 function finishTutorial(g: Game) {
-  g.tut = null; store.set("tutorial-done", true);
+  g.tut = null; store.set("tutorial-done", true); Profile.push();
   g.round = 1; g.wins = [0, 0]; g.msg = "";
   startRound(g);
 }
@@ -942,20 +942,24 @@ const AI_LEVEL: Record<Difficulty, number> = { EASY: 0, MEDIUM: 1, HARD: 2 };
 const BOUNTY: Record<Difficulty, number> = { EASY: 100, MEDIUM: 250, HARD: 500 };     // Street Cred for winning the match
 const DIFFICULTIES: Difficulty[] = ["EASY", "MEDIUM", "HARD"];
 
-/** What Street Cred buys. HARD TURF is the one that changes the game; the other two are flex. */
-type UnlockId = "goldtag" | "altcolors" | "hardturf";
+/** What Street Cred buys. KATBOT and HARD TURF change the game; the other two are flex. */
+type UnlockId = "goldtag" | "katbot" | "altcolors" | "hardturf";
 const UNLOCKS: { id: UnlockId; name: string; cost: number; blurb: string }[] = [
   { id: "goldtag",   name: "GOLD NAME PLATE", cost: 500,  blurb: "Your name and P1 tag in gold chrome on the fight HUD." },
+  { id: "katbot",    name: "KATBOT",          cost: 2000, blurb: "The wildcard joins your roster: fastest fighter in the game, fragile as glass. Until then the computer keeps KatBot for itself." },
   { id: "altcolors", name: "ALT COLORS",      cost: 1500, blurb: "A second colour set for your fighter — glow, special, callouts and HUD. Switch it on and off here." },
   { id: "hardturf",  name: "HARD TURF",       cost: 2500, blurb: "HARD difficulty on every location: the sharpest computer, and a +500 cred bounty per win." },
 ];
+/** Fighters a player has to unlock before picking them (the computer may still use them as a rival). */
+const LOCKED_FIGHTER: Partial<Record<string, UnlockId>> = { katbot: "katbot" };
+const fighterLocked = (id: string) => { const u = LOCKED_FIGHTER[id]; return !!u && !Cred.has(u); };
 const ALT_COLOR: Record<string, string> = { jpeez: "#4FD1FF", jahballa: "#FF3B5C", stockz: "#39E075", zoe: "#B76BFF", katbot: "#C6FF3A", hammad: "#FF7A1F" };
 const withAlt = (d: FighterDef): FighterDef => ({ ...d, color: ALT_COLOR[d.id] ?? d.color });
 
 /** Street Cred: earned by beating the computer, spent on unlocks, kept in this browser. */
 const Cred = {
-  get(): number { try { const v = Number(localStorage.getItem("pmg-cred")); return Number.isFinite(v) && v >= 0 ? v : 1200; } catch { return 1200; } },
-  set(v: number) { try { localStorage.setItem("pmg-cred", String(v)); } catch { /* private mode */ } },
+  get(): number { try { const raw = localStorage.getItem("pmg-cred"); if (raw === null) return 1200; const v = Number(raw); return Number.isFinite(v) && v >= 0 ? v : 1200; } catch { return 1200; } },
+  set(v: number) { try { localStorage.setItem("pmg-cred", String(v)); } catch { /* private mode */ } Profile.push(); },
   add(n: number): number { const v = this.get() + n; this.set(v); return v; },
   owned(): Set<UnlockId> { try { return new Set(JSON.parse(localStorage.getItem("pmg-unlocks") || "[]") as UnlockId[]); } catch { return new Set(); } },
   has(id: UnlockId): boolean { return this.owned().has(id); },
@@ -966,9 +970,92 @@ const Cred = {
     this.set(bal - u.cost);
     const o = this.owned(); o.add(id);
     try { localStorage.setItem("pmg-unlocks", JSON.stringify([...o])); } catch { /* private mode */ }
+    Profile.push();
     return true;
   },
   altOn(): boolean { return this.has("altcolors") && store.get("altcolors", true); },
+};
+
+/* ---------- the player's profile: recognised on return, saved in this browser and (when the site has a database) in the cloud ---------- */
+
+/** Everything worth keeping between visits. */
+interface Snapshot { cred: number; unlocks: UnlockId[]; tutorial: boolean; matches: number; keys: [Record<string, Action>, Record<string, Action>]; updated: number }
+/** Cloud store: the site's database, reached straight over REST so this file needs no client library. Off when the page has no database (the test build). */
+const SB_URL: string = ((import.meta as unknown as { env?: Record<string, string | undefined> }).env?.VITE_SUPABASE_URL) ?? "";
+const SB_KEY: string = ((import.meta as unknown as { env?: Record<string, string | undefined> }).env?.VITE_SUPABASE_PUBLISHABLE_KEY) ?? "";
+const CLOUD_ON = !!(SB_URL && SB_KEY);
+const PROFILE_TABLE = "pmg_fight_profiles";
+function sbHeaders(extra: Record<string, string> = {}) { return { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, "Content-Type": "application/json", ...extra }; }
+
+const Profile = {
+  pushTimer: 0 as ReturnType<typeof setTimeout> | 0,
+  listeners: new Set<() => void>(),
+  emit() { this.listeners.forEach((l) => l()); },
+  /** The player code: 8 letters/digits, made once, kept in this browser (and a cookie as a backup). Typed on another device, it brings the save along. */
+  code(): string {
+    let c = "";
+    try { c = localStorage.getItem("pmg-player") || ""; } catch { /* private mode */ }
+    if (!c) { const m = typeof document !== "undefined" && document.cookie.match(/(?:^|; )pmg_player=([A-Z0-9]{8})/); if (m) c = m[1]; }
+    if (!c) { const A = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; c = Array.from({ length: 8 }, () => A[Math.floor(Math.random() * A.length)]).join(""); }
+    this.setCode(c);
+    return c;
+  },
+  setCode(c: string) {
+    try { localStorage.setItem("pmg-player", c); } catch { /* private mode */ }
+    try { document.cookie = `pmg_player=${c}; max-age=31536000; path=/; SameSite=Lax`; } catch { /* no document */ }
+  },
+  pretty(c?: string) { const v = c ?? this.code(); return `${v.slice(0, 4)}-${v.slice(4)}`; },
+  matches(): number { try { return Number(localStorage.getItem("pmg-matches")) || 0; } catch { return 0; } },
+  /** True once this browser has fought: the title says WELCOME BACK instead of PRESS START. */
+  returning(): boolean { return this.matches() > 0 || Cred.get() !== 1200 || Cred.owned().size > 0; },
+  matchPlayed() { try { localStorage.setItem("pmg-matches", String(this.matches() + 1)); } catch { /* private mode */ } this.push(); },
+  updated(): number { try { return Number(localStorage.getItem("pmg-updated")) || 0; } catch { return 0; } },
+  touch() { try { localStorage.setItem("pmg-updated", String(Date.now())); } catch { /* private mode */ } },
+  snapshot(): Snapshot { return { cred: Cred.get(), unlocks: [...Cred.owned()], tutorial: store.get("tutorial-done", false), matches: this.matches(), keys: [{ ...KEYMAPS[0] }, { ...KEYMAPS[1] }], updated: this.updated() }; },
+  /** A browser that has never fought or bought anything: a save from the cloud simply replaces it. */
+  fresh(): boolean { const l = this.snapshot(); return l.matches === 0 && l.unlocks.length === 0 && l.cred === 1200; },
+  /** Put a saved profile into this browser, replacing what is here. (Never merged: adding cred from two copies would let spent cred come back.) */
+  apply(sn: Snapshot) {
+    try {
+      localStorage.setItem("pmg-cred", String(Math.max(0, Math.floor(sn.cred))));
+      localStorage.setItem("pmg-unlocks", JSON.stringify(sn.unlocks.filter((u) => UNLOCKS.some((x) => x.id === u))));
+      localStorage.setItem("pmg-matches", String(Math.max(0, sn.matches)));
+      localStorage.setItem("pmg-tutorial-done", sn.tutorial || store.get("tutorial-done", false) ? "1" : "0");
+      localStorage.setItem("pmg-updated", String(sn.updated));
+    } catch { /* private mode */ }
+    for (const p of [0, 1] as const) { const m = KEYMAPS[p], src = sn.keys?.[p]; if (src && typeof src === "object" && Object.keys(src).length) { for (const k of Object.keys(m)) delete m[k]; Object.assign(m, src); try { localStorage.setItem("pmg-keys-" + p, JSON.stringify(m)); } catch { /* private mode */ } } }
+    this.emit();
+  },
+  /** Cloud → this browser. Runs once when the game opens (the newer copy wins); typing a code in Settings always takes the cloud copy. */
+  async pull(code?: string, explicit = false): Promise<"loaded" | "none" | "off" | "error"> {
+    if (!CLOUD_ON) return "off";
+    code = code ?? this.code();
+    try {
+      const r = await fetch(`${SB_URL}/rest/v1/${PROFILE_TABLE}?code=eq.${encodeURIComponent(code)}&select=cred,unlocks,tutorial_done,matches,keys,updated_at`, { headers: sbHeaders() });
+      if (!r.ok) return "error";
+      const rows = (await r.json()) as { cred: number; unlocks: UnlockId[] | null; tutorial_done: boolean; matches: number | null; keys: Snapshot["keys"] | null; updated_at: string | null }[];
+      if (!rows.length) { if (!explicit && !this.fresh()) this.push(); return "none"; }           // first time this browser meets the cloud: send what it has
+      const row = rows[0];
+      const cloud: Snapshot = { cred: Number(row.cred) || 0, unlocks: row.unlocks ?? [], tutorial: !!row.tutorial_done, matches: row.matches ?? 0, keys: row.keys ?? [{}, {}], updated: row.updated_at ? Date.parse(row.updated_at) : 0 };
+      if (explicit || this.fresh() || cloud.updated > this.updated()) this.apply(cloud);
+      else this.push();                                                                            // this browser is newer: the cloud catches up
+      return "loaded";
+    } catch { return "error"; }
+  },
+  /** This browser → cloud, a moment after the last change (cred won, unlock bought, key rebound, match played). */
+  push() {
+    if (!CLOUD_ON) return;
+    if (this.pushTimer) clearTimeout(this.pushTimer);
+    this.touch();
+    this.pushTimer = setTimeout(() => {
+      this.pushTimer = 0;
+      const sn = this.snapshot();
+      fetch(`${SB_URL}/rest/v1/${PROFILE_TABLE}?on_conflict=code`, {
+        method: "POST", headers: sbHeaders({ Prefer: "resolution=merge-duplicates,return=minimal" }),
+        body: JSON.stringify({ code: this.code(), cred: sn.cred, unlocks: sn.unlocks, tutorial_done: sn.tutorial, matches: sn.matches, keys: sn.keys, updated_at: new Date(sn.updated).toISOString() }),
+      }).catch(() => { /* offline: the local copy is still the truth; next change retries */ });
+    }, 1500);
+  },
 };
 
 interface RatInst {
@@ -2116,7 +2203,7 @@ function loadKeys(p: 0 | 1): Record<string, Action> {
 }
 /** The live maps — the fight reads these every key press, so a rebind takes effect at once. */
 const KEYMAPS: [Record<string, Action>, Record<string, Action>] = [loadKeys(0), loadKeys(1)];
-function saveKeys(p: 0 | 1) { try { localStorage.setItem("pmg-keys-" + p, JSON.stringify(KEYMAPS[p])); } catch { /* private mode */ } }
+function saveKeys(p: 0 | 1) { try { localStorage.setItem("pmg-keys-" + p, JSON.stringify(KEYMAPS[p])); } catch { /* private mode */ } Profile.push(); }
 function bindKey(p: 0 | 1, action: Action, code: string) {
   const m = KEYMAPS[p];
   for (const k of Object.keys(m)) if (m[k] === action || k === code) delete m[k];     // one key per action; a key does one thing
@@ -2230,6 +2317,17 @@ const CSS = `
 .pmg-unlock .cost{font:13px ${HUDF};color:#ffcf7a;letter-spacing:1px}
 .pmg-unlock .pmg-toggle{grid-row:1/3}
 .pmg-diff{display:flex;gap:8px;justify-content:center;margin:0 0 16px;flex-wrap:wrap}
+.pmg-code{font:12px ${HUDF};letter-spacing:1px;color:#9aa3b0;margin:-8px 0 16px;text-align:center;max-width:46ch;line-height:1.6}
+.pmg-code b{color:#fff;letter-spacing:3px;font-size:14px}
+.pmg-codeval{font:16px ${HUDF};letter-spacing:4px;color:#ffcf7a}
+.pmg-profile{width:100%;padding:6px 2px 10px;border-bottom:1px solid #2f343d}
+.pmg-loadcode{display:flex;gap:8px;align-items:stretch}
+.pmg-input{flex:1;min-width:0;appearance:none;background:#0c0c12;border:2px solid #c9d1dc;border-radius:3px;color:#fff;font:16px ${HUDF};letter-spacing:3px;padding:8px 10px;text-transform:uppercase}
+.pmg-input:focus{outline:none;border-color:#ffc21a}
+.pmg-card.locked{cursor:pointer}
+.pmg-card.locked img,.pmg-card.locked .ph{filter:grayscale(1) brightness(.45)}
+.pmg-lock{position:absolute;top:0;left:0;right:0;aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font:15px ${HUDF};color:#ffc21a;letter-spacing:1px;text-shadow:2px 2px 0 #000;padding:8px}
+.pmg-lock small{font:11px ${HUDF};color:#fff;letter-spacing:2px}
 .pmg-diff .pmg-toggle{min-width:120px}
 .pmg-diff .pmg-toggle:disabled{opacity:.55;cursor:not-allowed}
 .pmg-link{appearance:none;background:none;border:0;color:#9aa3b0;font:12px ${HUDF};letter-spacing:2px;cursor:pointer;text-decoration:underline;padding:6px;margin-top:8px}
@@ -2611,6 +2709,37 @@ function UnlocksPanel({ onClose }: { onClose: () => void }) {
 }
 
 /** Settings: music, sound effects, next song. Opened from the MENU button (fight) or SETTINGS (home screen). */
+/** Settings: your player code, and a box to type a code from another device — its cred, unlocks and keys come over and merge. */
+function ProfileRow() {
+  const [typed, setTyped] = useState("");
+  const [msg, setMsg] = useState("");
+  const [busy, setBusy] = useState(false);
+  const load = async () => {
+    const code = typed.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    if (code.length !== 8) { setMsg("A player code is 8 letters and digits, like 7KQ2-M9FD."); return; }
+    setBusy(true);
+    const r = await Profile.pull(code, true);
+    setBusy(false);
+    if (r === "loaded") { Profile.setCode(code); Profile.push(); setMsg(`Loaded. Street Cred ${Cred.get().toLocaleString()} · ${Cred.owned().size} unlocks. This device now uses ${Profile.pretty(code)}.`); setTyped(""); }
+    else if (r === "none") setMsg("No save under that code yet — check the letters (O and 0, I and 1 are never used).");
+    else if (r === "off") setMsg("Cloud save is off in this build; your progress still stays in this browser.");
+    else setMsg("Couldn't reach the server. Try again in a moment.");
+  };
+  return (
+    <div className="pmg-profile">
+      <div className="pmg-row"><span>PLAYER CODE</span><b className="pmg-codeval">{Profile.pretty()}</b></div>
+      <p className="pmg-hint" style={{ margin: "6px 0 8px", textAlign: "left" }}>{CLOUD_ON ? "Your Street Cred, unlocks and keys are saved to this code. On another computer or phone, type it below to bring them over." : "Your Street Cred, unlocks and keys are saved in this browser."}</p>
+      {CLOUD_ON && (
+        <div className="pmg-loadcode">
+          <input className="pmg-input" value={typed} onChange={(e) => setTyped(e.target.value)} placeholder="XXXX-XXXX" maxLength={9} spellCheck={false} autoCapitalize="characters" aria-label="Player code from another device" onKeyDown={(e) => { e.stopPropagation(); if (e.key === "Enter") load(); }} />
+          <button className="pmg-toggle" disabled={busy} onClick={load}>{busy ? "…" : "LOAD CODE"}</button>
+        </div>
+      )}
+      {msg && <p className="pmg-hint" style={{ margin: "6px 0 0", textAlign: "left", color: "#ffcf7a" }}>{msg}</p>}
+    </div>
+  );
+}
+
 function SettingsPanel({ onClose, extra }: { onClose: () => void; extra?: ReactNode }) {
   const s = useSound();
   return (
@@ -2622,6 +2751,7 @@ function SettingsPanel({ onClose, extra }: { onClose: () => void; extra?: ReactN
           <div className="pmg-row"><span>MUSIC</span><button className="pmg-toggle" aria-pressed={s.musicOn} onClick={() => { s.unlock(); s.toggleMusic(); }}>{s.musicOn ? "ON" : "OFF"}</button></div>
           <div className="pmg-row"><span>SOUND FX</span><button className="pmg-toggle" aria-pressed={s.fxOn} onClick={() => { s.unlock(); s.toggleFx(); }}>{s.fxOn ? "ON" : "OFF"}</button></div>
           <div className="pmg-row"><span className="pmg-nowp">♪ {s.musicOn ? (s.title || "—") : "Music off"}</span><button className="pmg-toggle" onClick={() => { s.unlock(); if (!s.musicOn) s.toggleMusic(); else s.next(); }}>NEXT ▶▶</button></div>
+          {!extra && <ProfileRow />}
           {!extra && <button className="pmg-btn ghost" onClick={onClose}>BACK</button>}
         </div>
       </div>
@@ -2817,9 +2947,13 @@ export default function PMGFight3D({ onExit }: { onExit?: () => void } = {}) {
   useEffect(() => { getLogo(); if (screen === "menu") Sound.releaseMusic(); }, []);  // eslint-disable-line react-hooks/exhaustive-deps
   // Leaving the game (back to Propworld) must silence the soundtrack.
   useEffect(() => () => { Sound.music?.pause(); }, []);
+  // the profile: recognise a returning player (saved in this browser; pulled from the cloud when the site has one)
+  const [, bumpProfile] = useState(0);
+  useEffect(() => { const l = () => bumpProfile((n) => n + 1); Profile.listeners.add(l); Profile.pull(); return () => { Profile.listeners.delete(l); }; }, []);
 
   /** QUICK FIGHT: a random fighter against a random rival on a random turf — one tap from the title to the block. */
-  const quickFight = (a = Math.floor(Math.random() * ROSTER.length)) => {
+  const quickFight = (a = -1) => {
+    if (a < 0) { const open = ROSTER.map((_, i) => i).filter((i) => !fighterLocked(ROSTER[i].id)); a = open[Math.floor(Math.random() * open.length)]; }
     let b = Math.floor(Math.random() * (ROSTER.length - 1)); if (b >= a) b++;
     const pool = DIFFICULTIES.filter((d) => d !== "HARD" || Cred.has("hardturf"));
     setMode("cpu"); setPicks([a, b]); setLoc(LOCATIONS[Math.floor(Math.random() * LOCATIONS.length)].id); setDiff(pool[Math.floor(Math.random() * pool.length)]);
@@ -2854,7 +2988,8 @@ export default function PMGFight3D({ onExit }: { onExit?: () => void } = {}) {
           </h1>
           <p className="pmg-tag">STREETS OF NEW YORK</p>
           <p className="pmg-sub">The Propmyganda roster settles it on the block. Best of three rounds.</p>
-          <p className="pmg-cred">STREET CRED · {Cred.get().toLocaleString()}</p>
+          <p className="pmg-cred">{Profile.returning() ? "WELCOME BACK · " : ""}STREET CRED · {Cred.get().toLocaleString()}</p>
+          <p className="pmg-code">PLAYER CODE <b>{Profile.pretty()}</b>{CLOUD_ON ? " · your cred follows this code — type it in Settings on another device" : ""}</p>
           <div className="pmg-col">
             <button className="pmg-btn" onClick={() => quickFight()}>
               QUICK FIGHT<small>Random fighters, random turf — straight to the block</small>
@@ -2882,9 +3017,14 @@ export default function PMGFight3D({ onExit }: { onExit?: () => void } = {}) {
           </h1>
           <p className="pmg-sub">{quickPick ? "Tap or click a fighter — a random rival and turf are waiting." : "Stats are 1 to 10. Tap or click a fighter."}</p>
           <div className="pmg-grid">
-            {ROSTER.map((r, i) => (
-              <button key={r.id} className="pmg-card" aria-pressed={picks[0] === i} onClick={() => choose(i)}>
+            {ROSTER.map((r, i) => {
+              // a locked fighter can be picked as the rival (the computer's side), never as a player
+              const locked = fighterLocked(r.id) && (mode === "2p" || quickPick || picks.length === 0);
+              const price = UNLOCKS.find((u) => u.id === LOCKED_FIGHTER[r.id])?.cost ?? 0;
+              return (
+              <button key={r.id} className={`pmg-card${locked ? " locked" : ""}`} aria-pressed={picks[0] === i} aria-disabled={locked} onClick={() => (locked ? setUnlocks(true) : choose(i))}>
                 {portraits?.[r.id] ? <img src={portraits[r.id]} alt={`${r.name} portrait`} /> : <div className="ph">{portraits ? "NO MODEL" : "LOADING…"}</div>}
+                {locked && <span className="pmg-lock">🔒 {price.toLocaleString()} CRED<small>TAP TO UNLOCK</small></span>}
                 {picks[0] === i && <span className="pmg-badge">P1</span>}
                 <h3>{r.name.toUpperCase()}</h3>
                 <div className="bar" style={{ background: r.color }} />
@@ -2899,7 +3039,8 @@ export default function PMGFight3D({ onExit }: { onExit?: () => void } = {}) {
                 ))}
                 <div className="quote">“{r.quote}”</div>
               </button>
-            ))}
+              );
+            })}
           </div>
           <div className="pmg-col" style={{ marginTop: 18 }}>
             <button className="pmg-btn ghost" onClick={() => (picks.length ? setPicks([]) : (setQuickPick(false), setScreen("menu")))}>BACK</button>
@@ -3029,6 +3170,7 @@ function FightView3D(props: {
 
       const g: Game = newGame(p1, p2, cpu, () => {
         if (cpu && g.wins[0] >= 2) setCredWon({ won: BOUNTY[diff], total: Cred.add(BOUNTY[diff]) });   // bounty for the difficulty
+        Profile.matchPlayed();
         setOver(true);
       }, AI_LEVEL[diff]);
       g.touch = isTouch; GOLD_TAG = Cred.has("goldtag");
