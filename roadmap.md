@@ -41,6 +41,6 @@
 ## New tasks
 - [x] Store signed agreement version/hash, signing time/IP, splits, DSP title and self-produced flag on each sign-up order.
 - [x] Update PMG Fight in Propworld with the newly uploaded game code.
-- [ ] Deploy the Spotify catalog.
+- [x] Deploy the Spotify catalog.
 - [x] Remove "Made with Lovable" badge from the site
 - [x] Populate Events page from the 10 Instagram post links the user sent
