@@ -57,6 +57,13 @@
       "when": 1793799703047,
       "tag": "0007_onboarding_order_agreement_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793829630523,
+      "tag": "0008_create_pmg_fight_profiles",
+      "breakpoints": true
     }
   ]
 }
