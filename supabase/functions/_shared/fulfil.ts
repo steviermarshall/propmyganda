@@ -7,6 +7,7 @@ import { appendRow, ensureHeader } from "./google.ts";
 import { formatUsd, getTier } from "./tiers.ts";
 import { EDITING_COLUMNS, SESSION_MINUTES, distributionRow, editingRow, type OrderRow } from "./onboarding.ts";
 import { AGREEMENT_TEXT, AGREEMENT_VERSION, splitsLine } from "./agreement.ts";
+import { sendEmail } from "./email.ts";
 
 const DEFAULT_DISTRO_SHEET = "1-lGUtKmwAL7SmfaAHXbbPZK7715Detj1M6Ts_r6-kls";
 
@@ -27,18 +28,6 @@ async function signedLinks(supabase: SupabaseClient, uploads: OrderRow["uploads"
     out.push({ ...u, url: data?.signedUrl ?? u.path });
   }
   return out;
-}
-
-async function email(to: string, subject: string, text: string) {
-  const key = Deno.env.get("RESEND_API_KEY");
-  if (!key) return;
-  const from = Deno.env.get("NOTIFY_FROM") ?? "PMG <no-reply@propmyganda.com>";
-  const notify = Deno.env.get("NOTIFY_EMAIL");
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST", headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from, to: [to], bcc: notify ? [notify] : undefined, subject, text }),
-  });
-  if (!res.ok) throw new Error(`email ${res.status} ${await res.text()}`);
 }
 
 function moneyLine(o: OrderRow, paidStatus: string): string {
@@ -81,7 +70,7 @@ export async function fulfil(supabase: SupabaseClient, order: OrderRow, paidStat
 
   try {
     const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString("en-US", { timeZone: "America/New_York", dateStyle: "full", timeStyle: "short" }) : "—");
-    await email(order.email, `PMG · ${order.catalogue_no} · you're in`, [
+    await sendEmail(order.email, `PMG · ${order.catalogue_no} · you're in`, [
       `${order.artist_name} — you're in.`, "",
       `Plan: ${tier?.name ?? order.tier} · ${moneyLine(order, paidStatus)}`,
       `Posting date: ${when(order.post_at)}`, order.session_at ? `Session: ${when(order.session_at)}` : "",
@@ -96,7 +85,7 @@ export async function fulfil(supabase: SupabaseClient, order: OrderRow, paidStat
         order.dsp_title ? `Requested title: ${order.dsp_title}` : `Title: "${order.artist_name}" Propmyganda Performance`,
         "", AGREEMENT_TEXT,
       ] : []),
-    ].filter((l) => l !== "").join("\n"));
+    ].filter((l) => l !== "").join("\n"), { bccTeam: true });
   } catch (e) { errors.push(`email: ${e instanceof Error ? e.message : e}`); }
 
   if (errors.length) patch.sync_errors = errors.join(" | ");

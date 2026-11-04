@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Instagram, Twitter, Youtube } from "lucide-react";
 import ScrollReveal from "@/components/webgl/ScrollReveal";
 import SEO from "@/components/SEO";
+import AgentChat from "@/components/contact/AgentChat";
 
 const CONTACT_EMAIL = "workwithpmg@gmail.com";
 
@@ -85,8 +86,10 @@ const Contact = () => {
             </div>
           </ScrollReveal>
 
-          {/* Right — Form */}
+          {/* Right — chat first, the form underneath for anyone who'd rather write once */}
           <ScrollReveal delay={0.2} y={50}>
+            <AgentChat />
+            <p className="mt-10 mb-4 text-[10px] font-bold uppercase tracking-[0.25em] opacity-50">Or leave a message</p>
             {sent ? (
               <div className="space-y-4 py-10">
                 <p className="text-heading text-3xl uppercase">Message received</p>

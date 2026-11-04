@@ -18,6 +18,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { GCAL_BASE, gcalHeaders } from "../_shared/gcal.ts";
 import { fulfil } from "../_shared/fulfil.ts";
+import { igLookup } from "../_shared/igLookup.ts";
 import { AGREEMENT_TEXT, AGREEMENT_VERSION, normalizeIpi, sha256Hex, validateSplits } from "../_shared/agreement.ts";
 import { TIERS, formatUsd, getTier, quote, type PaymentPlan } from "../_shared/tiers.ts";
 import { catalogueNo, formEncode, postSlots, sessionBlock, sessionSlots, type Busy, type OrderRow } from "../_shared/onboarding.ts";
@@ -117,20 +118,6 @@ async function signatureStamp(req: Request): Promise<Record<string, unknown>> {
     signed_at: new Date().toISOString(),
     signed_ip: (req.headers.get("x-forwarded-for") ?? req.headers.get("cf-connecting-ip") ?? "").split(",")[0].trim() || null,
   };
-}
-
-async function igLookup(handle: string) {
-  const token = Deno.env.get("IG_ACCESS_TOKEN");
-  const businessId = Deno.env.get("IG_BUSINESS_ID");
-  const profileUrl = `https://www.instagram.com/${handle}/`;
-  if (!token || !businessId) return { handle, url: profileUrl, verified: false };
-  const fields = `business_discovery.username(${handle}){username,name,followers_count,media_count,profile_picture_url,biography}`;
-  const res = await fetch(`https://graph.facebook.com/v21.0/${businessId}?fields=${encodeURIComponent(fields)}&access_token=${token}`, { signal: AbortSignal.timeout(8000) });
-  if (!res.ok) return { handle, url: profileUrl, verified: false, error: `IG ${res.status}` };
-  const data = await res.json();
-  const p = data.business_discovery;
-  if (!p) return { handle, url: profileUrl, verified: false };
-  return { handle: p.username, url: `https://www.instagram.com/${p.username}/`, verified: true, name: p.name, followers: p.followers_count, posts: p.media_count, picture: p.profile_picture_url, bio: p.biography };
 }
 
 async function calendarBusy(fromISO: string, toISO: string): Promise<Busy[]> {
