@@ -29,6 +29,13 @@
       "when": 1790397596794,
       "tag": "0003_pmg_tasks_contact_wire",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793759660099,
+      "tag": "0004_tighten_rls_policies",
+      "breakpoints": true
     }
   ]
 }
