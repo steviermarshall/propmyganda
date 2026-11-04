@@ -5,12 +5,15 @@
  * Animation: each fighter holds a stance for their fighting style (see STANCES), feet stay planted on the floor,
  * knockdowns land flat on the back and go limp, and the CharacterAnatomyController adds breathing, weight and hit recoil.
  *
- * Needs:  the "three" package, and the  public/pmg/  folder with:
- *   jpeez.glb  jahballa.glb  stockz.glb  zoe.glb  hammad.glb  katbot.glb   (fighters)
- *   pmg-logo.png                                                        (intro + title)
+ * Lovable build: every file below is imported from its src/assets/pmg/*.asset.json entry (Lovable's asset CDN):
+ *   jpeez.glb  jahballa.glb  stockz.glb  zoe.glb  hammad.glb  katbot.glb   (fighters, meshopt-compressed)
+ *   dumpster car billboard rat subway bench spraycan .glb                (stage props + the intro's spray can)
+ *   portrait-<fighter>.jpg  stage-<location>.jpg                        (select-screen cards; optional — rendered live if missing)
+ *   pmg-logo.png  sign-34th.jpg                                         (intro + title, subway sign)
  *   song-*.mp3                                                          (music, listed in SONGS below)
  *
- * Lovable: save as  src/components/PMGFight3D.tsx  and render <PMGFight3D /> on the /propworld page.
+ * First fight downloads about 2.5 MB (two fighters + one stage) instead of the old 20 MB: only the picked fighters and the chosen stage load.
+ * Lovable: lives at  src/components/PMGFight3D.tsx ; Propworld renders <PMGFight3D onExit={...} />.
  */
 import { useEffect, useRef, useState } from "react";
 import type { PointerEvent as RPointerEvent, ReactNode } from "react";
@@ -18,35 +21,49 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import * as SkeletonUtils from "three/examples/jsm/utils/SkeletonUtils.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
+import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import pmgGraffitiLogo from "@/assets/pmg/pmg-logo-correct.png.asset.json";
-import jpeezModel from "@/assets/pmg/jpeez-correct.glb.asset.json";
-import jahballaModel from "@/assets/pmg/jahballa-correct.glb.asset.json";
-import stockzModel from "@/assets/pmg/stockz-correct.glb.asset.json";
-import zoeModel from "@/assets/pmg/zoe-correct.glb.asset.json";
-import hammadModel from "@/assets/pmg/hammad-correct.glb.asset.json";
-import katbotModel from "@/assets/pmg/katbot-correct.glb.asset.json";
-import subwayModel from "@/assets/pmg/subway-correct.glb.asset.json";
-import benchModel from "@/assets/pmg/bench-correct.glb.asset.json";
-import spraycanModel from "@/assets/pmg/spraycan-correct.glb.asset.json";
-import ratModel from "@/assets/pmg/rat-correct.glb.asset.json";
-import dumpsterModel from "@/assets/pmg/dumpster-correct.glb.asset.json";
-import billboardModel from "@/assets/pmg/billboard-correct.glb.asset.json";
-import carModel from "@/assets/pmg/car-correct.glb.asset.json";
+import jpeezModel from "@/assets/pmg/jpeez-v2.glb.asset.json";
+import jahballaModel from "@/assets/pmg/jahballa-v2.glb.asset.json";
+import stockzModel from "@/assets/pmg/stockz-v2.glb.asset.json";
+import zoeModel from "@/assets/pmg/zoe-v2.glb.asset.json";
+import hammadModel from "@/assets/pmg/hammad-v2.glb.asset.json";
+import katbotModel from "@/assets/pmg/katbot-v2.glb.asset.json";
+import subwayModel from "@/assets/pmg/subway-v2.glb.asset.json";
+import benchModel from "@/assets/pmg/bench-v2.glb.asset.json";
+import spraycanModel from "@/assets/pmg/spraycan-v2.glb.asset.json";
+import ratModel from "@/assets/pmg/rat-v2.glb.asset.json";
+import dumpsterModel from "@/assets/pmg/dumpster-v2.glb.asset.json";
+import billboardModel from "@/assets/pmg/billboard-v2.glb.asset.json";
+import carModel from "@/assets/pmg/car-v2.glb.asset.json";
+import portrait_jpeezPic from "@/assets/pmg/portrait-jpeez.jpg.asset.json";
+import portrait_jahballaPic from "@/assets/pmg/portrait-jahballa.jpg.asset.json";
+import portrait_stockzPic from "@/assets/pmg/portrait-stockz.jpg.asset.json";
+import portrait_zoePic from "@/assets/pmg/portrait-zoe.jpg.asset.json";
+import portrait_katbotPic from "@/assets/pmg/portrait-katbot.jpg.asset.json";
+import portrait_hammadPic from "@/assets/pmg/portrait-hammad.jpg.asset.json";
+import stage_streetsPic from "@/assets/pmg/stage-streets.jpg.asset.json";
+import stage_subwayPic from "@/assets/pmg/stage-subway.jpg.asset.json";
+import sign34Pic from "@/assets/pmg/sign-34th.jpg.asset.json";
 import dirtyDanTrack from "@/assets/pmg/song-dirty-dan.mp3.asset.json";
 import stockzTrack from "@/assets/pmg/song-fine-tiino-stockz.mp3.asset.json";
 import jahballaPrideTrack from "@/assets/pmg/song-jahballa-pride.mp3.asset.json";
 import zoeTrack from "@/assets/pmg/song-zoe-tuesday-rayny.mp3.asset.json";
 
-/** Where the game files live (Lovable: the public/pmg folder). */
+/** Where the game files live: Lovable's asset CDN (the .asset.json files in src/assets/pmg). The -v2 models are meshopt-compressed. */
 const ASSET_URLS: Record<string, string> = {
-  jpeez: jpeezModel.url, jahballa: jahballaModel.url, stockz: stockzModel.url,
-  zoe: zoeModel.url, hammad: hammadModel.url, katbot: katbotModel.url,
-  subway: subwayModel.url, bench: benchModel.url, spraycan: spraycanModel.url,
-  rat: ratModel.url, dumpster: dumpsterModel.url, billboard: billboardModel.url, car: carModel.url,
+  jpeez: jpeezModel.url, jahballa: jahballaModel.url, stockz: stockzModel.url, zoe: zoeModel.url, hammad: hammadModel.url, katbot: katbotModel.url, subway: subwayModel.url, bench: benchModel.url, spraycan: spraycanModel.url, rat: ratModel.url, dumpster: dumpsterModel.url, billboard: billboardModel.url, car: carModel.url,
+  "portrait-jpeez": portrait_jpeezPic.url, "portrait-jahballa": portrait_jahballaPic.url, "portrait-stockz": portrait_stockzPic.url, "portrait-zoe": portrait_zoePic.url, "portrait-katbot": portrait_katbotPic.url, "portrait-hammad": portrait_hammadPic.url, "stage-streets": stage_streetsPic.url, "stage-subway": stage_subwayPic.url, "sign-34th": sign34Pic.url,
 };
-/** Resolve a model name to its hosted file; unknown names return "" so loaders fail fast and fall back. */
+/** Resolve a file name to its hosted copy; unknown names return "" so loaders fail fast and fall back. */
 const assetUrl = (name: string) => ASSET_URLS[name] ?? "";
 const LOGO_URL = pmgGraffitiLogo.url;
+/** Pre-rendered pictures for the select screens (made with tools/render-cards). If one is missing the game renders it from the 3D model instead. */
+const PORTRAIT_URL = (id: string) => assetUrl(`portrait-${id}`);
+const STAGE_PIC_URL = (id: string) => assetUrl(`stage-${id}`);
+
+/** Every .glb is meshopt-compressed (about 4× smaller than the originals), so each loader gets the decoder. */
+function gltfLoader() { const l = new GLTFLoader(); l.setMeshoptDecoder(MeshoptDecoder); return l; }
 
 /** Music — plays in random order. Add a song: put the mp3 in public/pmg and add a line here. */
 const SONGS = [
@@ -722,7 +739,7 @@ const assetCache = new Map<string, Promise<Asset>>();
 function loadFighter(id: string): Promise<Asset> {
   let p = assetCache.get(id);
   if (!p) {
-    p = new GLTFLoader().loadAsync(assetUrl(id)).then((g) => {
+    p = gltfLoader().loadAsync(assetUrl(id)).then((g) => {
       // The Mixamo idles move the hips around the floor (JPeez's travel 57 cm forward and back, JahBalla's 52 cm).
       // Where a fighter stands is the game's job, so drop the hips' travel: the body stays on its spot and the
       // stances + foot planting do the rest.
@@ -878,7 +895,7 @@ interface GLTFResult { scene: THREE.Object3D; animations: THREE.AnimationClip[] 
 function loadGLB(name: string): Promise<GLTFResult | null> {
   let p = propCache.get(name);
   if (!p) {
-    p = new GLTFLoader().loadAsync(assetUrl(name)).then((g) => {
+    p = gltfLoader().loadAsync(assetUrl(name)).then((g) => {
       g.scene.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
       return { scene: g.scene as THREE.Object3D, animations: g.animations };
     }).catch(() => null);
@@ -1043,7 +1060,7 @@ function buildSubway(): Stage {
     st.position.x -= c.x; st.position.z += WALL_Z - wb.max.z; st.updateMatrixWorld(true);
 
     // the 34th Street sign, brought down from high on the wall to where the camera can see it
-    Promise.reject(new Error("no 34th St sign asset")).then((tx: THREE.Texture) => {
+    new THREE.TextureLoader().loadAsync(assetUrl("sign-34th")).then((tx) => {
       tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 8;
       const w = 2.8, h = w * tx.image.height / tx.image.width;
       const sign = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ map: tx, roughness: 0.6 }));
@@ -1118,6 +1135,8 @@ function makeRig(asset: Asset, color: string): Rig3 {
   idle?.play();
   const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex("rgba(255,255,255,1)", color), blending: THREE.AdditiveBlending, depthWrite: false }));
   glow.visible = false; root.add(glow);
+  // readability: a cool rim light just behind each fighter's shoulders, so the body outline reads against the dark set
+  const rim = new THREE.PointLight(0x9fc4ff, 6, 4.5, 1.6); rim.position.set(0, 1.7, -0.9); root.add(rim);
   root.updateMatrixWorld(true);
   const footRest = Math.min(footY(bones.LeftFoot), footY(bones.RightFoot));
   const hipsRest = hipsInModel(model, bones.Hips);
@@ -1655,8 +1674,10 @@ function drawCinematic(c: CanvasRenderingContext2D, g: Game) {
   outlined(c, small, W / 2, y + size * 0.5 + 22, 16, f.def.color, "center", 0.12);
 }
 
-function drawHud(c: CanvasRenderingContext2D, g: Game, touch: boolean, project: (x: number, y: number, z: number) => [number, number], pics: (HTMLImageElement | null)[]) {
-  const PS = 66, BY = 18, BH = 26, SK = 10, GAP = 54;
+function drawHud(c: CanvasRenderingContext2D, g: Game, touch: boolean, project: (x: number, y: number, z: number) => [number, number], pics: (HTMLImageElement | null)[], compact = false) {
+  // compact = a phone: the arena is only ~600 px wide there, so text and bars draw about a third bigger
+  const k = compact ? 1.35 : 1;
+  const PS = 66 * k, BY = 18, BH = 26 * k, SK = 10, GAP = 54 * k;
   const BW = W / 2 - GAP - 20 - PS - 16;
   const pulse = 0.5 + Math.sin(g.frame * 0.25) * 0.5;
   if (g.cine) { drawCinematic(c, g); return; }
@@ -1694,11 +1715,11 @@ function drawHud(c: CanvasRenderingContext2D, g: Game, touch: boolean, project: 
     c.restore();
 
     // name plate + player tag
-    const ny = BY + BH + 20, nameX = left ? bx + 4 : bx + BW - 4;
-    outlined(c, f.def.name.toUpperCase(), nameX, ny, 20, "#ffffff", left ? "left" : "right");
-    c.font = `20px ${HUDF}`; const nw = c.measureText(f.def.name.toUpperCase()).width;
-    c.fillStyle = f.def.color; c.fillRect(left ? nameX : nameX - nw, ny + 13, nw, 3);
-    outlined(c, f.tag, left ? nameX + nw + 14 : nameX - nw - 14, ny + 1, 12, "#ffd23f", left ? "left" : "right");
+    const ny = BY + BH + 20 * k, nameX = left ? bx + 4 : bx + BW - 4;
+    outlined(c, f.def.name.toUpperCase(), nameX, ny, 20 * k, "#ffffff", left ? "left" : "right");
+    c.font = `${20 * k}px ${HUDF}`; const nw = c.measureText(f.def.name.toUpperCase()).width;
+    c.fillStyle = f.def.color; c.fillRect(left ? nameX : nameX - nw, ny + 13 * k, nw, 3);
+    outlined(c, f.tag, left ? nameX + nw + 14 : nameX - nw - 14, ny + 1, 12 * k, "#ffd23f", left ? "left" : "right");
 
     // round wins: gold diamonds (empty = outline) near the timer
     for (let k = 0; k < 2; k++) {
@@ -1710,32 +1731,33 @@ function drawHud(c: CanvasRenderingContext2D, g: Game, touch: boolean, project: 
     }
 
     // special gauge: 10 segments, label says when it's ready (not just colour)
-    const gy = ny + 22, segs = 10, gw = BW * 0.62, segW = gw / segs;
+    const gy = ny + 22 * k, segs = 10, gw = BW * 0.62, segW = gw / segs, gh = 8 * k;
     const gx = left ? bx : bx + BW - gw;
-    c.fillStyle = "#000"; slantRect(c, gx - 3, gy - 3, gw + 6, 14, sk * 0.5); c.fill();
+    c.fillStyle = "#000"; slantRect(c, gx - 3, gy - 3, gw + 6, gh + 6, sk * 0.5); c.fill();
     const lit = (f.sta / 100) * segs;
     for (let k = 0; k < segs; k++) {
       const idx = left ? k : segs - 1 - k;
       const on = Math.min(1, Math.max(0, lit - idx));
       const sx = gx + k * segW + 1;
-      c.fillStyle = "#101a2e"; c.fillRect(sx, gy, segW - 2, 8);
+      c.fillStyle = "#101a2e"; c.fillRect(sx, gy, segW - 2, gh);
       if (on > 0) {
-        const gg = c.createLinearGradient(0, gy, 0, gy + 8); gg.addColorStop(0, "#bff3ff"); gg.addColorStop(1, "#1e78ff");
-        c.fillStyle = gg; c.globalAlpha = on; c.fillRect(sx, gy, segW - 2, 8); c.globalAlpha = 1;
+        const gg = c.createLinearGradient(0, gy, 0, gy + gh); gg.addColorStop(0, "#bff3ff"); gg.addColorStop(1, "#1e78ff");
+        c.fillStyle = gg; c.globalAlpha = on; c.fillRect(sx, gy, segW - 2, gh); c.globalAlpha = 1;
       }
     }
     const ready = f.sta >= SP_COST;
-    outlined(c, ready ? "SPECIAL READY" : "SPECIAL", left ? gx + gw + 10 : gx - 10, gy + 4, 11, ready ? `rgb(255,${Math.round(200 + 55 * pulse)},${Math.round(80 * pulse)})` : "#9fb3d9", left ? "left" : "right", 0.15);
+    outlined(c, ready ? "SPECIAL READY" : "SPECIAL", left ? gx + gw + 10 : gx - 10, gy + gh / 2, 11 * k, ready ? `rgb(255,${Math.round(200 + 55 * pulse)},${Math.round(80 * pulse)})` : "#9fb3d9", left ? "left" : "right", 0.15);
 
     // heat gauge: fills from landing and taking hits; full = the cinematic finisher
-    const hy = gy + 16, full = f.heat >= 100;
-    c.fillStyle = "#000"; slantRect(c, gx - 3, hy - 2, gw + 6, 10, sk * 0.5); c.fill();
-    c.fillStyle = "#2a1206"; c.fillRect(gx, hy, gw, 6);
+    const hy = gy + gh + 8 * k, hh = 6 * k, full = f.heat >= 100;
+    c.fillStyle = "#000"; slantRect(c, gx - 3, hy - 2, gw + 6, hh + 4, sk * 0.5); c.fill();
+    c.fillStyle = "#2a1206"; c.fillRect(gx, hy, gw, hh);
     const hw = (gw * f.heat) / 100;
-    const hg = c.createLinearGradient(0, hy, 0, hy + 6); hg.addColorStop(0, "#ffe08a"); hg.addColorStop(1, full ? "#ff2300" : "#ff8a1f");
-    c.fillStyle = hg; c.fillRect(left ? gx : gx + gw - hw, hy, hw, 6);
-    const finLabel = full ? (i === 0 || !g.cpu ? "FINISHER READY — L" : "FINISHER READY") : "HEAT";
-    outlined(c, finLabel, left ? gx + gw + 10 : gx - 10, hy + 3, 10, full ? `rgb(255,${Math.round(90 + 120 * pulse)},40)` : "#e0a070", left ? "left" : "right", 0.15);
+    const hg = c.createLinearGradient(0, hy, 0, hy + hh); hg.addColorStop(0, "#ffe08a"); hg.addColorStop(1, full ? "#ff2300" : "#ff8a1f");
+    c.fillStyle = hg; c.fillRect(left ? gx : gx + gw - hw, hy, hw, hh);
+    const finKey = touch ? "S" : "L";
+    const finLabel = full ? (i === 0 || !g.cpu ? `FINISHER READY — ${finKey}` : "FINISHER READY") : "HEAT";
+    outlined(c, finLabel, left ? gx + gw + 10 : gx - 10, hy + hh / 2, 10 * k, full ? `rgb(255,${Math.round(90 + 120 * pulse)},40)` : "#e0a070", left ? "left" : "right", 0.15);
 
     // combo counter
     const cs = g.comboShow[i];
@@ -1749,7 +1771,7 @@ function drawHud(c: CanvasRenderingContext2D, g: Game, touch: boolean, project: 
     const down = f.state === "knockdown" || f.state === "ko";
     const [tx, ty0] = project(X3(f.x), Y3(f.y) + (down ? 0.6 : f.crouch ? 1.5 : 2.05) + (i === 0 ? 0 : 0.12), 0);
     const ty = Math.max(170, ty0);
-    outlined(c, f.tag, tx, ty, 13, i === 0 ? "#ffd23f" : "#ffffff");
+    outlined(c, f.tag, tx, ty, 13 * k, i === 0 ? "#ffd23f" : "#ffffff");
     const co = g.callout[i];
     if (co.t > 0) outlined(c, co.text, Math.max(130, Math.min(W - 130, tx)), ty - 28, 24, f.def.color);        // special name, arcade-style
   });
@@ -1764,10 +1786,11 @@ function drawHud(c: CanvasRenderingContext2D, g: Game, touch: boolean, project: 
   const secs = Math.max(0, Math.ceil(g.timer / 60));
   outlined(c, `${secs}`.padStart(2, "0"), W / 2, ty + th / 2 + 1, 34, secs <= 10 ? `rgb(255,${Math.round(60 + 100 * pulse)},40)` : gold(c, ty + 12, ty + th - 12), "center", 0.12);
 
-  for (const s of g.sparks) if (s.blocked) { const [bx, by] = project(X3(s.x), (GROUND - s.y) * U + 0.35, 0.4); outlined(c, "BLOCK", bx, by, 14, "#bfe0ff"); }
+  for (const s of g.sparks) if (s.blocked) { const [bx, by] = project(X3(s.x), (GROUND - s.y) * U + 0.35, 0.4); outlined(c, "BLOCK", bx, by, 14 * k, "#bfe0ff"); }
 
   if (g.round === 1 && g.frame < 420) {
-    outlined(c, touch ? "HOLD THE STICK AWAY FROM YOUR RIVAL TO BLOCK" : "HOLD BACK (AWAY FROM YOUR RIVAL) TO BLOCK", W / 2, H - 92, 13, "#ffcf7a", "center", 0.1);
+    outlined(c, touch ? "HOLD THE STICK AWAY FROM YOUR RIVAL TO BLOCK" : "HOLD BACK (AWAY FROM YOUR RIVAL) TO BLOCK", W / 2, H - 92, 13 * k, "#ffcf7a", "center", 0.1);
+    if (touch) outlined(c, "SWIPE ↓ DUCK · SWIPE ← → DODGE · TWO-FINGER TAP PARRY", W / 2, H - 92 + 20 * k, 12 * k, "#bfe0ff", "center", 0.1);
   }
 
   // big announcements on a slanted banner
@@ -1786,19 +1809,29 @@ function drawHud(c: CanvasRenderingContext2D, g: Game, touch: boolean, project: 
 
 /* ---------- select-screen portraits, rendered from the real 3D models ---------- */
 
+/** True when a picture exists at this address (the pre-rendered cards). */
+function imageExists(url: string): Promise<boolean> {
+  return new Promise((res) => { const im = new Image(); im.onload = () => res(im.naturalWidth > 0); im.onerror = () => res(false); im.src = url; });
+}
+
 let stagePreviewJob: Promise<Record<string, string>> | null = null;
-/** A snapshot of each location from the fight camera, for the location-select cards. */
+/** A snapshot of each location from the fight camera, for the location-select cards.
+ *  Uses the pre-rendered stage-<id>.jpg when it exists (a few KB); otherwise builds the stage and renders it live (several MB). */
 function renderStagePreviews(): Promise<Record<string, string>> {
   if (stagePreviewJob) return stagePreviewJob;
   stagePreviewJob = (async () => {
     const out: Record<string, string> = {};
+    const pre = await Promise.all(LOCATIONS.map((l) => imageExists(STAGE_PIC_URL(l.id))));
+    LOCATIONS.forEach((l, i) => { if (pre[i]) out[l.id] = STAGE_PIC_URL(l.id); });
+    const todo = LOCATIONS.filter((l) => !out[l.id]);
+    if (!todo.length) return out;
     await getLogo();
     const r = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
     r.setSize(640, 360); r.outputColorSpace = THREE.SRGBColorSpace; r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.05;
     r.shadowMap.enabled = true;
     const cam = new THREE.PerspectiveCamera(34, 16 / 9, 0.1, 80);
     cam.position.set(0, 1.35, 7.2); cam.lookAt(0, 1.15, 0);
-    for (const l of LOCATIONS) {
+    for (const l of todo) {
       try {
         const st = buildStage(r, l.id); await st.ready; updateStage(st, null, 1, 0);
         r.render(st.scene, cam);
@@ -1813,11 +1846,16 @@ function renderStagePreviews(): Promise<Record<string, string>> {
 }
 
 let portraitJob: Promise<Record<string, string>> | null = null;
-/** Head-and-shoulders shots of every fighter, framed from the model's real pose, on an arcade-style card background. */
+/** Head-and-shoulders shots of every fighter, framed from the model's real pose, on an arcade-style card background.
+ *  Uses the pre-rendered portrait-<id>.jpg when it exists (≈ 20 KB each); otherwise loads that fighter's model and renders it live. */
 function renderPortraits(): Promise<Record<string, string>> {
   if (portraitJob) return portraitJob;
   portraitJob = (async () => {
     const out: Record<string, string> = {};
+    const pre = await Promise.all(ROSTER.map((d) => imageExists(PORTRAIT_URL(d.id))));
+    ROSTER.forEach((d, i) => { if (pre[i]) out[d.id] = PORTRAIT_URL(d.id); });
+    const todo = ROSTER.filter((d) => !out[d.id]);
+    if (!todo.length) return out;
     const S = 320;
     const r = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
     r.setSize(S, S); r.setClearColor(0x000000, 0); r.outputColorSpace = THREE.SRGBColorSpace; r.toneMapping = THREE.ACESFilmicToneMapping;
@@ -1828,11 +1866,13 @@ function renderPortraits(): Promise<Record<string, string>> {
     const cam = new THREE.PerspectiveCamera(26, 1, 0.05, 20);
     const comp = document.createElement("canvas"); comp.width = comp.height = S;
     const cc = comp.getContext("2d")!;
-    for (const d of ROSTER) {
+    for (const d of todo) {
       try {
         const rg = makeRig(await loadFighter(d.id), d.color);
         rg.mixer.update(0.5); rg.model.rotation.y = 0.3;
         scene.add(rg.root); rg.root.updateMatrixWorld(true);
+        faceRival(rg, 0);                                                          // square the hips to the camera (Stockz's idle turns his back)
+        turn(rg.bones.Head, V(1, 0, 0), -(d.headUp ?? 0)); rg.root.updateMatrixWorld(true);   // chin up for the fighters whose idle looks down
         // real bounds of the posed body
         const box = new THREE.Box3(), mb = new THREE.Box3();
         rg.model.traverse((o) => {
@@ -2025,7 +2065,9 @@ const CSS = `
 .pmg-loc img,.pmg-loc .ph{aspect-ratio:16/9 !important}
 .pmg-loc h3{font-size:24px}
 .pmg-canvas{display:block;touch-action:none;background:#000;border:3px solid #000;box-shadow:0 0 0 3px #6b7380,8px 8px 0 3px #000}
-.pmg-top{position:absolute;top:15.2%;left:50%;transform:translateX(-50%);display:flex;gap:6px}
+.pmg-top{position:absolute;top:15.2%;left:50%;transform:translateX(-50%);display:flex;gap:6px;z-index:3}
+.pmg-stage.compact .pmg-top{top:auto;bottom:2.5%}
+@media (pointer:coarse) and (orientation:portrait){.pmg{justify-content:flex-start;padding-top:10px}}
 .pmg-top .pmg-mini{font-size:clamp(9px,1.3vw,12px);padding:clamp(3px,.6vw,6px) clamp(8px,1.2vw,14px);letter-spacing:1px}
 .pmg-modal{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;padding:16px}
 .pmg-panel{width:min(400px,94vw);max-height:94dvh;overflow:auto;padding:20px;border-radius:6px;background:linear-gradient(#2a2e36,#101217);box-shadow:0 0 0 2px #c9d1dc,0 0 0 4px #000,6px 8px 0 4px rgba(0,0,0,.6);display:flex;flex-direction:column;align-items:center}
@@ -2037,26 +2079,34 @@ const CSS = `
 .pmg-toggle:focus-visible{outline:3px solid #fff;outline-offset:3px}
 .pmg-mini{appearance:none;border:2px solid #c9d1dc;border-radius:3px;background:rgba(12,12,16,.85);color:#fff;font:12px ${HUDF};padding:8px 10px;cursor:pointer;white-space:nowrap}
 .pmg-mini[aria-pressed="true"]{border-color:#6b7380;color:#9aa3b0}
-.pmg-help{color:#efdcc6;font-size:14px;margin-top:14px;text-align:center;line-height:1.9}
-.pmg-help kbd{background:#15171c;border:2px solid #c9d1dc;border-radius:3px;padding:0 6px;font:12px ${HUDF};color:#fff}
-.pmg-pad{display:flex;justify-content:space-between;align-items:flex-end;gap:8px;margin-top:12px;width:100%;max-width:100%}
-.pmg-pad.overlay{position:absolute;left:10px;right:10px;bottom:10px;width:auto;margin:0;pointer-events:none}
+.pmg kbd{background:#15171c;border:2px solid #c9d1dc;border-radius:3px;padding:0 6px;font:12px ${HUDF};color:#fff;white-space:nowrap}
+.pmg-ctl{display:grid;grid-template-columns:auto 1fr;gap:7px 14px;align-items:center;width:100%;color:#efdcc6;font-size:14px;line-height:1.5;margin-bottom:14px}
+.pmg-ctl b{font:13px ${HUDF};color:#ffcf7a;letter-spacing:1px;text-align:right}
+.pmg-ctl h4{grid-column:1/-1;margin:8px 0 0;font:14px ${HUDF};color:#fff;letter-spacing:2px;border-bottom:1px solid #2f343d;padding-bottom:4px}
+.pmg-hint{color:#c9c2b6;font-size:13px;margin-top:10px;text-align:center}
+.pmg-link{appearance:none;background:none;border:0;color:#9aa3b0;font:12px ${HUDF};letter-spacing:2px;cursor:pointer;text-decoration:underline;padding:6px;margin-top:8px}
+.pmg-link:hover{color:#fff}
+.pmg-pad{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:14px;width:100%;max-width:100%;padding:0 4px}
+.pmg-pad.overlay{position:absolute;left:10px;right:10px;bottom:10px;width:auto;margin:0;padding:0;pointer-events:none;align-items:flex-end}
 .pmg-pad.overlay>*{pointer-events:auto}
-.pmg-dpad{position:relative;width:clamp(116px,30vw,150px);aspect-ratio:1;border-radius:50%;background:rgba(12,12,16,.55);border:3px solid rgba(201,209,220,.9);touch-action:none;flex:none}
+.pmg-dpad{position:relative;width:clamp(120px,40vw,190px);aspect-ratio:1;border-radius:50%;background:rgba(12,12,16,.55);border:3px solid rgba(201,209,220,.9);touch-action:none;flex:none}
+.pmg-pad.overlay .pmg-dpad{width:clamp(96px,26vh,140px)}
+.pmg-gest{position:absolute;inset:0;touch-action:none}
 .pmg-dpad .ar{position:absolute;font:14px ${HUDF};color:#e6eaf0;line-height:1}
 .pmg-knob{position:absolute;left:50%;top:50%;width:42%;height:42%;margin:-21% 0 0 -21%;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff,#a9b2bf 40%,#4a5160);border:3px solid #000;pointer-events:none}
-.pmg-keys{display:flex;gap:clamp(6px,2vw,10px);align-items:flex-end;flex-wrap:wrap;justify-content:flex-end;max-width:min(260px,62vw)}
-.pmg-key{appearance:none;border:3px solid #c9d1dc;background:rgba(12,12,16,.7);color:#fff;border-radius:50%;width:clamp(56px,15vw,70px);height:clamp(56px,15vw,70px);
-  font:700 11px system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;touch-action:none;padding:0;gap:2px}
-.pmg-key span{font:20px ${HUDF}}
-.pmg-key.p{border-color:#ffc21a}
-.pmg-key.sp{border-color:#FF2300}
-.pmg-key.g{border-color:#2ED47A}
-.pmg-key.d,.pmg-key.py{border-color:#3AA0FF}
-.pmg-key.k{margin-bottom:18px}
+.pmg-cluster{--kb:clamp(56px,17vw,84px);display:grid;grid-template-columns:repeat(3,var(--kb));grid-template-rows:repeat(3,var(--kb));gap:0;flex:none}
+.pmg-pad.overlay .pmg-cluster{--kb:clamp(48px,13vh,64px)}
+.pmg-key{appearance:none;border:3px solid #c9d1dc;background:rgba(12,12,16,.7);color:#fff;border-radius:50%;width:var(--kb);height:var(--kb);
+  font:700 11px system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;touch-action:none;padding:0;gap:1px;box-shadow:0 3px 0 #000}
+.pmg-key:active{transform:translateY(2px);box-shadow:none;background:rgba(40,40,52,.9)}
+.pmg-key span{font:calc(var(--kb) * .34) ${HUDF};line-height:1}
+.pmg-key.p{border-color:#ffc21a;grid-area:2/1}
+.pmg-key.k{border-color:#c9d1dc;grid-area:2/3}
+.pmg-key.sp{border-color:#FF2300;grid-area:1/2}
+.pmg-key.g{border-color:#2ED47A;grid-area:3/2}
 .pmg-over{position:absolute;inset:0;display:flex;align-items:flex-end;justify-content:center;padding-bottom:12%;pointer-events:none}
 .pmg-over .pmg-col{pointer-events:auto;width:min(320px,80%)}
-.pmg-rotate{color:#efdcc6;font-size:13px;margin-top:10px;text-align:center}
+.pmg-rotate{color:#9aa3b0;font-size:12px;margin-top:10px;text-align:center}
 .pmg-intro{position:fixed;inset:0;z-index:50;background:#050304;display:flex;align-items:center;justify-content:center;cursor:pointer}
 .pmg-intro canvas{width:100%;height:100%;display:block}
 .pmg-skip{position:absolute;bottom:18px;right:20px;font:12px ${HUDF};color:#8a8f99;letter-spacing:2px}
@@ -2112,6 +2162,86 @@ function TapKey({ glyph, label, cls, onPress }: { glyph: string; label: string; 
   );
 }
 
+/** Touch: the four attack buttons in a diamond — Punch left, Kick right, Special top, Grab bottom. */
+function ButtonCluster({ onTap }: { onTap: (b: Btn) => void }) {
+  return (
+    <div className="pmg-cluster" role="group" aria-label="Attack buttons">
+      <TapKey glyph="P" label="Punch" cls="p" onPress={() => onTap("punch")} />
+      <TapKey glyph="K" label="Kick" cls="k" onPress={() => onTap("kick")} />
+      <TapKey glyph="S" label="Special" cls="sp" onPress={() => onTap("special")} />
+      <TapKey glyph="G" label="Grab" cls="g" onPress={() => onTap("grab")} />
+    </div>
+  );
+}
+
+/** Touch: defend by swiping the arena itself — swipe down = duck, swipe sideways = dodge, two fingers at once = parry. */
+function GestureLayer({ onGesture }: { onGesture: (b: Btn) => void }) {
+  const pts = useRef(new Map<number, { x: number; y: number; t: number }>());
+  const lastParry = useRef(0);
+  const down = (e: RPointerEvent<HTMLDivElement>) => {
+    e.preventDefault(); e.currentTarget.setPointerCapture?.(e.pointerId);
+    pts.current.set(e.pointerId, { x: e.clientX, y: e.clientY, t: performance.now() });
+    if (pts.current.size >= 2 && performance.now() - lastParry.current > 300) { lastParry.current = performance.now(); onGesture("parry"); }
+  };
+  const up = (e: RPointerEvent<HTMLDivElement>) => {
+    const p = pts.current.get(e.pointerId); pts.current.delete(e.pointerId);
+    if (!p) return;
+    const dx = e.clientX - p.x, dy = e.clientY - p.y;
+    if (performance.now() - p.t > 900 || Math.hypot(dx, dy) < 28) return;        // a tap or a slow drag: not a swipe
+    if (Math.abs(dy) > Math.abs(dx)) { if (dy > 0) onGesture("duck"); }
+    else onGesture("dodge");
+  };
+  return (
+    <div className="pmg-gest" aria-hidden="true"
+      onPointerDown={down} onPointerUp={up}
+      onPointerCancel={(e) => pts.current.delete(e.pointerId)} onContextMenu={(e) => e.preventDefault()} />
+  );
+}
+
+/** The controls, laid out in one panel (opened with the ? button, also inside the pause menu). */
+function ControlsHelp({ touch, cpu }: { touch: boolean; cpu: boolean }) {
+  const K = ({ k }: { k: string }) => <kbd>{k}</kbd>;
+  if (touch) return (
+    <div className="pmg-ctl">
+      <h4>MOVE</h4>
+      <b>STICK</b><span>Left / right walk · up jumps · down crouches · hold it <em>away</em> from your rival to block</span>
+      <h4>ATTACK</h4>
+      <b>P</b><span>Punch — tap up to three times for the combo. Crouching: low punch</span>
+      <b>K</b><span>Kick — roundhouse (knocks down). Crouching: sweep. In the air: jump kick</span>
+      <b>S</b><span>Special (needs 3 bars) — with full HEAT: the cinematic finisher</span>
+      <b>G</b><span>Grab and slam — breaks through a block</span>
+      <h4>DEFEND — SWIPE THE ARENA</h4>
+      <b>SWIPE ↓</b><span>Duck under punches, high kicks and specials</span>
+      <b>SWIPE ← →</b><span>Dodge: sidestep anything except a grab</span>
+      <b>2 FINGERS</b><span>Tap with two fingers to parry a strike the moment it lands</span>
+    </div>
+  );
+  return (
+    <div className="pmg-ctl">
+      <h4>{cpu ? "MOVE" : "PLAYER 1 · MOVE"}</h4>
+      <b>WALK</b><span><K k="A" /> <K k="D" />{cpu && <> or <K k="←" /> <K k="→" /></>} · hold away from your rival to block</span>
+      <b>JUMP</b><span><K k="W" />{cpu && <> or <K k="↑" /></>}</span>
+      <b>CROUCH</b><span><K k="S" />{cpu && <> or <K k="↓" /></>}</span>
+      <h4>{cpu ? "ATTACK" : "PLAYER 1 · ATTACK"}</h4>
+      <b>PUNCH</b><span><K k="J" /> — tap three times for the combo</span>
+      <b>KICK</b><span><K k="K" /> — roundhouse; crouching = sweep</span>
+      <b>SPECIAL</b><span><K k="L" /> (3 bars) or <K k="↓" /> <K k="→" /> <K k="J" /> · with full HEAT = finisher</span>
+      <b>GRAB</b><span><K k="I" /> — breaks a block</span>
+      <h4>{cpu ? "DEFEND" : "PLAYER 1 · DEFEND"}</h4>
+      <b>DODGE</b><span><K k="U" /></span>
+      <b>DUCK</b><span><K k="O" /> — under punches and specials</span>
+      <b>PARRY</b><span><K k="Space" /> — the first 8 frames catch a strike</span>
+      {!cpu && <>
+        <h4>PLAYER 2</h4>
+        <b>MOVE</b><span><K k="←" /> <K k="→" /> walk · <K k="↑" /> jump · <K k="↓" /> crouch</span>
+        <b>ATTACK</b><span><K k="," /> punch · <K k="." /> kick · <K k="/" /> special · <K k=";" /> grab</span>
+        <b>DEFEND</b><span><K k="'" /> dodge · <K k="M" /> duck · <K k="Enter" /> parry</span>
+      </>}
+      <h4>GAME</h4>
+      <b>PAUSE</b><span><K k="P" /> or <K k="Esc" /></span>
+    </div>
+  );
+}
 
 
 /* ================================================================== */
@@ -2295,7 +2425,7 @@ function SprayIntro({ onDone }: { onDone: () => void }) {
   const doneRef = useRef(false);
   // Browsers block sound until the viewer taps once, so the intro waits for that tap — then plays with its spray sound.
   const [started, setStarted] = useState(false);
-  const finish = () => { if (!doneRef.current) { doneRef.current = true; Sound.releaseMusic(); onDone(); } };
+  const finish = () => { if (!doneRef.current) { doneRef.current = true; store.set("intro-seen", true); Sound.releaseMusic(); onDone(); } };
 
   useEffect(() => {
     if (!started) return;
@@ -2339,7 +2469,7 @@ function SprayIntro({ onDone }: { onDone: () => void }) {
       const k = new THREE.DirectionalLight(0xffffff, 3); k.position.set(-1, 2, 2); canScene.add(k);
       const rimL = new THREE.DirectionalLight(0xffc890, 2.5); rimL.position.set(2, 1, -1); canScene.add(rimL);
       canCam = new THREE.PerspectiveCamera(28, CW / CH, 0.01, 10); canCam.position.set(0, 0.1, 0.8); canCam.lookAt(0, 0.1, 0);   // pulled back: the whole can fits
-      new GLTFLoader().loadAsync(assetUrl("spraycan")).then((g) => { can = g.scene; canScene!.add(can); }).catch(() => {});
+      gltfLoader().loadAsync(assetUrl("spraycan")).then((g) => { can = g.scene; canScene!.add(can); }).catch(() => {});
     } catch { canR = null; }
 
     let L = { x: 0, y: 0, w: 0, h: 0 };
@@ -2456,7 +2586,8 @@ function SprayIntro({ onDone }: { onDone: () => void }) {
 }
 
 export default function PMGFight3D({ onExit }: { onExit?: () => void } = {}) {
-  const [screen, setScreen] = useState<"intro" | "menu" | "select" | "stage" | "fight">("intro");
+  // the spray-paint intro plays on the first visit; after that the title comes straight up (REPLAY INTRO brings it back)
+  const [screen, setScreen] = useState<"intro" | "menu" | "select" | "stage" | "fight">(() => (store.get("intro-seen", false) ? "menu" : "intro"));
   const [loc, setLoc] = useState<LocationId>("streets");
   const [stagePics, setStagePics] = useState<Record<string, string> | null>(null);
   const [mode, setMode] = useState<"cpu" | "2p">("cpu");
@@ -2464,15 +2595,24 @@ export default function PMGFight3D({ onExit }: { onExit?: () => void } = {}) {
   const [round, setRound] = useState(0);
   const [portraits, setPortraits] = useState<Record<string, string> | null>(null);
   const [settings, setSettings] = useState(false);
+  const [quickPick, setQuickPick] = useState(false);          // SELECT CHARACTER: you pick, the rival and the turf are random
   const isTouch = useIsTouch();
 
   useEffect(() => { if (screen !== "intro" && !portraits) renderPortraits().then(setPortraits); }, [screen, portraits]);
-  useEffect(() => { getLogo(); }, []);
-  // Leaving the game (e.g. back to Propworld) must silence the soundtrack.
+  useEffect(() => { getLogo(); if (screen === "menu") Sound.releaseMusic(); }, []);  // eslint-disable-line react-hooks/exhaustive-deps
+  // Leaving the game (back to Propworld) must silence the soundtrack.
   useEffect(() => () => { Sound.music?.pause(); }, []);
+
+  /** QUICK FIGHT: a random fighter against a random rival on a random turf — one tap from the title to the block. */
+  const quickFight = (a = Math.floor(Math.random() * ROSTER.length)) => {
+    let b = Math.floor(Math.random() * (ROSTER.length - 1)); if (b >= a) b++;
+    setMode("cpu"); setPicks([a, b]); setLoc(LOCATIONS[Math.floor(Math.random() * LOCATIONS.length)].id);
+    setQuickPick(false); setRound((r) => r + 1); setScreen("fight");
+  };
   useEffect(() => { if (screen === "stage" && !stagePics) renderStagePreviews().then(setStagePics); }, [screen, stagePics]);
 
   const choose = (i: number) => {
+    if (quickPick) { quickFight(i); return; }
     const next = [...picks, i];
     if (next.length === 2) { setPicks(next); setScreen("stage"); }
     else setPicks(next);
@@ -2495,24 +2635,30 @@ export default function PMGFight3D({ onExit }: { onExit?: () => void } = {}) {
           <p className="pmg-sub">The Propmyganda roster settles it on the block. Best of three rounds.</p>
           <p className="pmg-cred">STREET CRED · {Cred.get().toLocaleString()}</p>
           <div className="pmg-col">
-            <button className="pmg-btn" onClick={() => { setMode("cpu"); setPicks([]); setScreen("select"); }}>
-              1 PLAYER<small>You vs the computer · phone, tablet or PC</small>
+            <button className="pmg-btn" onClick={() => quickFight()}>
+              QUICK FIGHT<small>Random fighters, random turf — straight to the block</small>
             </button>
-            <button className="pmg-btn ghost" onClick={() => { setMode("2p"); setPicks([]); setScreen("select"); }}>
+            <button className="pmg-btn" onClick={() => { setMode("cpu"); setPicks([]); setQuickPick(true); setScreen("select"); }}>
+              SELECT CHARACTER<small>Pick your fighter — random rival, random turf</small>
+            </button>
+            <button className="pmg-btn ghost" onClick={() => { setMode("cpu"); setPicks([]); setQuickPick(false); setScreen("select"); }}>
+              1 PLAYER<small>Pick your fighter, your rival and the turf</small>
+            </button>
+            <button className="pmg-btn ghost" onClick={() => { setMode("2p"); setPicks([]); setQuickPick(false); setScreen("select"); }}>
               2 PLAYERS<small>Two people, one keyboard</small>
             </button>
             <button className="pmg-btn ghost" onClick={() => setSettings(true)}>SETTINGS<small>Music · sound effects · next song</small></button>
           </div>
-          <p className="pmg-tag pmg-blink" style={{ marginTop: 26 }}>PRESS START</p>
+          <button className="pmg-link" onClick={() => setScreen("intro")}>REPLAY INTRO</button>
         </>
       )}
 
       {screen === "select" && (
         <>
           <h1 className="pmg-h2">
-            {picks.length === 0 ? "PLAYER 1 · SELECT YOUR FIGHTER" : mode === "cpu" ? "PICK YOUR RIVAL" : "PLAYER 2 · SELECT YOUR FIGHTER"}
+            {quickPick ? "SELECT YOUR FIGHTER" : picks.length === 0 ? "PLAYER 1 · SELECT YOUR FIGHTER" : mode === "cpu" ? "PICK YOUR RIVAL" : "PLAYER 2 · SELECT YOUR FIGHTER"}
           </h1>
-          <p className="pmg-sub">Stats are 1 to 10. Tap or click a fighter.</p>
+          <p className="pmg-sub">{quickPick ? "Tap or click a fighter — a random rival and turf are waiting." : "Stats are 1 to 10. Tap or click a fighter."}</p>
           <div className="pmg-grid">
             {ROSTER.map((r, i) => (
               <button key={r.id} className="pmg-card" aria-pressed={picks[0] === i} onClick={() => choose(i)}>
@@ -2534,7 +2680,7 @@ export default function PMGFight3D({ onExit }: { onExit?: () => void } = {}) {
             ))}
           </div>
           <div className="pmg-col" style={{ marginTop: 18 }}>
-            <button className="pmg-btn ghost" onClick={() => (picks.length ? setPicks([]) : setScreen("menu"))}>BACK</button>
+            <button className="pmg-btn ghost" onClick={() => (picks.length ? setPicks([]) : (setQuickPick(false), setScreen("menu")))}>BACK</button>
           </div>
         </>
       )}
@@ -2590,8 +2736,9 @@ function FightView3D(props: {
   useEffect(() => { renderPortraits().then(setVsPics); }, []);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [paused, setPaused] = useState(false);
-  const pausedRef = useRef(false);
-  useEffect(() => { pausedRef.current = paused; if (gameRef.current) gameRef.current.ctl.forEach((c) => { c.left = c.right = c.up = c.down = false; c.queue.length = 0; }); }, [paused]);
+  const [help, setHelp] = useState(false);
+  const pausedRef = useRef(false), helpRef = useRef(false);
+  useEffect(() => { pausedRef.current = paused || help; helpRef.current = help; if (gameRef.current) gameRef.current.ctl.forEach((c) => { c.left = c.right = c.up = c.down = false; c.queue.length = 0; }); }, [paused, help]);
   const [size, setSize] = useState({ w: 960, h: 540, landscape: true });
 
   // fit the arena to the screen
@@ -2599,7 +2746,7 @@ function FightView3D(props: {
     const fit = () => {
       const landscape = window.innerWidth > window.innerHeight;
       const overlay = isTouch && landscape;
-      const reserve = overlay ? 20 : isTouch ? 210 : 110;
+      const reserve = overlay ? 20 : isTouch ? 280 : 110;        // portrait phone: room for the stick and the button diamond under the arena
       const w = Math.max(260, Math.min(window.innerWidth - 22, (window.innerHeight - reserve) * (16 / 9), 1280));
       setSize({ w, h: (w * 9) / 16, landscape });
     };
@@ -2657,6 +2804,7 @@ function FightView3D(props: {
       Object.entries(KEYS_P2).forEach(([k, a]) => map.set(k, [cpu ? 0 : 1, a]));
       const isHold = (a: Action): a is "left" | "right" | "up" | "down" => a === "left" || a === "right" || a === "up" || a === "down";
       const down = (e: KeyboardEvent) => {
+        if (helpRef.current) { if (e.code === "Escape" || e.code === "KeyP") setHelp(false); return; }
         if (e.code === "Escape" || e.code === "KeyP") { setPaused((v) => !v); return; }
         if (pausedRef.current) return;
         const hit = map.get(e.code); if (!hit) return;
@@ -2695,7 +2843,7 @@ function FightView3D(props: {
         renderer.render(stage.scene, cam);
         hctx.setTransform(hud.width / W, 0, 0, hud.height / H, 0, 0);
         hctx.clearRect(0, 0, W, H);
-        drawHud(hctx, g, isTouch, project, pics);
+        drawHud(hctx, g, isTouch, project, pics, cw < 700);
         raf = requestAnimationFrame(loop);
       };
       raf = requestAnimationFrame(loop);
@@ -2713,23 +2861,16 @@ function FightView3D(props: {
   const pad = isTouch && (
     <div className={`pmg-pad${overlay ? " overlay" : ""}`}>
       <DPad onDir={setDir} />
-      <div className="pmg-keys">
-        <TapKey glyph="P" label="Punch" cls="p" onPress={() => tap("punch")} />
-        <TapKey glyph="K" label="Kick" cls="k" onPress={() => tap("kick")} />
-        <TapKey glyph="S" label="Special" cls="sp" onPress={() => tap("special")} />
-        <TapKey glyph="G" label="Grab" cls="g" onPress={() => tap("grab")} />
-        <TapKey glyph="↺" label="Dodge" cls="d" onPress={() => tap("dodge")} />
-        <TapKey glyph="◇" label="Parry" cls="py" onPress={() => tap("parry")} />
-        <TapKey glyph="⤓" label="Duck" cls="d" onPress={() => tap("duck")} />
-      </div>
+      <ButtonCluster onTap={tap} />
     </div>
   );
 
   return (
     <>
-      <div className="pmg-stage" style={{ width: size.w }}>
+      <div className={`pmg-stage${size.w < 700 ? " compact" : ""}`} style={{ width: size.w }}>
         <canvas ref={glRef} className="pmg-canvas" style={{ width: size.w, height: size.h }} />
         <canvas ref={hudRef} style={{ position: "absolute", left: 3, top: 3, width: size.w, height: size.h, pointerEvents: "none" }} />
+        {isTouch && status === "ready" && <GestureLayer onGesture={tap} />}
         {status === "loading" && (
           <div className="pmg-vs" role="status" aria-label={`${p1.name} versus ${p2.name}, loading`}>
             {[p1, p2].map((d, k) => (
@@ -2750,10 +2891,23 @@ function FightView3D(props: {
         {status === "error" && (
           <div className="pmg-load">{`COULDN'T LOAD THE FIGHTER FILES. CHECK THAT ${p1.id}.glb AND ${p2.id}.glb COULD BE DOWNLOADED`}</div>
         )}
-        <div className="pmg-top"><button className="pmg-mini" onClick={() => setPaused(true)}>MENU</button></div>
-        {paused && (
+        <div className="pmg-top">
+          <button className="pmg-mini" onClick={() => setPaused(true)}>MENU</button>
+          <button className="pmg-mini" onClick={() => setHelp(true)} aria-label="Controls">? CONTROLS</button>
+        </div>
+        {help && (
+          <div className="pmg-modal" role="dialog" aria-label="Controls">
+            <div className="pmg-panel">
+              <h2 className="pmg-h2" style={{ margin: "0 0 14px" }}>CONTROLS</h2>
+              <ControlsHelp touch={isTouch} cpu={cpu} />
+              <div className="pmg-col"><button className="pmg-btn" onClick={() => setHelp(false)}>GOT IT</button></div>
+            </div>
+          </div>
+        )}
+        {paused && !help && (
           <SettingsPanel onClose={() => setPaused(false)} extra={<>
             <button className="pmg-btn" onClick={() => setPaused(false)}>RESUME</button>
+            <button className="pmg-btn ghost" onClick={() => setHelp(true)}>CONTROLS</button>
             <button className="pmg-btn ghost" onClick={props.onChange}>CHANGE FIGHTERS</button>
             <button className="pmg-btn ghost" onClick={props.onStage}>CHANGE LOCATION</button>
             <button className="pmg-btn ghost" onClick={props.onMenu}>QUIT TO TITLE</button>
@@ -2771,17 +2925,11 @@ function FightView3D(props: {
         )}
       </div>
       {!overlay && pad}
-      {isTouch && !size.landscape && <div className="pmg-rotate">Turn your device sideways for a bigger arena.</div>}
+      {isTouch && !size.landscape && <div className="pmg-rotate">Swipe the arena to defend · turn sideways for a bigger arena</div>}
       {!isTouch && (
-        <div className="pmg-help">
-          {cpu ? (
-            <>Move <kbd>A</kbd> <kbd>D</kbd> or <kbd>←</kbd> <kbd>→</kbd> · Jump <kbd>W</kbd> or <kbd>↑</kbd> · Crouch <kbd>S</kbd> or <kbd>↓</kbd> · Punch <kbd>J</kbd> · Kick <kbd>K</kbd> · Special <kbd>L</kbd><br />
-            Grab <kbd>I</kbd> (breaks a block) · Dodge <kbd>U</kbd> · Duck <kbd>O</kbd> (under punches and specials) · Parry <kbd>Space</kbd> · Full heat: <kbd>L</kbd> = cinematic finisher · Hold back to block.</>
-          ) : (
-            <>P1: <kbd>A</kbd> <kbd>D</kbd> move · <kbd>W</kbd> jump · <kbd>S</kbd> crouch · <kbd>J</kbd> punch · <kbd>K</kbd> kick · <kbd>L</kbd> special<br />
-            P1 also: <kbd>I</kbd> grab · <kbd>U</kbd> dodge · <kbd>O</kbd> duck · <kbd>Space</kbd> parry<br />
-            P2: arrows move / jump / crouch · <kbd>,</kbd> punch · <kbd>.</kbd> kick · <kbd>/</kbd> special · <kbd>;</kbd> grab · <kbd>'</kbd> dodge · <kbd>M</kbd> duck · <kbd>Enter</kbd> parry</>
-          )}
+        <div className="pmg-hint">
+          {cpu ? <>Move <kbd>A</kbd> <kbd>D</kbd> · Jump <kbd>W</kbd> · Punch <kbd>J</kbd> · Kick <kbd>K</kbd> · Special <kbd>L</kbd> · Grab <kbd>I</kbd> · hold back to block — <kbd>? CONTROLS</kbd> has the rest</>
+            : <>P1 <kbd>A</kbd> <kbd>D</kbd> <kbd>W</kbd> + <kbd>J</kbd> <kbd>K</kbd> <kbd>L</kbd> · P2 arrows + <kbd>,</kbd> <kbd>.</kbd> <kbd>/</kbd> — <kbd>? CONTROLS</kbd> has the rest</>}
         </div>
       )}
     </>
