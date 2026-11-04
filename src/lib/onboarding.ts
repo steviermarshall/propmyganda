@@ -8,6 +8,7 @@ export interface Order {
   phone: string | null; instagram_handle: string | null; instagram_url: string | null; tiktok_url: string | null; youtube_url: string | null;
   track_title: string | null; explicit: boolean; wants_distribution: boolean; report_preference: string | null; uploads: Upload[];
   post_at: string | null; session_at: string | null; paid_at: string | null; sync_errors: string | null;
+  signature?: string | null; signed_at?: string | null; agreement_version?: string | null; dsp_title?: string | null;
 }
 export interface Slot { start: string; end: string }
 export interface IgProfile { handle: string; url: string; verified: boolean; name?: string; followers?: number; posts?: number; picture?: string; bio?: string; error?: string }

@@ -18,6 +18,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { GCAL_BASE, gcalHeaders } from "../_shared/gcal.ts";
 import { fulfil } from "../_shared/fulfil.ts";
+import { AGREEMENT_TEXT, AGREEMENT_VERSION, normalizeIpi, sha256Hex, validateSplits } from "../_shared/agreement.ts";
 import { TIERS, formatUsd, getTier, quote, type PaymentPlan } from "../_shared/tiers.ts";
 import { catalogueNo, formEncode, postSlots, sessionBlock, sessionSlots, type Busy, type OrderRow } from "../_shared/onboarding.ts";
 
@@ -61,6 +62,7 @@ const DETAIL_FIELDS = [
   "artist_name", "legal_name", "phone", "instagram_handle", "tiktok_url", "youtube_url", "track_title", "explicit",
   "wants_distribution", "pro_affiliation", "ipi_number", "distro_email", "producer_name", "producer_stage_name",
   "producer_pro", "producer_ipi", "producer_email", "report_preference", "notes", "agreement_accepted", "signature",
+  "dsp_title", "self_produced", "splits",
 ] as const;
 
 function cleanDetails(input: Record<string, unknown>) {
@@ -68,7 +70,9 @@ function cleanDetails(input: Record<string, unknown>) {
   for (const f of DETAIL_FIELDS) {
     if (!(f in input)) continue;
     const v = input[f];
-    if (f === "explicit" || f === "wants_distribution" || f === "agreement_accepted") out[f] = v === true || v === "true";
+    if (f === "explicit" || f === "wants_distribution" || f === "agreement_accepted" || f === "self_produced") out[f] = v === true || v === "true";
+    else if (f === "splits") out.splits = v ? validateSplits(v) : null;
+    else if (f === "ipi_number" || f === "producer_ipi") out[f] = normalizeIpi(v);
     else if (f === "tiktok_url" || f === "youtube_url") out[f] = url(v);
     else if (f === "instagram_handle") { const h = igHandle(v); out.instagram_handle = h || null; out.instagram_url = h ? `https://www.instagram.com/${h}/` : null; }
     else if (f === "distro_email" || f === "producer_email") out[f] = email(v) || null;
@@ -88,6 +92,31 @@ async function checkInvite(code: string) {
   if (data.expires_at && new Date(data.expires_at) < new Date()) return { ok: false as const, reason: "That invite has expired" };
   if (data.used_count >= data.max_uses) return { ok: false as const, reason: "That invite has already been used" };
   return { ok: true as const, invite: data as { code: string; label: string | null; tier: string; max_uses: number; used_count: number } };
+}
+
+/** What the DSP path must have before it can be signed; mirrors the form's required questions. */
+function distributionProblems(d: Record<string, unknown>): string | null {
+  if (!d.pro_affiliation) return "Your PRO (BMI, ASCAP, SESAC or Other) is required for distribution";
+  if (!d.ipi_number) return "Your IPI number is required (9 to 11 digits, or 'none')";
+  if (!d.distro_email) return "The email on your distro account is required";
+  if (!d.self_produced) {
+    if (!d.producer_name || !d.producer_stage_name) return "Producer legal name and stage name are required, or mark the record self-produced";
+    if (!d.producer_pro) return "The producer's PRO is required";
+    if (!d.producer_ipi) return "The producer's IPI number is required (9 to 11 digits, or 'none')";
+    if (!d.producer_email) return "The producer's email is required";
+  }
+  if (!d.agreement_accepted || !d.signature) return "The release agreement must be accepted and signed with your full legal name";
+  return null;
+}
+
+/** Stamp the signature: which text was signed, its hash, when, from where. */
+async function signatureStamp(req: Request): Promise<Record<string, unknown>> {
+  return {
+    agreement_version: AGREEMENT_VERSION,
+    agreement_hash: await sha256Hex(AGREEMENT_TEXT),
+    signed_at: new Date().toISOString(),
+    signed_ip: (req.headers.get("x-forwarded-for") ?? req.headers.get("cf-connecting-ip") ?? "").split(",")[0].trim() || null,
+  };
 }
 
 async function igLookup(handle: string) {
@@ -131,6 +160,7 @@ Deno.serve(async (req) => {
 
   try {
     if (action === "tiers") return json({ tiers: TIERS });
+    if (action === "agreement") return json({ version: AGREEMENT_VERSION, text: AGREEMENT_TEXT });
 
     if (action === "invite-check") {
       const r = await checkInvite(inviteCode(body.invite));
@@ -152,13 +182,22 @@ Deno.serve(async (req) => {
       if (!details.artist_name || !details.legal_name) return bad("Artist name and legal name are required");
       const mail = email(body.email);
       if (!mail) return bad("A valid email is required");
-      if (details.wants_distribution && (!details.agreement_accepted || !details.signature)) return bad("The release agreement must be accepted and signed");
+      let stamp: Record<string, unknown> = {};
+      if (details.wants_distribution) {
+        if (details.self_produced) {
+          details.producer_name = details.legal_name; details.producer_stage_name = details.artist_name;
+          details.producer_pro = details.pro_affiliation; details.producer_ipi = details.ipi_number; details.producer_email = mail;
+        }
+        const problem = distributionProblems(details);
+        if (problem) return bad(problem);
+        stamp = await signatureStamp(req);
+      }
       // One email, one order: a second submission resumes the open order instead of making a duplicate row.
       const { data: open } = await supabase.from("onboarding_orders").select("id, client_token, catalogue_no, tier")
         .eq("email", mail).in("status", ["draft", "pending_payment"]).order("created_at", { ascending: false }).limit(1).maybeSingle();
       const q = quote(tier.id, Number(body.adBudgetCents ?? 0), (str(body.plan, 10) as PaymentPlan) || "full");
       const fields = {
-        ...details, email: mail, tier: tier.id, ad_budget_cents: q.adBudgetCents, total_cents: q.totalCents,
+        ...details, ...stamp, email: mail, tier: tier.id, ad_budget_cents: q.adBudgetCents, total_cents: q.totalCents,
         payment_plan: q.plan, due_now_cents: q.dueNowCents, status: "draft", invite_code: invite, updated_at: new Date().toISOString(),
       };
       if (open) {
@@ -184,6 +223,7 @@ Deno.serve(async (req) => {
       const patch = cleanDetails((body.patch as Record<string, unknown>) ?? {});
       const p = (body.patch as Record<string, unknown>) ?? {};
       if (getTier(order.tier)?.distribution) patch.wants_distribution = true;
+      if (patch.agreement_accepted && patch.signature) Object.assign(patch, await signatureStamp(req));
       if (p?.email) { const m = email(p.email); if (m) patch.email = m; }
       if ("post_at" in p) patch.post_at = p.post_at ? new Date(String(p.post_at)).toISOString() : null;
       if ("session_at" in p) patch.session_at = p.session_at ? new Date(String(p.session_at)).toISOString() : null;

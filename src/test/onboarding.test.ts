@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { AD_BUDGET_MAX, AD_BUDGET_MIN, DEPOSIT_SHARE, TIERS, clampAdBudget, formatUsd, quote } from "../../supabase/functions/_shared/tiers";
+import { AGREEMENT_TEXT, AGREEMENT_VERSION, STANDARD_SPLITS, normalizeIpi, sha256Hex, splitsLine, validateSplits } from "../../supabase/functions/_shared/agreement";
 import { catalogueNo, distributionRow, editingRow, EDITING_COLUMNS, formEncode, nyOffsetMinutes, nyTime, parseStripeSignature, postSlots, sessionBlock, sessionSlots, splitName, type OrderRow } from "../../supabase/functions/_shared/onboarding";
 
 const order: OrderRow = {
@@ -14,11 +15,11 @@ const order: OrderRow = {
 };
 
 describe("tiers", () => {
-  it("lists DSP first, then the three paid tiers, with Invited hidden from the public", () => {
+  it("shows only the three paid tiers in public; DSP and Invited open from their own links", () => {
     expect(TIERS.map((t) => [t.id, t.priceCents, t.public])).toEqual([
-      ["dsp", 0, true], ["basic", 55_000, true], ["mid", 100_000, true], ["viral", 1_500_000, true], ["comp", 0, false],
+      ["dsp", 0, false], ["basic", 55_000, true], ["mid", 100_000, true], ["viral", 1_500_000, true], ["comp", 0, false],
     ]);
-    expect(TIERS.find((t) => t.id === "dsp")).toMatchObject({ distribution: true, revenueShare: true });
+    expect(TIERS.find((t) => t.id === "dsp")).toMatchObject({ inviteOnly: true, distribution: true, revenueShare: true });
     expect(TIERS.find((t) => t.id === "comp")).toMatchObject({ inviteOnly: true });
   });
   it("quotes $0 due for DSP and Invited, never a deposit", () => {
@@ -102,11 +103,12 @@ describe("availability", () => {
     expect(monday).not.toContain("2026-10-19T19:00:00.000Z");
     expect(monday).toContain("2026-10-19T18:00:00.000Z");
   });
-  it("offers release times at 3, 4 and 6pm after the lead time and skips taken ones", () => {
-    const slots = postSlots(from, 1, ["2026-10-25T20:00:00.000Z"]); // 4pm EDT on the 25th is taken
-    const day = slots.filter((s) => s.start.startsWith("2026-10-25")).map((s) => s.start);
-    expect(day).toEqual(["2026-10-25T19:00:00.000Z", "2026-10-25T22:00:00.000Z"]);
-    expect(slots.filter((s) => s.start.startsWith("2026-10-26")).length).toBe(3);
+  it("offers release times at 3, 4 and 6pm on weekdays after the lead time and skips taken ones", () => {
+    const slots = postSlots(from, 3, ["2026-10-26T20:00:00.000Z"]); // 4pm EDT on Monday the 26th is taken
+    expect(slots.filter((s) => s.start.startsWith("2026-10-25")).length).toBe(0); // Sunday
+    const monday = slots.filter((s) => s.start.startsWith("2026-10-26")).map((s) => s.start);
+    expect(monday).toEqual(["2026-10-26T19:00:00.000Z", "2026-10-26T22:00:00.000Z"]);
+    expect(slots.filter((s) => s.start.startsWith("2026-10-27")).length).toBe(3);
   });
 });
 
@@ -123,5 +125,46 @@ describe("stripe helpers", () => {
     expect(parseStripeSignature("t=1700000000,v1=abc,v0=zzz,v1=def")).toEqual({ t: "1700000000", v1: ["abc", "def"] });
     expect(parseStripeSignature(null)).toBeNull();
     expect(parseStripeSignature("junk")).toBeNull();
+  });
+});
+
+describe("release agreement", () => {
+  it("carries the form's splits and the clauses the artist signs", () => {
+    expect(STANDARD_SPLITS.master).toEqual({ pmg: 45, artist: 45, producer: 10 });
+    expect(STANDARD_SPLITS.publishing).toEqual({ pmg: 100, artist: 50, producer: 50 });
+    for (const clause of ["non-exclusive", "retain ownership", "UnitedMasters", "4 to 6 weeks", "ESIGN", "State of New York"]) expect(AGREEMENT_TEXT).toContain(clause);
+    expect(AGREEMENT_VERSION).toMatch(/^\d{4}-\d{2}-/);
+  });
+  it("hashes the text deterministically so a signed version can be proven later", async () => {
+    const h = await sha256Hex(AGREEMENT_TEXT);
+    expect(h).toMatch(/^[0-9a-f]{64}$/);
+    expect(await sha256Hex(AGREEMENT_TEXT)).toBe(h);
+    expect(await sha256Hex(AGREEMENT_TEXT + " ")).not.toBe(h);
+  });
+  it("accepts alternate splits only when whole numbers totalling 100", () => {
+    expect(validateSplits({ pmg: 40, artist: 50, producer: 10 })).toEqual({ pmg: 40, artist: 50, producer: 10 });
+    expect(validateSplits({ pmg: "40", artist: "50", producer: "10" })).toEqual({ pmg: 40, artist: 50, producer: 10 });
+    expect(validateSplits({ pmg: 45, artist: 45, producer: 11 })).toBeNull();
+    expect(validateSplits({ pmg: 45.5, artist: 44.5, producer: 10 })).toBeNull();
+    expect(validateSplits({ pmg: -10, artist: 100, producer: 10 })).toBeNull();
+    expect(validateSplits(null)).toBeNull();
+    expect(splitsLine({ pmg: 40, artist: 50, producer: 10 })).toBe("PMG 40% / Artist 50% / Producer 10%");
+  });
+  it("normalises IPI numbers to digits, or an explicit none", () => {
+    expect(normalizeIpi(" 00123456789 ")).toBe("00123456789");
+    expect(normalizeIpi("123-456-789")).toBe("123456789");
+    expect(normalizeIpi("None")).toBe("none");
+    expect(normalizeIpi("n/a")).toBe("none");
+    expect(normalizeIpi("12")).toBeNull();
+    expect(normalizeIpi("")).toBeNull();
+  });
+  it("puts a requested title and alternate splits on the distribution sheet row", () => {
+    const row = distributionRow({ ...order, dsp_title: "Night Shift (Live at PMG)", splits: { pmg: 40, artist: 50, producer: 10 } });
+    expect(row[2]).toBe("Night Shift (Live at PMG)");
+    expect(row[20]).toBe("Yes");
+    expect(row[21]).toBe("PMG 40% / Artist 50% / Producer 10%");
+    const std = distributionRow(order);
+    expect(std[2]).toBe("Yes");
+    expect(std[20]).toBe("No");
   });
 });

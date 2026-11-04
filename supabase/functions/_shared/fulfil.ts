@@ -6,6 +6,7 @@ import { GCAL_BASE, gcalHeaders } from "./gcal.ts";
 import { appendRow, ensureHeader } from "./google.ts";
 import { formatUsd, getTier } from "./tiers.ts";
 import { EDITING_COLUMNS, SESSION_MINUTES, distributionRow, editingRow, type OrderRow } from "./onboarding.ts";
+import { AGREEMENT_TEXT, AGREEMENT_VERSION, splitsLine } from "./agreement.ts";
 
 const DEFAULT_DISTRO_SHEET = "1-lGUtKmwAL7SmfaAHXbbPZK7715Detj1M6Ts_r6-kls";
 
@@ -88,6 +89,13 @@ export async function fulfil(supabase: SupabaseClient, order: OrderRow, paidStat
       "Before your date: accounts public, collab requests on, accept the invite when it lands.",
       "Read this before the shoot and the post: https://propmyganda.com/start/prep",
       "Reply to this email for anything. One thread, start to finish.", "", "— PMG",
+      ...(order.wants_distribution ? [
+        "", "────────", `Your signed copy · PMG Streaming Release Agreement · version ${AGREEMENT_VERSION}`,
+        `Signed by ${order.signature ?? order.legal_name} on ${(order as unknown as { signed_at?: string }).signed_at ?? "—"}`,
+        order.splits ? `Alternate master split requested: ${splitsLine(order.splits)}` : "Standard splits apply.",
+        order.dsp_title ? `Requested title: ${order.dsp_title}` : `Title: "${order.artist_name}" Propmyganda Performance`,
+        "", AGREEMENT_TEXT,
+      ] : []),
     ].filter((l) => l !== "").join("\n"));
   } catch (e) { errors.push(`email: ${e instanceof Error ? e.message : e}`); }
 

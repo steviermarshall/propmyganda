@@ -1,6 +1,7 @@
 // Pure helpers for the onboarding flow (no Deno globals): row mapping for the
 // two Google Sheets, slot generation, Stripe form encoding and signature parsing.
 import { formatUsd, getTier } from "./tiers.ts";
+import { splitsLine, type Splits } from "./agreement.ts";
 
 export interface OrderRow {
   id: string;
@@ -39,6 +40,9 @@ export interface OrderRow {
   session_at: string | null;
   agreement_accepted: boolean;
   signature: string | null;
+  splits?: Splits | null;
+  dsp_title?: string | null;
+  self_produced?: boolean;
 }
 
 export function splitName(full: string): { first: string; last: string } {
@@ -63,7 +67,7 @@ export function distributionRow(o: OrderRow): string[] {
   return [
     sheetTimestamp(o.created_at),                           // A Timestamp
     `From propmyganda.com/start · ${o.tier.toUpperCase()} · ${o.catalogue_no ?? ""}`, // B NOTES
-    "Yes",                                                  // C standard DSP title approved
+    o.dsp_title?.trim() ? o.dsp_title.trim() : "Yes",      // C standard DSP title approved, or the requested title
     o.email,                                                // D Email
     first,                                                  // E First Name
     last,                                                   // F Last Name
@@ -81,8 +85,8 @@ export function distributionRow(o: OrderRow): string[] {
     o.producer_email ?? "",                                 // R Producer distro email
     o.producer_email ?? "",                                 // S Producer agreements email
     "",                                                     // T Additional producers
-    "No",                                                   // U Alternate splits requested
-    "",                                                     // V Split details
+    o.splits ? "Yes" : "No",                                // U Alternate splits requested
+    o.splits ? splitsLine(o.splits) : "",                   // V Split details
     "Yes",                                                  // W Contributors agreed
     o.agreement_accepted ? "Yes" : "No",                    // X Agreement accepted
     o.signature ?? o.legal_name,                            // Y Signature
@@ -186,7 +190,7 @@ export function sessionBlock(startISO: string): Busy {
   return { start: startISO, end: new Date(new Date(startISO).getTime() + SESSION_BLOCK_MINUTES * 60_000).toISOString() };
 }
 
-/** Release slots: every day after the lead time, at 3, 4 and 6pm New York; a time already taken that day is left out. */
+/** Release slots: weekdays after the lead time, at 3, 4 and 6pm New York; a time already taken that day is left out. */
 export function postSlots(from: Date, days: number, taken: string[], leadDays = POST_LEAD_DAYS): Slot[] {
   const out: Slot[] = [];
   const takenSet = new Set(taken.map((t) => new Date(t).toISOString()));
@@ -194,6 +198,8 @@ export function postSlots(from: Date, days: number, taken: string[], leadDays = 
   for (let d = leadDays; d <= leadDays + days; d++) {
     const day = new Date(Date.UTC(y0, m0, d0 + d, 12));
     const y = day.getUTCFullYear(), m = day.getUTCMonth(), dd = day.getUTCDate();
+    const wd = nyWeekday(y, m, dd);
+    if (wd === 0 || wd === 6) continue;
     for (const h of RELEASE_HOURS) {
       const start = nyTime(y, m, dd, h);
       if (takenSet.has(start.toISOString())) continue;

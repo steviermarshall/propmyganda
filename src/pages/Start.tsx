@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import SEO from "@/components/SEO";
+import { AGREEMENT_TEXT, STANDARD_SPLITS } from "@/lib/agreement";
 import { AD_BUDGET_MAX, AD_BUDGET_MIN, PUBLIC_TIERS, TIERS, formatUsd, getTier, quote, type PaymentPlan, type Tier, type TierId } from "@/lib/tiers";
 import { api, fmtBytes, fmtSlot, loadSession, saveSession, type IgProfile, type Order, type Session, type Slot, type Upload } from "@/lib/onboarding";
 import { Button, ErrorLine, Input, Note, Select, Textarea, Toggle } from "@/components/start/ui";
@@ -29,7 +30,8 @@ function priceLabel(t: Tier): string {
 
 function TierStep({ tier, setTier, adBudget, setAdBudget, onNext, invite }: { tier: TierId; setTier: (t: TierId) => void; adBudget: number; setAdBudget: (n: number) => void; onNext: () => void; invite: { label: string | null } | null }) {
   const q = quote(tier, adBudget);
-  const shown = invite ? TIERS.filter((t) => t.inviteOnly) : PUBLIC_TIERS;
+  // An invite link shows exactly the plan it was issued for (Invited or DSP Release); the public link shows the paid tiers.
+  const shown = invite ? TIERS.filter((t) => t.id === tier) : PUBLIC_TIERS;
   return (
     <div>
       {invite && (
@@ -37,7 +39,7 @@ function TierStep({ tier, setTier, adBudget, setAdBudget, onNext, invite }: { ti
           Invite accepted{invite.label ? ` · ${invite.label}` : ""}
         </p>
       )}
-      <div className={`grid gap-3 ${shown.length > 1 ? "md:grid-cols-2 lg:grid-cols-4" : "max-w-md"}`}>
+      <div className={`grid gap-3 ${shown.length > 3 ? "md:grid-cols-2 lg:grid-cols-4" : shown.length > 1 ? "md:grid-cols-3" : "max-w-md"}`}>
         {shown.map((t) => {
           const active = t.id === tier;
           return (
@@ -92,11 +94,13 @@ type Details = {
   track_title: string; explicit: boolean; wants_distribution: boolean; pro_affiliation: string; ipi_number: string; distro_email: string;
   producer_name: string; producer_stage_name: string; producer_pro: string; producer_ipi: string; producer_email: string;
   report_preference: "email" | "dashboard" | "both"; notes: string; agreement_accepted: boolean; signature: string;
+  dsp_title: string; self_produced: boolean; alt_splits: boolean; splits: { pmg: number; artist: number; producer: number };
 };
 const EMPTY: Details = {
   artist_name: "", legal_name: "", email: "", phone: "", instagram_handle: "", tiktok_url: "", youtube_url: "", track_title: "", explicit: false,
   wants_distribution: false, pro_affiliation: "", ipi_number: "", distro_email: "", producer_name: "", producer_stage_name: "", producer_pro: "",
   producer_ipi: "", producer_email: "", report_preference: "email", notes: "", agreement_accepted: false, signature: "",
+  dsp_title: "", self_produced: false, alt_splits: false, splits: { ...STANDARD_SPLITS.master },
 };
 
 function IgCard({ p }: { p: IgProfile }) {
@@ -132,7 +136,13 @@ function DetailsStep({ initial, busy, onBack, onSubmit, forceDistribution }: { i
     setErr(null);
     if (!d.artist_name || !d.legal_name || !d.email) return setErr("Artist name, legal name and email are required.");
     if (!d.instagram_handle) return setErr("Link your Instagram. The collab post goes to your page.");
-    if (d.wants_distribution && (!d.agreement_accepted || !d.signature)) return setErr("Distribution needs the agreement accepted and signed.");
+    if (d.wants_distribution) {
+      if (!d.pro_affiliation || !d.ipi_number || !d.distro_email) return setErr("Distribution needs your PRO, IPI number (or 'none') and distro email.");
+      if (!d.self_produced && (!d.producer_name || !d.producer_stage_name || !d.producer_pro || !d.producer_ipi || !d.producer_email)) return setErr("Fill in the producer, or mark the record self-produced.");
+      if (d.alt_splits && d.splits.pmg + d.splits.artist + d.splits.producer !== 100) return setErr("Alternate master splits must add up to 100.");
+      if (!d.agreement_accepted || !d.signature.trim()) return setErr("Read the agreement, tick the box and sign with your full legal name.");
+      if (d.signature.trim().toLowerCase() !== d.legal_name.trim().toLowerCase()) return setErr("Your signature must match your legal name exactly.");
+    }
     onSubmit(d);
   }
 
@@ -177,23 +187,53 @@ function DetailsStep({ initial, busy, onBack, onSubmit, forceDistribution }: { i
         <Toggle label="Add PMG distribution to DSPs" hint="Spotify, Apple, Tidal and the rest · fills the release agreement" checked={d.wants_distribution} onChange={(v) => set("wants_distribution", v)} />
       )}
       {d.wants_distribution && (
-        <div className="space-y-4 border border-[#F2EFE9]/30 p-4">
-          <Note>DSP title: "{d.artist_name || "Your Artist Name"}" Propmyganda Performance</Note>
+        <div className="space-y-5 border border-[#F2EFE9]/30 p-4">
+          <div>
+            <Note>Standard DSP title: "{d.artist_name || "Your Artist Name"}" Propmyganda Performance</Note>
+            <Input label="Different title?" hint="leave blank to use the standard title" value={d.dsp_title} onChange={(e) => set("dsp_title", e.target.value)} />
+          </div>
           <div className="grid gap-4 sm:grid-cols-3">
             <Select label="Your PRO" value={d.pro_affiliation} onChange={(e) => set("pro_affiliation", e.target.value)}>{PRO_OPTIONS.map((o) => <option key={o} value={o}>{o || "Select"}</option>)}</Select>
-            <Input label="IPI number" value={d.ipi_number} onChange={(e) => set("ipi_number", e.target.value)} />
-            <Input label="Distro email" hint="DistroKid etc." type="email" value={d.distro_email} onChange={(e) => set("distro_email", e.target.value)} />
+            <Input label="IPI number" hint="9 to 11 digits, or 'none'" value={d.ipi_number} onChange={(e) => set("ipi_number", e.target.value)} />
+            <Input label="Distro email" hint="the email on your DistroKid / UnitedMasters account" type="email" value={d.distro_email} onChange={(e) => set("distro_email", e.target.value)} />
           </div>
-          <Note>Producer (if any)</Note>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Input label="Producer legal name" value={d.producer_name} onChange={(e) => set("producer_name", e.target.value)} />
-            <Input label="Producer stage name" value={d.producer_stage_name} onChange={(e) => set("producer_stage_name", e.target.value)} />
-            <Select label="Producer PRO" value={d.producer_pro} onChange={(e) => set("producer_pro", e.target.value)}>{PRO_OPTIONS.map((o) => <option key={o} value={o}>{o || "Select"}</option>)}</Select>
-            <Input label="Producer IPI" value={d.producer_ipi} onChange={(e) => set("producer_ipi", e.target.value)} />
-            <Input label="Producer email" type="email" value={d.producer_email} onChange={(e) => set("producer_email", e.target.value)} />
+
+          <Toggle label="I produced this record myself" hint="producer credit and split stay with you" checked={d.self_produced} onChange={(v) => set("self_produced", v)} />
+          {!d.self_produced && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Input label="Producer legal name" value={d.producer_name} onChange={(e) => set("producer_name", e.target.value)} />
+              <Input label="Producer stage name" value={d.producer_stage_name} onChange={(e) => set("producer_stage_name", e.target.value)} />
+              <Select label="Producer PRO" value={d.producer_pro} onChange={(e) => set("producer_pro", e.target.value)}>{PRO_OPTIONS.map((o) => <option key={o} value={o}>{o || "Select"}</option>)}</Select>
+              <Input label="Producer IPI" hint="9 to 11 digits, or 'none'" value={d.producer_ipi} onChange={(e) => set("producer_ipi", e.target.value)} />
+              <Input label="Producer email" hint="they get a copy of the agreement" type="email" value={d.producer_email} onChange={(e) => set("producer_email", e.target.value)} />
+            </div>
+          )}
+
+          <div className="border border-[#F2EFE9]/20 p-3">
+            <span className="block font-mono text-[10px] uppercase tracking-[0.18em] text-[#FFD230]">Splits</span>
+            <span className="mt-2 block text-sm text-[#F2EFE9]">Master · PMG {STANDARD_SPLITS.master.pmg}% / Artist {STANDARD_SPLITS.master.artist}% / Producer {STANDARD_SPLITS.master.producer}%</span>
+            <span className="block text-sm text-[#F2EFE9]/70">Publishing · PMG {STANDARD_SPLITS.publishing.pmg} / Artist {STANDARD_SPLITS.publishing.artist} / Producer {STANDARD_SPLITS.publishing.producer} (of 200)</span>
+            <div className="mt-3">
+              <Toggle label="Request a different master split" hint="all contributors must have agreed · applies to this release only" checked={d.alt_splits} onChange={(v) => set("alt_splits", v)} />
+            </div>
+            {d.alt_splits && (
+              <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                {(["pmg", "artist", "producer"] as const).map((k) => (
+                  <Input key={k} label={`${k === "pmg" ? "PMG" : k[0].toUpperCase() + k.slice(1)} %`} type="number" min={0} max={100} value={d.splits[k]} onChange={(e) => set("splits", { ...d.splits, [k]: Number(e.target.value) })} />
+                ))}
+                <span className="font-mono text-[10px] uppercase tracking-[0.14em] sm:col-span-3" style={{ color: d.splits.pmg + d.splits.artist + d.splits.producer === 100 ? "#9A9A9E" : "#FF5A36" }}>
+                  Total {d.splits.pmg + d.splits.artist + d.splits.producer}% · must be 100
+                </span>
+              </div>
+            )}
           </div>
-          <Toggle label="I have read and agree to the PMG Streaming Release Agreement" hint="binding electronic contract" checked={d.agreement_accepted} onChange={(v) => set("agreement_accepted", v)} />
-          <Input label="Signature" hint="type your full legal name" value={d.signature} onChange={(e) => set("signature", e.target.value)} />
+
+          <div>
+            <span className="block font-mono text-[10px] uppercase tracking-[0.18em] text-[#FFD230]">PMG Streaming Release Agreement</span>
+            <pre className="mt-2 max-h-72 overflow-y-auto whitespace-pre-wrap border border-[#F2EFE9]/20 bg-[#0B0B0B] p-4 font-sans text-[13px] leading-5 text-[#F2EFE9]/85">{AGREEMENT_TEXT}</pre>
+          </div>
+          <Toggle label="I have read and agree to the PMG Streaming Release Agreement" hint="binding electronic contract · a signed copy is emailed to you" checked={d.agreement_accepted} onChange={(v) => set("agreement_accepted", v)} />
+          <Input label="Signature" hint={`type your full legal name${d.legal_name ? ` · ${d.legal_name}` : ""}`} value={d.signature} onChange={(e) => set("signature", e.target.value)} />
         </div>
       )}
 
@@ -405,7 +445,7 @@ function PayStep({ session, order, onBack }: { session: Session; order: Order; o
         {row("Release", order.post_at ? `${fmtSlot(order.post_at)} ET` : "to be placed")}
         {order.session_at && row("Shoot", `${fmtSlot(order.session_at)} ET · 30 min`)}
         {row("Files", String(order.uploads?.length ?? 0))}
-        {order.wants_distribution && row("Distribution", "yes · agreement signed")}
+        {order.wants_distribution && row("Distribution", `agreement signed by ${order.signature ?? order.legal_name}`)}
         {q.tier.revenueShare ? row("PMG's share", "from the streaming split you signed") : row("Total", formatUsd(q.totalCents))}
         {row("Due now", formatUsd(q.dueNowCents))}
         {q.balanceCents > 0 && row("Balance before posting", formatUsd(q.balanceCents))}
@@ -445,7 +485,7 @@ function PayStep({ session, order, onBack }: { session: Session; order: Order; o
 export default function Start() {
   const [params] = useSearchParams();
   const [step, setStep] = useState(0);
-  const [tier, setTier] = useState<TierId>(getTier(params.get("tier") ?? "")?.public ? (params.get("tier") as TierId) : "dsp");
+  const [tier, setTier] = useState<TierId>(getTier(params.get("tier") ?? "")?.public ? (params.get("tier") as TierId) : "basic");
   const [invite, setInvite] = useState<{ code: string; label: string | null } | null>(null);
   const [inviteErr, setInviteErr] = useState<string | null>(null);
   const [adBudget, setAdBudget] = useState(0);
@@ -482,13 +522,15 @@ export default function Start() {
   const go = (n: number) => { setStep(n); window.scrollTo({ top: 0, behavior: "smooth" }); if (session) saveSession({ ...session, step: n }); };
 
   async function submitDetails(d: Details) {
+    const { alt_splits, splits, ...rest } = d;
+    const payload = { ...rest, splits: alt_splits ? splits : null };
     setBusy(true); setErr(null); setDetails(d);
     try {
       if (session) {
-        const { order: o } = await api.update(session, { ...d, tier, adBudgetCents: adBudget });
+        const { order: o } = await api.update(session, { ...payload, tier, adBudgetCents: adBudget });
         setOrder(o);
       } else {
-        const r = await api.create({ tier, adBudgetCents: adBudget, invite: invite?.code, ...d });
+        const r = await api.create({ tier, adBudgetCents: adBudget, invite: invite?.code, ...payload });
         const s = { orderId: r.orderId, token: r.token, step: 2 };
         setSession(s); saveSession(s);
         const { order: o } = await api.status(s);

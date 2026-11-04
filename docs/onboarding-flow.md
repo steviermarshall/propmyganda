@@ -9,7 +9,7 @@ the sheets and the confirmation email.
 
 | Step | What happens | Where |
 | --- | --- | --- |
-| 1 Tier | DSP Release ($0 up front, split on streams, distribution + agreement required), Basic $550 (+ optional extra ad budget), Mid $1,000, Viral $15,000. Invited ($0, everything in Mid) is hidden and only opens from `/start?invite=CODE` | `supabase/functions/_shared/tiers.ts` |
+| 1 Tier | Public `/start` shows Basic $550 (+ optional extra ad budget), Mid $1,000, Viral $15,000 only. DSP Release ($0 up front, split on streams, agreement required) and Invited ($0, everything in Mid) are never shown next to the paid tiers: each opens only from its own `/start?invite=CODE` link, which shows that one card | `supabase/functions/_shared/tiers.ts` |
 | 2 Details | Contact, Instagram lookup, TikTok/YouTube, track, explicit, ad-report preference, optional distribution block with PRO/IPI/producer + e-signature | `src/pages/Start.tsx` → `onboarding` function `create` |
 | 3 Upload | Files go straight to the private `onboarding-uploads` bucket via signed URLs | `upload-url` / `upload-done` |
 | 4 Schedule | Release: a date 7+ days out and one of three New York times, 3, 4 or 6pm; a time already taken that day is struck out. Shoot: Monday–Friday, 30 minutes, starts 2, 3, 4, 5, 6 or 7pm; each booking blocks the full hour (30 min shoot + 30 min gap) and anything on the PMG Google Calendar in that hour hides the slot. All times are true New York time across DST | `availability` |
@@ -30,9 +30,16 @@ directly; the function does, keyed by `id` + `client_token`.
 | --- | --- | --- | --- |
 | Paying artists | `/start`, pick Basic / Mid / Viral | prices, Stripe | optional distribution block |
 | DSP artists | `/start`, pick DSP Release (first card) | "$0 up front · split on streams" | required: PRO, IPI, producer, e-signature |
-| Free artists | a single-use link from `/admin/invites` (`/start?invite=CODE`) | only the Invited card, $0 | optional |
+| Free artists | a single-use link from `/admin/invites`, plan "Invited" (`/start?invite=CODE`) | only the Invited card, $0, no agreement | optional |
+| DSP artists | a link from `/admin/invites`, plan "DSP Release" (give it many uses to hand out broadly) | only the DSP Release card, $0 up front | required, signed in the flow |
 
-Invite codes live in `onboarding_invites` (migration `20261104_015`); a code is consumed when the order is confirmed. A second submission from the same email resumes the open order instead of creating a duplicate row.
+Invite codes live in `onboarding_invites` (migration `20261104_015`); a code is consumed when the order is confirmed. The public page never offers a $0 option, so nobody can pick the free door to dodge the paid one.
+
+## The release agreement
+
+The DSP path shows the full PMG Streaming Release Agreement (`supabase/functions/_shared/agreement.ts`, the text from the DSP Release Agreement Google Form) and collects what the form made required: PRO, IPI (9 to 11 digits or "none"), distro email, producer legal/stage name, PRO, IPI and email (or "self-produced", which copies the artist's details), an optional different DSP title, and an optional alternate master split that must total 100. Standard splits: master PMG 45 / Artist 45 / Producer 10; publishing PMG 100 / Artist 50 / Producer 50 (of 200). Distribution is via UnitedMasters.
+
+The signature is the typed legal name and must match the legal name on the order. The server stamps the order with `agreement_version`, `agreement_hash` (SHA-256 of the exact text shown), `signed_at` and `signed_ip` (migration `20261104_017`), so a signed version can be proven later. Bump `AGREEMENT_VERSION` whenever the text changes. The confirmation email carries the full signed copy; the distro sheet row records the requested title and any alternate split. A second submission from the same email resumes the open order instead of creating a duplicate row.
 
 ## Secrets to set in Lovable Cloud
 

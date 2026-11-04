@@ -24,6 +24,7 @@ export default function Invites() {
   const [label, setLabel] = useState("");
   const [uses, setUses] = useState(1);
   const [days, setDays] = useState(30);
+  const [tier, setTier] = useState<"comp" | "dsp">("comp");
 
   const { data: invites = [], isLoading } = useQuery({
     queryKey: ["onboarding-invites"],
@@ -37,7 +38,7 @@ export default function Invites() {
   const create = useMutation({
     mutationFn: async () => {
       const { data: auth } = await supabase.auth.getUser();
-      const row = { code: makeCode(), label: label.trim() || null, tier: "comp", max_uses: Math.max(1, uses), expires_at: days > 0 ? new Date(Date.now() + days * 86400_000).toISOString() : null, created_by: auth.user?.id ?? null };
+      const row = { code: makeCode(), label: label.trim() || null, tier, max_uses: Math.max(1, uses), expires_at: days > 0 ? new Date(Date.now() + days * 86400_000).toISOString() : null, created_by: auth.user?.id ?? null };
       const { error } = await db.from("onboarding_invites").insert(row);
       if (error) throw new Error(error.message);
       return row.code;
@@ -67,10 +68,17 @@ export default function Invites() {
       <div className="mx-auto max-w-4xl px-4 py-8">
         <h1 className="text-2xl font-bold tracking-tight">Invite links</h1>
         <p className="mt-1 mb-6 text-xs opacity-50">
-          For artists we let on for free. Each link opens /start with only the Invited plan (everything in Mid, $0), skips payment, and still books the calendar and fills the sheets. One use by default.
+          Two private doors, neither on the public /start page. <b>Invited</b> is completely free: everything in Mid, $0, no agreement. <b>DSP Release</b> is $0 up front with a record released under PMG: the artist signs the streaming agreement in the flow. Both skip payment and still book the calendar and fill the sheets. One use by default; give a DSP link many uses to reuse it.
         </p>
 
-        <form onSubmit={(e) => { e.preventDefault(); create.mutate(); }} className="mb-8 grid gap-3 border border-white/15 p-4 sm:grid-cols-[1fr_110px_110px_auto]">
+        <form onSubmit={(e) => { e.preventDefault(); create.mutate(); }} className="mb-8 grid gap-3 border border-white/15 p-4 sm:grid-cols-[150px_1fr_90px_110px_auto]">
+          <label className="text-xs uppercase tracking-widest opacity-70">
+            Plan
+            <select value={tier} onChange={(e) => setTier(e.target.value as "comp" | "dsp")} className="mt-1 w-full border border-white/20 bg-black px-2 py-2 text-sm text-white">
+              <option value="comp">Invited · free</option>
+              <option value="dsp">DSP Release</option>
+            </select>
+          </label>
           <label className="text-xs uppercase tracking-widest opacity-70">
             Who is it for
             <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Artist name" className="mt-1 w-full border border-white/20 bg-black px-2 py-2 text-sm text-white" />
@@ -100,6 +108,7 @@ export default function Invites() {
                 <li key={i.code} className="flex flex-wrap items-center gap-3 border border-white/15 p-3">
                   <span className="font-mono text-sm tracking-widest">{i.code}</span>
                   <span className="text-[9px] uppercase tracking-widest px-1.5 py-0.5" style={{ background: st === "open" ? ACCENT : "rgba(255,255,255,0.15)", color: st === "open" ? "#000" : "#fff" }}>{st}</span>
+                  <span className="text-[9px] uppercase tracking-widest border border-white/30 px-1.5 py-0.5">{i.tier === "dsp" ? "DSP" : "Invited"}</span>
                   <span className="min-w-0 flex-1 truncate text-sm">{i.label ?? "—"}</span>
                   <span className="text-xs opacity-50">{i.used_count}/{i.max_uses} used{i.expires_at ? ` · until ${new Date(i.expires_at).toLocaleDateString()}` : ""}</span>
                   <button type="button" onClick={() => copy(i.code)} className="border border-white/30 px-2.5 py-1 text-xs uppercase tracking-widest hover:border-white">Copy link</button>
