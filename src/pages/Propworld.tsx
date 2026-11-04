@@ -1,14 +1,16 @@
-import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import PMGFight3D from "@/components/PMGFight3D";
 import SEO from "@/components/SEO";
+import ChunkBoundary from "@/components/ChunkBoundary";
+import { lazyWithRetry } from "@/lib/lazyWithRetry";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Joystick, Minimap, SoundToggle } from "@/components/propworld/ForestUI";
 import { PORTAL_BY_ID, placePlayerAtDoor, type Portal } from "@/components/propworld/worldState";
 
-const PropworldScene = lazy(() => import("@/components/propworld/PropworldScene"));
-const SpaceGameOverlay = lazy(() => import("@/components/propworld/SpaceGameOverlay"));
-const RoomExclusive = lazy(() => import("@/components/propworld/RoomExclusive"));
+const PropworldScene = lazyWithRetry(() => import("@/components/propworld/PropworldScene"));
+const SpaceGameOverlay = lazyWithRetry(() => import("@/components/propworld/SpaceGameOverlay"));
+const RoomExclusive = lazyWithRetry(() => import("@/components/propworld/RoomExclusive"));
 
 type Mode = "forest" | "transitioning" | Portal;
 
@@ -46,13 +48,15 @@ const Propworld = () => {
       {/* Explorable forest — unmounted while inside a tree to free the GPU */}
       {inForest && (
         <div className="absolute inset-0">
-          <Suspense fallback={<div className="h-full w-full bg-[#02060a]" />}>
-            <PropworldScene
-              onNear={setNear}
-              onTransitionStart={(p) => { pending.current = p; setMode("transitioning"); }}
-              onEnter={(p) => setMode(p)}
-            />
-          </Suspense>
+          <ChunkBoundary label="The forest didn't load">
+            <Suspense fallback={<div className="h-full w-full bg-[#02060a]" />}>
+              <PropworldScene
+                onNear={setNear}
+                onTransitionStart={(p) => { pending.current = p; setMode("transitioning"); }}
+                onEnter={(p) => setMode(p)}
+              />
+            </Suspense>
+          </ChunkBoundary>
         </div>
       )}
 
@@ -122,16 +126,20 @@ const Propworld = () => {
         )}
         {mode === "game" && (
           <motion.div key="game" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.45 }} className="absolute inset-0 z-[40]">
-            <Suspense fallback={<div className="h-full w-full bg-[#02030a]" />}>
-              <SpaceGameOverlay onExit={() => exitTo("game")} />
-            </Suspense>
+            <ChunkBoundary label="The Game didn't load">
+              <Suspense fallback={<div className="h-full w-full bg-[#02030a]" />}>
+                <SpaceGameOverlay onExit={() => exitTo("game")} />
+              </Suspense>
+            </ChunkBoundary>
           </motion.div>
         )}
         {mode === "room" && (
           <motion.div key="room" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.45 }} className="absolute inset-0 z-[40]">
-            <Suspense fallback={<div className="h-full w-full bg-[#0e0804]" />}>
-              <RoomExclusive onExit={() => exitTo("room")} />
-            </Suspense>
+            <ChunkBoundary label="The Room didn't load">
+              <Suspense fallback={<div className="h-full w-full bg-[#0e0804]" />}>
+                <RoomExclusive onExit={() => exitTo("room")} />
+              </Suspense>
+            </ChunkBoundary>
           </motion.div>
         )}
       </AnimatePresence>
