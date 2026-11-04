@@ -48,13 +48,15 @@ const Propworld = () => {
       {/* Explorable forest — unmounted while inside a tree to free the GPU */}
       {inForest && (
         <div className="absolute inset-0">
-          <Suspense fallback={<div className="h-full w-full bg-[#02060a]" />}>
-            <PropworldScene
-              onNear={setNear}
-              onTransitionStart={(p) => { pending.current = p; setMode("transitioning"); }}
-              onEnter={(p) => setMode(p)}
-            />
-          </Suspense>
+          <ChunkBoundary label="The forest didn't load">
+            <Suspense fallback={<div className="h-full w-full bg-[#02060a]" />}>
+              <PropworldScene
+                onNear={setNear}
+                onTransitionStart={(p) => { pending.current = p; setMode("transitioning"); }}
+                onEnter={(p) => setMode(p)}
+              />
+            </Suspense>
+          </ChunkBoundary>
         </div>
       )}
 
@@ -124,16 +126,20 @@ const Propworld = () => {
         )}
         {mode === "game" && (
           <motion.div key="game" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.45 }} className="absolute inset-0 z-[40]">
-            <Suspense fallback={<div className="h-full w-full bg-[#02030a]" />}>
-              <SpaceGameOverlay onExit={() => exitTo("game")} />
-            </Suspense>
+            <ChunkBoundary label="The Game didn't load">
+              <Suspense fallback={<div className="h-full w-full bg-[#02030a]" />}>
+                <SpaceGameOverlay onExit={() => exitTo("game")} />
+              </Suspense>
+            </ChunkBoundary>
           </motion.div>
         )}
         {mode === "room" && (
           <motion.div key="room" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.45 }} className="absolute inset-0 z-[40]">
-            <Suspense fallback={<div className="h-full w-full bg-[#0e0804]" />}>
-              <RoomExclusive onExit={() => exitTo("room")} />
-            </Suspense>
+            <ChunkBoundary label="The Room didn't load">
+              <Suspense fallback={<div className="h-full w-full bg-[#0e0804]" />}>
+                <RoomExclusive onExit={() => exitTo("room")} />
+              </Suspense>
+            </ChunkBoundary>
           </motion.div>
         )}
       </AnimatePresence>
