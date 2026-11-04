@@ -2143,6 +2143,7 @@ export type Database = {
     }
     Functions: {
       has_crm_role: { Args: { _role: string }; Returns: boolean }
+      is_staff: { Args: never; Returns: boolean }
       my_crm_role: { Args: never; Returns: string }
       my_role: {
         Args: never
