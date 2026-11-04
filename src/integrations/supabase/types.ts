@@ -1082,11 +1082,14 @@ export type Database = {
         Row: {
           ad_budget_cents: number
           agreement_accepted: boolean
+          agreement_hash: string | null
+          agreement_version: string | null
           artist_name: string
           catalogue_no: string | null
           client_token: string
           created_at: string
           distro_email: string | null
+          dsp_title: string | null
           due_now_cents: number
           email: string
           explicit: boolean
@@ -1111,9 +1114,13 @@ export type Database = {
           producer_pro: string | null
           producer_stage_name: string | null
           report_preference: string | null
+          self_produced: boolean
           session_at: string | null
           sheet_synced_at: string | null
           signature: string | null
+          signed_at: string | null
+          signed_ip: string | null
+          splits: Json | null
           status: string
           stripe_payment_intent: string | null
           stripe_session_id: string | null
@@ -1130,11 +1137,14 @@ export type Database = {
         Insert: {
           ad_budget_cents?: number
           agreement_accepted?: boolean
+          agreement_hash?: string | null
+          agreement_version?: string | null
           artist_name: string
           catalogue_no?: string | null
           client_token?: string
           created_at?: string
           distro_email?: string | null
+          dsp_title?: string | null
           due_now_cents?: number
           email: string
           explicit?: boolean
@@ -1159,9 +1169,13 @@ export type Database = {
           producer_pro?: string | null
           producer_stage_name?: string | null
           report_preference?: string | null
+          self_produced?: boolean
           session_at?: string | null
           sheet_synced_at?: string | null
           signature?: string | null
+          signed_at?: string | null
+          signed_ip?: string | null
+          splits?: Json | null
           status?: string
           stripe_payment_intent?: string | null
           stripe_session_id?: string | null
@@ -1178,11 +1192,14 @@ export type Database = {
         Update: {
           ad_budget_cents?: number
           agreement_accepted?: boolean
+          agreement_hash?: string | null
+          agreement_version?: string | null
           artist_name?: string
           catalogue_no?: string | null
           client_token?: string
           created_at?: string
           distro_email?: string | null
+          dsp_title?: string | null
           due_now_cents?: number
           email?: string
           explicit?: boolean
@@ -1207,9 +1224,13 @@ export type Database = {
           producer_pro?: string | null
           producer_stage_name?: string | null
           report_preference?: string | null
+          self_produced?: boolean
           session_at?: string | null
           sheet_synced_at?: string | null
           signature?: string | null
+          signed_at?: string | null
+          signed_ip?: string | null
+          splits?: Json | null
           status?: string
           stripe_payment_intent?: string | null
           stripe_session_id?: string | null
