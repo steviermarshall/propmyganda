@@ -1804,7 +1804,7 @@ function updateCamera(cam: THREE.PerspectiveCamera, g: Game, init = false) {
   cam.position.x += (tx - cam.position.x) * k;
   cam.position.y += (1.25 + lift * 0.45 - cam.position.y) * k;
   cam.position.z += (dist - cam.position.z) * k;
-  if (g.shake > 0) { cam.position.x += Math.sin(g.frame * 7.3) * 0.03; cam.position.y += Math.cos(g.frame * 5.1) * 0.03; }
+  if (g.shake > 0 && !Motion.reduced) { cam.position.x += Math.sin(g.frame * 7.3) * 0.03; cam.position.y += Math.cos(g.frame * 5.1) * 0.03; }
   cam.lookAt(cam.position.x, 1.02 + lift * 0.4, 0);
 }
 
@@ -1839,7 +1839,7 @@ function slantRect(c: CanvasRenderingContext2D, x: number, y: number, w: number,
 /** The finisher cutscene: letterbox, colour pulse in the fighter's colour, three title cards over 4 seconds. */
 function drawCinematic(c: CanvasRenderingContext2D, g: Game) {
   const cn = g.cine!, f = g.f[cn.who], t = cn.t, NAME = f.def.name.toUpperCase();
-  const flash = Math.sin(t * 0.55) > 0 ? 0.16 : 0.04;
+  const flash = Motion.reduced ? 0.08 : Math.sin(t * 0.55) > 0 ? 0.16 : 0.04;   // reduced motion: a steady tint instead of a strobe
   c.save();
   c.globalAlpha = flash; c.fillStyle = f.def.color; c.fillRect(0, 0, W, H); c.globalAlpha = 1;
   const bar = Math.min(1, t / 10) * 62;                                   // letterbox slides in
@@ -1887,7 +1887,8 @@ function drawHud(c: CanvasRenderingContext2D, g: Game, touch: boolean, project: 
     c.fillStyle = chrome(c, BY - 3, BY + BH + 3); slantRect(c, bx - 3, BY - 2, BW + 6, BH + 4, sk); c.fill();
     c.fillStyle = "#1a0606"; slantRect(c, bx, BY + 1, BW, BH - 2, sk); c.fill();
     c.save(); slantRect(c, bx, BY + 1, BW, BH - 2, sk); c.clip();
-    const lagW = fill(f.lag), hpW = fill(f.hp);
+    const fillIn = g.phase === "intro" && !Motion.reduced ? ease(Math.min(1, g.pf / 36)) : 1;      // round start: the bars fill up
+    const lagW = fill(f.lag) * fillIn, hpW = fill(f.hp) * fillIn;
     c.fillStyle = "#e01a00"; c.fillRect(left ? bx + BW + SK - lagW : bx - SK, BY, lagW + SK, BH);
     const low = f.hp < 30;
     c.fillStyle = low ? `rgb(255,${Math.round(80 + 120 * pulse)},0)` : gold(c, BY, BY + BH);
@@ -1993,7 +1994,9 @@ function drawHud(c: CanvasRenderingContext2D, g: Game, touch: boolean, project: 
 
   // big announcements on a slanted banner
   if (g.msg) {
-    const size = g.msg.length > 16 ? 34 : g.msg.length > 10 ? 44 : 70;
+    const age = g.phase === "intro" && g.pf >= 70 ? g.pf - 70 : g.pf;                       // frames since this message appeared
+    const pop = Motion.reduced ? 1 : 1 + 0.9 * (1 - ease(Math.min(1, age / 10)));             // slams in from large
+    const size = (g.msg.length > 16 ? 34 : g.msg.length > 10 ? 44 : 70) * pop;
     const y = H / 2 - 30;
     c.save();
     c.fillStyle = "rgba(0,0,0,0.6)";
@@ -2230,6 +2233,53 @@ const CSS = `
   display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px;box-sizing:border-box;
   user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;overscroll-behavior:none}
 .pmg *{box-sizing:border-box}
+/* motion graphics: slanted stripes drifting behind the menus, slam-ins, staggered rises, a wipe between screens. All off under .rm */
+.pmg.menu::before,.pmg.select::before,.pmg.stage::before{content:"";position:absolute;inset:-20%;pointer-events:none;z-index:0;opacity:.6;
+  background:repeating-linear-gradient(-32deg,rgba(255,255,255,.045) 0 14px,transparent 14px 86px);animation:pmgDrift 26s linear infinite}
+.pmg>*{position:relative;z-index:1}
+@keyframes pmgDrift{to{transform:translate3d(-140px,80px,0)}}
+@keyframes pmgSlam{0%{transform:scale(2.4) rotate(-6deg);opacity:0;filter:blur(6px)}60%{transform:scale(.94) rotate(0);opacity:1;filter:blur(0)}80%{transform:scale(1.04)}100%{transform:scale(1)}}
+@keyframes pmgBurst{0%{transform:translate(-50%,-50%) scale(.2);opacity:0}30%{opacity:.9}100%{transform:translate(-50%,-50%) scale(2.6);opacity:0}}
+@keyframes pmgSkewIn{0%{transform:translateX(-70px) skewX(-22deg);opacity:0}100%{transform:translateX(0) skewX(-6deg);opacity:1}}
+@keyframes pmgRise{0%{transform:translateY(26px) skewX(-4deg);opacity:0}100%{transform:none;opacity:1}}
+@keyframes pmgFromL{0%{transform:translateX(-60%);opacity:0}70%{transform:translateX(4%)}100%{transform:none;opacity:1}}
+@keyframes pmgFromR{0%{transform:translateX(60%);opacity:0}70%{transform:translateX(-4%)}100%{transform:none;opacity:1}}
+@keyframes pmgPop{0%{transform:scale(3) skewX(-8deg);opacity:0}60%{transform:scale(.9) skewX(-8deg);opacity:1}100%{transform:scale(1) skewX(-8deg)}}
+@keyframes pmgPanel{0%{transform:scale(.94) translateY(12px);opacity:0}100%{transform:none;opacity:1}}
+@keyframes pmgWipe{0%{transform:translateX(-130%) skewX(-18deg)}100%{transform:translateX(130%) skewX(-18deg)}}
+@keyframes pmgSweep{0%,55%{transform:translateX(-130%) skewX(-25deg)}100%{transform:translateX(230%) skewX(-25deg)}}
+@keyframes pmgBadge{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
+@keyframes pmgBarStripes{to{transform:translateX(20px)}}
+.pmg-titlewrap{position:relative}
+.pmg-burst{position:absolute;left:50%;top:42%;width:min(420px,70vw);height:min(420px,70vw);border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle,rgba(255,194,26,.55) 0,rgba(255,138,31,.25) 35%,transparent 70%);animation:pmgBurst .9s .1s ease-out both}
+.pmg-titlelogo{animation:pmgSlam .75s cubic-bezier(.2,.9,.25,1.2) both}
+.pmg-fight{animation:pmgSkewIn .5s .35s cubic-bezier(.2,.9,.25,1) both}
+.pmg.menu .pmg-tag,.pmg.menu .pmg-sub,.pmg.menu .pmg-cred,.pmg.menu .pmg-code{animation:pmgRise .45s .55s both}
+.pmg-col>.pmg-btn{animation:pmgRise .45s both;animation-delay:calc(.65s + var(--i,0) * 70ms)}
+.pmg-btn{position:relative;overflow:hidden}
+.pmg-btn.primary::after{content:"";position:absolute;top:0;bottom:0;left:0;width:34%;pointer-events:none;background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);animation:pmgSweep 2.8s 1.4s ease-in-out infinite}
+.pmg-btn,.pmg-card{transition:transform .15s ease,filter .15s ease}
+.pmg-btn:hover{transform:translateY(-2px)}
+.pmg-grid .pmg-card,.pmg-locs .pmg-card{animation:pmgRise .5s both;animation-delay:calc(var(--i,0) * 70ms)}
+.pmg-card:hover{transform:translateY(-5px)}
+.pmg-card .pmg-badge{animation:pmgBadge .9s ease-in-out infinite}
+.pmg-h2{animation:pmgSkewIn .45s both}
+.pmg-vs .side.l{animation:pmgFromL .55s .05s cubic-bezier(.2,.9,.25,1) both}
+.pmg-vs .side.r{animation:pmgFromR .55s .05s cubic-bezier(.2,.9,.25,1) both}
+.pmg-vs .vs{animation:pmgPop .5s .45s cubic-bezier(.2,.9,.25,1) both}
+.pmg-vs .foot{animation:pmgRise .45s .7s both}
+.pmg-vs .bar b{position:relative;overflow:hidden}
+.pmg-vs .bar b::after{content:"";position:absolute;top:0;bottom:0;left:-28px;right:0;background:repeating-linear-gradient(-45deg,rgba(255,255,255,.28) 0 7px,transparent 7px 14px);animation:pmgBarStripes .5s linear infinite}
+.pmg-panel{animation:pmgPanel .28s cubic-bezier(.2,.9,.25,1) both}
+.pmg-over .pmg-col>*{animation:pmgRise .4s both}
+.pmg-over .pmg-col>*:nth-child(2){animation-delay:.08s}.pmg-over .pmg-col>*:nth-child(3){animation-delay:.16s}
+.pmg-wipe{position:fixed;inset:0;z-index:45;pointer-events:none;overflow:hidden}
+.pmg-wipe::before,.pmg-wipe::after{content:"";position:absolute;top:-10%;bottom:-10%;left:0;width:120%;animation:pmgWipe .7s cubic-bezier(.7,0,.3,1) both}
+.pmg-wipe::before{background:#050304;border-right:14px solid #ffc21a;box-shadow:8px 0 0 #000}
+.pmg-wipe::after{background:#0b0c0f;animation-delay:.09s;opacity:.85}
+.pmg.rm *,.pmg.rm::before{animation:none!important;transition:none!important}
+.pmg.rm .pmg-fight{transform:skewX(-6deg)}.pmg.rm .pmg-burst{display:none}.pmg.rm .pmg-vs .vs{transform:skewX(-8deg)}
 .pmg-titlewrap{display:flex;flex-direction:column;align-items:center;margin-bottom:10px}
 .pmg-titlelogo{width:min(360px,64vw,46dvh);height:auto;display:block;filter:drop-shadow(0 6px 14px rgba(0,0,0,.8))}
 .pmg-fight{font:clamp(44px,12vw,96px)/0.9 ${WET};color:#FF2300;margin-top:-6px;letter-spacing:2px;
@@ -2297,6 +2347,8 @@ const CSS = `
 .pmg-panel .pmg-col{width:100%}
 .pmg-row{display:flex;align-items:center;justify-content:space-between;gap:10px;font:16px ${HUDF};letter-spacing:1px;padding:6px 2px;border-bottom:1px solid #2f343d}
 .pmg-nowp{font:13px ${HUDF};color:#ffcf7a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.pmg-row small{display:block;font:11px ${HUDF};color:#9aa3b0;letter-spacing:1px;margin-top:2px}
+.pmg-slider input[type=range]{flex:1;max-width:46%;accent-color:#ffc21a;height:28px;cursor:pointer}
 .pmg-toggle{appearance:none;min-width:84px;border:2px solid #c9d1dc;border-radius:3px;background:#15171c;color:#fff;font:14px ${HUDF};padding:8px 10px;cursor:pointer;flex:none}
 .pmg-toggle[aria-pressed="true"]{background:linear-gradient(#fff7c2,#ffc21a 45%,#e07b00 55%,#ffd45a);color:#000;border-color:#000}
 .pmg-toggle:focus-visible{outline:3px solid #fff;outline-offset:3px}
@@ -2517,6 +2569,15 @@ function ControlsHelp({ touch, cpu }: { touch: boolean; cpu: boolean }) {
 const store = {
   get(k: string, d: boolean) { try { const v = localStorage.getItem("pmg-" + k); return v === null ? d : v === "1"; } catch { return d; } },
   set(k: string, v: boolean) { try { localStorage.setItem("pmg-" + k, v ? "1" : "0"); } catch { /* private mode: ignore */ } },
+  num(k: string, d: number) { try { const v = localStorage.getItem("pmg-" + k); if (v === null) return d; const n = Number(v); return Number.isFinite(n) ? n : d; } catch { return d; } },
+  setNum(k: string, v: number) { try { localStorage.setItem("pmg-" + k, String(v)); } catch { /* private mode: ignore */ } },
+};
+
+/** Motion: one switch for people who get motion-sick or just want a calmer screen. Follows the system's reduce-motion setting
+ *  until changed here. Off = no camera shake, no finisher strobe, no screen wipes or slam-in animations (things still move in the fight). */
+const Motion = {
+  reduced: (() => { const sys = typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches; try { const v = localStorage.getItem("pmg-reduced-motion"); return v === null ? sys : v === "1"; } catch { return sys; } })(),
+  set(v: boolean) { this.reduced = v; store.set("reduced-motion", v); Sound.emit(); },
 };
 
 type AudioListener = () => void;
@@ -2524,6 +2585,7 @@ const Sound = {
   music: null as HTMLAudioElement | null,
   order: [] as number[], pos: -1,
   musicOn: store.get("music", true), fxOn: store.get("fx", true),
+  musicVol: store.num("vol-music", 70), fxVol: store.num("vol-fx", 100),       // 0–100 sliders in Settings
   started: false, title: "",
   holdMusic: true,                                  // no music until the intro is over
   ctx: null as AudioContext | null, fxGain: null as GainNode | null, noise: null as AudioBuffer | null,
@@ -2536,7 +2598,7 @@ const Sound = {
       const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       if (AC) {
         this.ctx = new AC();
-        this.fxGain = this.ctx.createGain(); this.fxGain.gain.value = 0.55; this.fxGain.connect(this.ctx.destination);
+        this.fxGain = this.ctx.createGain(); this.fxGain.gain.value = 0.55 * (this.fxVol / 100); this.fxGain.connect(this.ctx.destination);
         const n = this.ctx.createBuffer(1, this.ctx.sampleRate, this.ctx.sampleRate), d = n.getChannelData(0);
         for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
         this.noise = n;
@@ -2602,7 +2664,7 @@ const Sound = {
     this.pos++;
     const song = SONGS[this.order[this.pos]];
     if (!this.music) {
-      this.music = new Audio(); this.music.volume = 0.5; this.music.preload = "auto";
+      this.music = new Audio(); this.music.volume = 0.7 * (this.musicVol / 100); this.music.preload = "auto";
       this.music.addEventListener("ended", () => this.next());
       this.music.addEventListener("error", () => { if (this.musicOn) setTimeout(() => this.next(), 400); });
     }
@@ -2617,6 +2679,8 @@ const Sound = {
     this.emit();
   },
   toggleFx() { this.fxOn = !this.fxOn; store.set("fx", this.fxOn); this.emit(); },
+  setMusicVol(v: number) { this.musicVol = Math.max(0, Math.min(100, Math.round(v))); store.setNum("vol-music", this.musicVol); if (this.music) this.music.volume = 0.7 * (this.musicVol / 100); this.emit(); },
+  setFxVol(v: number) { this.fxVol = Math.max(0, Math.min(100, Math.round(v))); store.setNum("vol-fx", this.fxVol); if (this.fxGain) this.fxGain.gain.value = 0.55 * (this.fxVol / 100); this.emit(); },
 
   /** Short arcade sounds, built from noise and tones. */
   play(kind: string) {
@@ -2666,7 +2730,7 @@ const Voice = {
     let a = this.cache.get(name);
     if (!a) { a = new Audio(voiceUrl(name)); a.preload = "auto"; a.addEventListener("error", () => a!.dataset.missing = "1"); this.cache.set(name, a); }
     if (a.dataset.missing) return;
-    a.volume = vol; a.currentTime = 0; a.play().catch(() => { /* blocked until a tap, or no clip */ });
+    a.volume = vol * (Sound.fxVol / 100); a.currentTime = 0; a.play().catch(() => { /* blocked until a tap, or no clip */ });
   },
   preload(names: string[]) { for (const n of names) if (voiceUrl(n) && !this.cache.has(n)) { const a = new Audio(voiceUrl(n)); a.preload = "auto"; a.addEventListener("error", () => a.dataset.missing = "1"); this.cache.set(n, a); } },
 };
@@ -2749,7 +2813,10 @@ function SettingsPanel({ onClose, extra }: { onClose: () => void; extra?: ReactN
         <div className="pmg-col">
           {extra}
           <div className="pmg-row"><span>MUSIC</span><button className="pmg-toggle" aria-pressed={s.musicOn} onClick={() => { s.unlock(); s.toggleMusic(); }}>{s.musicOn ? "ON" : "OFF"}</button></div>
-          <div className="pmg-row"><span>SOUND FX</span><button className="pmg-toggle" aria-pressed={s.fxOn} onClick={() => { s.unlock(); s.toggleFx(); }}>{s.fxOn ? "ON" : "OFF"}</button></div>
+          <div className="pmg-row pmg-slider"><span>MUSIC VOLUME <small>{s.musicVol}%</small></span><input type="range" min={0} max={100} value={s.musicVol} aria-label="Music volume" onChange={(e) => { s.unlock(); s.setMusicVol(Number(e.target.value)); }} onKeyDown={(e) => e.stopPropagation()} /></div>
+          <div className="pmg-row"><span>SOUND FX &amp; VOICE</span><button className="pmg-toggle" aria-pressed={s.fxOn} onClick={() => { s.unlock(); s.toggleFx(); }}>{s.fxOn ? "ON" : "OFF"}</button></div>
+          <div className="pmg-row pmg-slider"><span>FX VOLUME <small>{s.fxVol}%</small></span><input type="range" min={0} max={100} value={s.fxVol} aria-label="Sound effects volume" onChange={(e) => { s.unlock(); s.setFxVol(Number(e.target.value)); }} onKeyDown={(e) => e.stopPropagation()} onPointerUp={() => s.play("hit")} /></div>
+          <div className="pmg-row"><span>REDUCED MOTION <small>no shake, strobe or wipes</small></span><button className="pmg-toggle" aria-pressed={Motion.reduced} onClick={() => { s.unlock(); Motion.set(!Motion.reduced); }}>{Motion.reduced ? "ON" : "OFF"}</button></div>
           <div className="pmg-row"><span className="pmg-nowp">♪ {s.musicOn ? (s.title || "—") : "Music off"}</span><button className="pmg-toggle" onClick={() => { s.unlock(); if (!s.musicOn) s.toggleMusic(); else s.next(); }}>NEXT ▶▶</button></div>
           {!extra && <ProfileRow />}
           {!extra && <button className="pmg-btn ghost" onClick={onClose}>BACK</button>}
@@ -2931,6 +2998,13 @@ function SprayIntro({ onDone }: { onDone: () => void }) {
 export default function PMGFight3D({ onExit }: { onExit?: () => void } = {}) {
   // the spray-paint intro plays on the first visit; after that the title comes straight up (REPLAY INTRO brings it back)
   const [screen, setScreen] = useState<"intro" | "menu" | "select" | "stage" | "fight">(() => (store.get("intro-seen", false) ? "menu" : "intro"));
+  // screen changes go through a slanted wipe (motion-graphics style); reduced motion switches at once
+  const [wipe, setWipe] = useState(false);
+  const go = (next: "intro" | "menu" | "select" | "stage" | "fight") => {
+    if (Motion.reduced) { setScreen(next); return; }
+    setWipe(true); setTimeout(() => setScreen(next), 260); setTimeout(() => setWipe(false), 700);
+  };
+  useSound();                                                     // re-render when the reduced-motion switch flips
   const [loc, setLoc] = useState<LocationId>("streets");
   const [stagePics, setStagePics] = useState<Record<string, string> | null>(null);
   const [mode, setMode] = useState<"cpu" | "2p">("cpu");
@@ -2957,7 +3031,7 @@ export default function PMGFight3D({ onExit }: { onExit?: () => void } = {}) {
     let b = Math.floor(Math.random() * (ROSTER.length - 1)); if (b >= a) b++;
     const pool = DIFFICULTIES.filter((d) => d !== "HARD" || Cred.has("hardturf"));
     setMode("cpu"); setPicks([a, b]); setLoc(LOCATIONS[Math.floor(Math.random() * LOCATIONS.length)].id); setDiff(pool[Math.floor(Math.random() * pool.length)]);
-    setQuickPick(false); setRound((r) => r + 1); setScreen("fight");
+    setQuickPick(false); setRound((r) => r + 1); go("fight");
   };
   useEffect(() => { if (screen === "stage" && !stagePics) renderStagePreviews().then(setStagePics); }, [screen, stagePics]);
 
@@ -2968,21 +3042,23 @@ export default function PMGFight3D({ onExit }: { onExit?: () => void } = {}) {
   const choose = (i: number) => {
     if (quickPick) { quickFight(i); return; }
     const next = [...picks, i];
-    if (next.length === 2) { setPicks(next); setScreen("stage"); }
+    if (next.length === 2) { setPicks(next); go("stage"); }
     else setPicks(next);
   };
 
   return (
-    <div className="pmg" onPointerDownCapture={() => Sound.unlock()} onKeyDownCapture={() => Sound.unlock()}>
+    <div className={`pmg ${screen}${Motion.reduced ? " rm" : ""}`} onPointerDownCapture={() => Sound.unlock()} onKeyDownCapture={() => Sound.unlock()}>
+      {wipe && <div className="pmg-wipe" aria-hidden="true" />}
       {onExit && <button onClick={onExit} style={{ position: "fixed", top: 12, left: 12, zIndex: 9999, padding: "8px 14px", background: "rgba(0,0,0,.7)", color: "#f5f0e6", border: "1px solid #f5f0e6", font: "700 12px/1 Barlow, sans-serif", letterSpacing: ".12em", cursor: "pointer" }}>← PROPWORLD</button>}
       <style>{CSS}</style>
-      {screen === "intro" && <SprayIntro onDone={() => setScreen("menu")} />}
+      {screen === "intro" && <SprayIntro onDone={() => go("menu")} />}
       {settings && <SettingsPanel onClose={() => setSettings(false)} />}
       {unlocks && <UnlocksPanel onClose={() => setUnlocks(false)} />}
 
       {screen === "menu" && (
         <>
           <h1 className="pmg-titlewrap" aria-label="PMG Fight">
+            <span className="pmg-burst" aria-hidden="true" />
             <img className="pmg-titlelogo" src={LOGO_URL} alt="PMG" />
             <span className="pmg-fight">FIGHT</span>
           </h1>
@@ -2991,22 +3067,22 @@ export default function PMGFight3D({ onExit }: { onExit?: () => void } = {}) {
           <p className="pmg-cred">{Profile.returning() ? "WELCOME BACK · " : ""}STREET CRED · {Cred.get().toLocaleString()}</p>
           <p className="pmg-code">PLAYER CODE <b>{Profile.pretty()}</b>{CLOUD_ON ? " · your cred follows this code — type it in Settings on another device" : ""}</p>
           <div className="pmg-col">
-            <button className="pmg-btn" onClick={() => quickFight()}>
+            <button className="pmg-btn primary" style={{ ["--i" as string]: 0 }} onClick={() => quickFight()}>
               QUICK FIGHT<small>Random fighters, random turf — straight to the block</small>
             </button>
-            <button className="pmg-btn" onClick={() => { setMode("cpu"); setPicks([]); setQuickPick(true); setScreen("select"); }}>
+            <button className="pmg-btn" style={{ ["--i" as string]: 1 }} onClick={() => { setMode("cpu"); setPicks([]); setQuickPick(true); go("select"); }}>
               SELECT CHARACTER<small>Pick your fighter — random rival, random turf</small>
             </button>
-            <button className="pmg-btn ghost" onClick={() => { setMode("cpu"); setPicks([]); setQuickPick(false); setScreen("select"); }}>
+            <button className="pmg-btn ghost" style={{ ["--i" as string]: 2 }} onClick={() => { setMode("cpu"); setPicks([]); setQuickPick(false); go("select"); }}>
               1 PLAYER<small>Pick your fighter, your rival and the turf</small>
             </button>
-            <button className="pmg-btn ghost" onClick={() => { setMode("2p"); setPicks([]); setQuickPick(false); setScreen("select"); }}>
+            <button className="pmg-btn ghost" style={{ ["--i" as string]: 3 }} onClick={() => { setMode("2p"); setPicks([]); setQuickPick(false); go("select"); }}>
               2 PLAYERS<small>Two people, one keyboard</small>
             </button>
-            <button className="pmg-btn ghost" onClick={() => setUnlocks(true)}>UNLOCKS<small>Spend your Street Cred · {Cred.owned().size} of {UNLOCKS.length} owned</small></button>
-            <button className="pmg-btn ghost" onClick={() => setSettings(true)}>SETTINGS<small>Music · sound effects · next song</small></button>
+            <button className="pmg-btn ghost" style={{ ["--i" as string]: 4 }} onClick={() => setUnlocks(true)}>UNLOCKS<small>Spend your Street Cred · {Cred.owned().size} of {UNLOCKS.length} owned</small></button>
+            <button className="pmg-btn ghost" style={{ ["--i" as string]: 5 }} onClick={() => setSettings(true)}>SETTINGS<small>Music · sound effects · next song</small></button>
           </div>
-          <button className="pmg-link" onClick={() => setScreen("intro")}>REPLAY INTRO</button>
+          <button className="pmg-link" onClick={() => go("intro")}>REPLAY INTRO</button>
         </>
       )}
 
@@ -3022,7 +3098,7 @@ export default function PMGFight3D({ onExit }: { onExit?: () => void } = {}) {
               const locked = fighterLocked(r.id) && (mode === "2p" || quickPick || picks.length === 0);
               const price = UNLOCKS.find((u) => u.id === LOCKED_FIGHTER[r.id])?.cost ?? 0;
               return (
-              <button key={r.id} className={`pmg-card${locked ? " locked" : ""}`} aria-pressed={picks[0] === i} aria-disabled={locked} onClick={() => (locked ? setUnlocks(true) : choose(i))}>
+              <button key={r.id} className={`pmg-card${locked ? " locked" : ""}`} style={{ ["--i" as string]: i }} aria-pressed={picks[0] === i} aria-disabled={locked} onClick={() => (locked ? setUnlocks(true) : choose(i))}>
                 {portraits?.[r.id] ? <img src={portraits[r.id]} alt={`${r.name} portrait`} /> : <div className="ph">{portraits ? "NO MODEL" : "LOADING…"}</div>}
                 {locked && <span className="pmg-lock">🔒 {price.toLocaleString()} CRED<small>TAP TO UNLOCK</small></span>}
                 {picks[0] === i && <span className="pmg-badge">P1</span>}
@@ -3043,7 +3119,7 @@ export default function PMGFight3D({ onExit }: { onExit?: () => void } = {}) {
             })}
           </div>
           <div className="pmg-col" style={{ marginTop: 18 }}>
-            <button className="pmg-btn ghost" onClick={() => (picks.length ? setPicks([]) : (setQuickPick(false), setScreen("menu")))}>BACK</button>
+            <button className="pmg-btn ghost" onClick={() => (picks.length ? setPicks([]) : (setQuickPick(false), go("menu")))}>BACK</button>
           </div>
         </>
       )}
@@ -3063,7 +3139,7 @@ export default function PMGFight3D({ onExit }: { onExit?: () => void } = {}) {
           )}
           <div className="pmg-locs">
             {LOCATIONS.map((l) => (
-              <button key={l.id} className="pmg-card pmg-loc" onClick={() => { setLoc(l.id); setRound((r) => r + 1); setScreen("fight"); }}>
+              <button key={l.id} className="pmg-card pmg-loc" style={{ ["--i" as string]: LOCATIONS.indexOf(l) }} onClick={() => { setLoc(l.id); setRound((r) => r + 1); go("fight"); }}>
                 {stagePics?.[l.id] ? <img src={stagePics[l.id]} alt={`${l.name} preview`} /> : <div className="ph">{stagePics ? "PREVIEW UNAVAILABLE" : "LOADING…"}</div>}
                 <h3>{l.name.toUpperCase()}</h3>
                 <div className="meta">{l.blurb}</div>
@@ -3072,7 +3148,7 @@ export default function PMGFight3D({ onExit }: { onExit?: () => void } = {}) {
             ))}
           </div>
           <div className="pmg-col" style={{ marginTop: 18 }}>
-            <button className="pmg-btn ghost" onClick={() => { setPicks([]); setScreen("select"); }}>BACK</button>
+            <button className="pmg-btn ghost" onClick={() => { setPicks([]); go("select"); }}>BACK</button>
           </div>
         </>
       )}
@@ -3082,9 +3158,9 @@ export default function PMGFight3D({ onExit }: { onExit?: () => void } = {}) {
           key={round}
           p1={fighters[0]} p2={fighters[1]} cpu={mode === "cpu"} isTouch={isTouch} loc={loc} diff={mode === "cpu" ? diff : "MEDIUM"}
           onRematch={() => setRound((r) => r + 1)}
-          onChange={() => { setPicks([]); setScreen("select"); }}
-          onStage={() => setScreen("stage")}
-          onMenu={() => { setPicks([]); setScreen("menu"); }}
+          onChange={() => { setPicks([]); go("select"); }}
+          onStage={() => go("stage")}
+          onMenu={() => { setPicks([]); go("menu"); }}
         />
       )}
     </div>
