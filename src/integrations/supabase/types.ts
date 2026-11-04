@@ -1045,6 +1045,194 @@ export type Database = {
         }
         Relationships: []
       }
+      onboarding_invites: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string | null
+          expires_at: string | null
+          label: string | null
+          max_uses: number
+          tier: string
+          used_count: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          label?: string | null
+          max_uses?: number
+          tier?: string
+          used_count?: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          label?: string | null
+          max_uses?: number
+          tier?: string
+          used_count?: number
+        }
+        Relationships: []
+      }
+      onboarding_orders: {
+        Row: {
+          ad_budget_cents: number
+          agreement_accepted: boolean
+          artist_name: string
+          catalogue_no: string | null
+          client_token: string
+          created_at: string
+          distro_email: string | null
+          due_now_cents: number
+          email: string
+          explicit: boolean
+          google_post_event_id: string | null
+          google_session_event_id: string | null
+          id: string
+          instagram_followers: number | null
+          instagram_handle: string | null
+          instagram_url: string | null
+          invite_code: string | null
+          ipi_number: string | null
+          legal_name: string
+          notes: string | null
+          paid_at: string | null
+          payment_plan: string
+          phone: string | null
+          post_at: string | null
+          pro_affiliation: string | null
+          producer_email: string | null
+          producer_ipi: string | null
+          producer_name: string | null
+          producer_pro: string | null
+          producer_stage_name: string | null
+          report_preference: string | null
+          session_at: string | null
+          sheet_synced_at: string | null
+          signature: string | null
+          status: string
+          stripe_payment_intent: string | null
+          stripe_session_id: string | null
+          sync_errors: string | null
+          tier: string
+          tiktok_url: string | null
+          total_cents: number
+          track_title: string | null
+          updated_at: string
+          uploads: Json
+          wants_distribution: boolean
+          youtube_url: string | null
+        }
+        Insert: {
+          ad_budget_cents?: number
+          agreement_accepted?: boolean
+          artist_name: string
+          catalogue_no?: string | null
+          client_token?: string
+          created_at?: string
+          distro_email?: string | null
+          due_now_cents?: number
+          email: string
+          explicit?: boolean
+          google_post_event_id?: string | null
+          google_session_event_id?: string | null
+          id?: string
+          instagram_followers?: number | null
+          instagram_handle?: string | null
+          instagram_url?: string | null
+          invite_code?: string | null
+          ipi_number?: string | null
+          legal_name: string
+          notes?: string | null
+          paid_at?: string | null
+          payment_plan?: string
+          phone?: string | null
+          post_at?: string | null
+          pro_affiliation?: string | null
+          producer_email?: string | null
+          producer_ipi?: string | null
+          producer_name?: string | null
+          producer_pro?: string | null
+          producer_stage_name?: string | null
+          report_preference?: string | null
+          session_at?: string | null
+          sheet_synced_at?: string | null
+          signature?: string | null
+          status?: string
+          stripe_payment_intent?: string | null
+          stripe_session_id?: string | null
+          sync_errors?: string | null
+          tier: string
+          tiktok_url?: string | null
+          total_cents?: number
+          track_title?: string | null
+          updated_at?: string
+          uploads?: Json
+          wants_distribution?: boolean
+          youtube_url?: string | null
+        }
+        Update: {
+          ad_budget_cents?: number
+          agreement_accepted?: boolean
+          artist_name?: string
+          catalogue_no?: string | null
+          client_token?: string
+          created_at?: string
+          distro_email?: string | null
+          due_now_cents?: number
+          email?: string
+          explicit?: boolean
+          google_post_event_id?: string | null
+          google_session_event_id?: string | null
+          id?: string
+          instagram_followers?: number | null
+          instagram_handle?: string | null
+          instagram_url?: string | null
+          invite_code?: string | null
+          ipi_number?: string | null
+          legal_name?: string
+          notes?: string | null
+          paid_at?: string | null
+          payment_plan?: string
+          phone?: string | null
+          post_at?: string | null
+          pro_affiliation?: string | null
+          producer_email?: string | null
+          producer_ipi?: string | null
+          producer_name?: string | null
+          producer_pro?: string | null
+          producer_stage_name?: string | null
+          report_preference?: string | null
+          session_at?: string | null
+          sheet_synced_at?: string | null
+          signature?: string | null
+          status?: string
+          stripe_payment_intent?: string | null
+          stripe_session_id?: string | null
+          sync_errors?: string | null
+          tier?: string
+          tiktok_url?: string | null
+          total_cents?: number
+          track_title?: string | null
+          updated_at?: string
+          uploads?: Json
+          wants_distribution?: boolean
+          youtube_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_orders_invite_code_fkey"
+            columns: ["invite_code"]
+            isOneToOne: false
+            referencedRelation: "onboarding_invites"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
       pmg_tasks: {
         Row: {
           area: string | null
