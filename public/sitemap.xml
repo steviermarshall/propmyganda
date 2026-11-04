@@ -51,6 +51,11 @@
     <priority>0.9</priority>
   </url>
   <url>
+    <loc>https://propmyganda.com/start/prep</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
     <loc>https://propmyganda.com/artists/albee-al</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -131,6 +136,54 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://propmyganda.com/publication/robert-smith-schedules-the-cure-tour-dates-and-new-music-for-2027</loc>
+    <lastmod>2026-11-04</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://propmyganda.com/publication/music-and-film-figures-respond-to-democratic-sweep-in-2026-midterms</loc>
+    <lastmod>2026-11-04</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://propmyganda.com/publication/australia-reveals-first-ten-tracks-inducted-into-new-national-songbook</loc>
+    <lastmod>2026-11-04</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://propmyganda.com/publication/robbie-williams-headlines-entertainment-for-2026-melbourne-cup</loc>
+    <lastmod>2026-11-04</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://propmyganda.com/publication/australian-consumer-group-names-ticketmaster-and-ticketek-in-annual-sh</loc>
+    <lastmod>2026-11-04</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://propmyganda.com/publication/cisac-reports-record-global-creator-royalties-as-ai-challenges-emerge</loc>
+    <lastmod>2026-11-04</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://propmyganda.com/publication/nintendo-details-orchestral-score-for-ocarina-of-time-remake</loc>
+    <lastmod>2026-11-04</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://propmyganda.com/publication/billboard-latin-music-week-2026-concludes-at-faena-forum-in-miami</loc>
+    <lastmod>2026-11-04</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://propmyganda.com/publication/katseye-postpones-detroit-debut-due-to-member-illness</loc>
     <lastmod>2026-11-04</lastmod>
     <changefreq>monthly</changefreq>
@@ -138,6 +191,24 @@
   </url>
   <url>
     <loc>https://propmyganda.com/publication/mattel-restocks-limited-edition-diwali-barbie-doll-following-initial-s</loc>
+    <lastmod>2026-11-04</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://propmyganda.com/publication/diana-ross-schedules-exclusive-australian-performance-for-march-2027</loc>
+    <lastmod>2026-11-04</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://propmyganda.com/publication/katseye-delays-detroit-concert-due-to-member-illness</loc>
+    <lastmod>2026-11-04</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://propmyganda.com/publication/eminem-track-soundtracks-abdul-el-sayed-election-day-campaign-video</loc>
     <lastmod>2026-11-04</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -473,7 +544,31 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://propmyganda.com/publication/sam-fender-covers-the-rolling-stones-for-john-lewis-holiday-commercial</loc>
+    <lastmod>2026-11-03</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://propmyganda.com/publication/lego-to-release-official-godzilla-building-set-for-black-friday</loc>
+    <lastmod>2026-11-03</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://propmyganda.com/publication/netherlands-cinema-chain-hypnotizes-moviegoers-to-simulate-first-time-</loc>
+    <lastmod>2026-11-03</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://propmyganda.com/publication/saya-gray-releases-new-ep-titled-qwerty-iii</loc>
+    <lastmod>2026-11-03</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://propmyganda.com/publication/robert-smith-confirms-the-cure-will-return-for-2027-shows</loc>
     <lastmod>2026-11-03</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -510,6 +605,18 @@
   </url>
   <url>
     <loc>https://propmyganda.com/publication/bonnie-fraser-of-stand-atlantic-wants-rock-to-embrace-its-flaws</loc>
+    <lastmod>2026-11-03</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://propmyganda.com/publication/kurt-vile-performs-99-bpm-on-the-tonight-show-starring-jimmy-fallon</loc>
+    <lastmod>2026-11-03</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://propmyganda.com/publication/her-new-knife-shares-new-track-lyre</loc>
     <lastmod>2026-11-03</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -571,6 +678,18 @@
   <url>
     <loc>https://propmyganda.com/publication/justin-timberlake-announces-four-part-docuseries-featuring-janet-jacks</loc>
     <lastmod>2026-11-03</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://propmyganda.com/publication/tove-lo-schedules-spring-2027-united-states-concert-dates</loc>
+    <lastmod>2026-11-02</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://propmyganda.com/publication/spike-lee-details-the-origins-of-the-red-new-york-yankees-cap</loc>
+    <lastmod>2026-11-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
@@ -6013,120 +6132,6 @@
   <url>
     <loc>https://propmyganda.com/publication/base-for-music-joins-google-s-gemini-startup-forum</loc>
     <lastmod>2026-10-07</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://propmyganda.com/publication/black-friday-record-store-day-picks-highlighted</loc>
-    <lastmod>2026-10-07</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://propmyganda.com/publication/ariana-grande-s-r-e-m-beauty-line-on-sale</loc>
-    <lastmod>2026-10-07</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://propmyganda.com/publication/diddy-ordered-to-pay-legal-fees-after-failed-defamation-suit</loc>
-    <lastmod>2026-10-07</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://propmyganda.com/publication/jack-white-calls-trump-worst-american-of-all-time</loc>
-    <lastmod>2026-10-07</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://propmyganda.com/publication/bruno-mars-joins-lakers-player-for-surprise-proposal</loc>
-    <lastmod>2026-10-07</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://propmyganda.com/publication/young-thug-hints-at-drake-collabs-plans-r-b-album</loc>
-    <lastmod>2026-10-07</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://propmyganda.com/publication/wwe-merchandise-sees-significant-price-drops-during-prime-day-sales</loc>
-    <lastmod>2026-10-07</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://propmyganda.com/publication/orville-peck-discusses-sobriety-journey-and-road-to-recovery</loc>
-    <lastmod>2026-10-07</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://propmyganda.com/publication/billboard-charts-see-movements-from-swift-tinashe-and-chesney</loc>
-    <lastmod>2026-10-07</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://propmyganda.com/publication/will-smith-and-dj-jazzy-jeff-documentary-series-in-development</loc>
-    <lastmod>2026-10-07</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://propmyganda.com/publication/record-store-day-black-friday-plans-new-releases</loc>
-    <lastmod>2026-10-07</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://propmyganda.com/publication/chris-brown-addresses-custody-situation-for-youngest-daughter</loc>
-    <lastmod>2026-10-06</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://propmyganda.com/publication/artists-flau-jae-johnson-joaquina-and-nezza-discuss-music-preferences</loc>
-    <lastmod>2026-10-06</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://propmyganda.com/publication/amazon-announces-audio-deals-for-october-prime-day</loc>
-    <lastmod>2026-10-06</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://propmyganda.com/publication/freddie-jackson-s-notable-chart-history-documented</loc>
-    <lastmod>2026-10-06</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://propmyganda.com/publication/dude-wipes-offers-discounts-during-online-sales-event</loc>
-    <lastmod>2026-10-06</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://propmyganda.com/publication/k-pop-demon-hunters-merch-on-sale-during-amazon-event</loc>
-    <lastmod>2026-10-06</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://propmyganda.com/publication/cloonee-explores-personal-evolution-on-debut-album</loc>
-    <lastmod>2026-10-06</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://propmyganda.com/publication/dj-sara-landry-files-lawsuit-against-former-management</loc>
-    <lastmod>2026-10-06</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
