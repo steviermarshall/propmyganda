@@ -36,6 +36,13 @@
       "when": 1793759660099,
       "tag": "0004_tighten_rls_policies",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793771201727,
+      "tag": "0005_onboarding_orders_and_invites",
+      "breakpoints": true
     }
   ]
 }
