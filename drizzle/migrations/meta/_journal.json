@@ -50,6 +50,13 @@
       "when": 1793771225257,
       "tag": "0006_onboarding_uploads_storage_policies",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793799703047,
+      "tag": "0007_onboarding_order_agreement_fields",
+      "breakpoints": true
     }
   ]
 }
