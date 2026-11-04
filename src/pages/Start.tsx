@@ -503,7 +503,11 @@ export default function Start() {
     api.inviteCheck(code).then((r) => {
       if (r.ok) { setInvite({ code: code.toUpperCase(), label: r.label ?? null }); setTier((r.tier as TierId) || "comp"); }
       else setInviteErr(r.reason ?? "That invite link isn't valid.");
-    }).catch((e) => setInviteErr((e as Error).message));
+    }).catch((e) => {
+      const m = (e as Error).message;
+      // An old build of the backend has no invite-check and answers with its order lookup instead.
+      setInviteErr(/order not found|unknown action/i.test(m) ? "The site's backend hasn't been updated yet, so invite links can't be checked. Ask PMG to republish and try again." : m);
+    });
   }, [params]);
 
   // Resume: from the Stripe cancel link or from a saved session on this device.

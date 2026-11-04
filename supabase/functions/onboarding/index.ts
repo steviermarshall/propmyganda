@@ -151,8 +151,13 @@ async function calendarBusy(fromISO: string, toISO: string): Promise<Busy[]> {
   }
 }
 
+/** Bump with every change so a GET on the function shows which build is live (Lovable only redeploys functions it notices changed). */
+const FUNCTION_VERSION = "2026-11-04.3";
+const ACTIONS = ["tiers", "agreement", "invite-check", "create", "update", "ig-lookup", "upload-url", "upload-done", "availability", "checkout", "confirm", "status"];
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method === "GET") return json({ ok: true, function: "onboarding", version: FUNCTION_VERSION, actions: ACTIONS });
   let body: Record<string, unknown> = {};
   try { body = (await req.json()) ?? {}; } catch { return bad("Invalid JSON"); }
   const action = str(body.action, 40);
