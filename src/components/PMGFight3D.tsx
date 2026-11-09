@@ -102,7 +102,7 @@ interface ArchetypeStats { kind: ArchetypeKind; displayName: string; strikeMod: 
 const ARCHETYPES: Record<ArchetypeKind, ArchetypeStats> = {
   BRAWLER:    { kind: "BRAWLER",    displayName: "Street Brawler",    strikeMod: 1.16, speedMod: 1.0,  reachMod: 0.9,  takenMod: 1.0,  grabMod: 1.0,  passiveDesc: "Haymaker Criticals: 25% chance to hit for double damage.", weakness: "Shortest reach in the game." },
   KICKBOXER:  { kind: "KICKBOXER",  displayName: "Kickboxer",         strikeMod: 1.12, speedMod: 1.35, reachMod: 1.3,  takenMod: 1.06, grabMod: 0.9,  passiveDesc: "Velocity Footwork: out-reach opponents with minimal frame lag.", weakness: "Glass chin: takes 6% more damage." },
-  SUBMISSION: { kind: "SUBMISSION", displayName: "Submission Expert", strikeMod: 1.0,  speedMod: 0.95, reachMod: 1.0,  takenMod: 1.0,  grabMod: 1.04,  passiveDesc: "Adrenaline Drain: grapples hit hard and drain the enemy's heat meter.", weakness: "Slowest hands." },
+  SUBMISSION: { kind: "SUBMISSION", displayName: "Submission Expert", strikeMod: 1.0,  speedMod: 0.95, reachMod: 1.0,  takenMod: 1.0,  grabMod: 1.0,   passiveDesc: "Adrenaline Drain: grapples hit hard and drain the enemy's heat meter.", weakness: "Slowest hands." },
 };
 const ARCHETYPE_OF: Record<FightStyle, ArchetypeKind> = { Streetfighter: "BRAWLER", Kickboxer: "KICKBOXER", Submission: "SUBMISSION" };
 const archOf = (d: FighterDef) => ARCHETYPES[ARCHETYPE_OF[d.fightStyle]];
@@ -124,7 +124,7 @@ const ROSTER: FighterDef[] = [
   { id: "jahballa", name: "JahBalla", lookLabel: "Street wear",  headUp: 0.3, fightStyle: "Streetfighter", arch: "aggressive", style: "Brawler — heavy hands, nonstop pressure",  power: 8, speed: 7, defense: 5, special: 6, color: "#F5C400", sig: { name: "GOLD RUSH", kind: "gold" }, quote: "Respect ain't given here, it's taken.", finisher: "GOLD RUSH SLAM", sigName: "BODY SHOT", sigDesc: "Quick low hook: knocks down and fills your heat." },
   { id: "stockz",   name: "Stockz",   lookLabel: "High fashion", fightStyle: "Kickboxer", arch: "technical",  style: "Technician — fast, safe, precise",         power: 6, speed: 8, defense: 7, special: 8, color: "#3AA0FF", sig: { name: "BULL RUN", kind: "ticker" }, quote: "Your numbers just crashed.", finisher: "BULL RUN MATRIX", sigName: "STEP-IN KICK", sigDesc: "Lunges a full step forward and recovers fast." },
   { id: "zoe",      name: "Zoe",      lookLabel: "High fashion", fightStyle: "Kickboxer", arch: "balanced",   style: "All-rounder — quick feet, sharp kicks",    power: 6, speed: 6, defense: 7, special: 6, color: "#FF5FB0", sig: { name: "HIGH NOTE", kind: "note" }, quote: "Catch the rhythm of this hit.", finisher: "HIGH NOTE FREQUENCY", sigName: "HIGH KICK", sigDesc: "Head-height kick: knocks jumpers out of the air for extra damage." },
-  { id: "katbot",   name: "KatBot",   lookLabel: "Street tech",  fightStyle: "Kickboxer", arch: "technical",  style: "Wildcard — fastest in the roster, but fragile", power: 8, speed: 9, defense: 3, special: 8, color: "#B070FF", sig: { name: "NINE LIVES", kind: "paw" }, quote: "Fast hands, faster exits.", finisher: "NINE LIVES BLITZ", sigName: "NINE LIVES DASH", sigDesc: "Blinks through the rival and hits them from behind." },
+  { id: "katbot",   name: "KatBot",   lookLabel: "Street tech",  fightStyle: "Kickboxer", arch: "technical",  style: "Wildcard — fastest in the roster, but fragile", power: 8, speed: 9, defense: 4, special: 8, color: "#B070FF", sig: { name: "NINE LIVES", kind: "paw" }, quote: "Fast hands, faster exits.", finisher: "NINE LIVES BLITZ", sigName: "NINE LIVES DASH", sigDesc: "Blinks through the rival and hits them from behind." },
   { id: "hammad",   name: "Hammad",   lookLabel: "Casual",       fightStyle: "Submission", arch: "balanced",   style: "All-rounder — solid at every range",       power: 7, speed: 7, defense: 6, special: 6, color: "#2ED47A", sig: { name: "BASS DROP", kind: "wave" }, quote: "Feel the pressure drop.", finisher: "BASS DROP CHOKE", sigName: "CHOKE SLAM", sigDesc: "Long-reach grab that can't be dodged and breaks a block." },
 ];
 
@@ -197,9 +197,9 @@ function sigMoveFor(id: string): Move {
   switch (id) {
     case "jpeez":    return { ...base, pose: "hook",       startup: 14, active: 4, recovery: 24, damage: 19, hitstop: 12, reach: 86, knockback: 11, guardCrush: true };        // HAYMAKER
     case "jahballa": return { ...base, pose: "lowpunch",   startup: 7,  active: 3, recovery: 16, damage: 10, height: 110, reach: 80, knockback: 7, heatGain: 20, onBlock: -6 };           // BODY SHOT
-    case "stockz":   return { ...base, pose: "roundhouse", startup: 9,  active: 5, recovery: 10, damage: 10, height: 130, reach: 112, knockback: 9, lunge: 60, onBlock: -5 }; // STEP-IN KICK (fast recovery: only -3 on block)
+    case "stockz":   return { ...base, pose: "roundhouse", startup: 9,  active: 5, recovery: 10, damage: 9, height: 130, reach: 112, knockback: 9, lunge: 60, onBlock: -5 }; // STEP-IN KICK (fast recovery: only -3 on block)
     case "zoe":      return { ...base, pose: "roundhouse", startup: 6,  active: 6, recovery: 18, damage: 11, height: 195, reach: 100, knockback: 6, knockdown: false, antiAir: 1.6, onBlock: -6 }; // HIGH KICK
-    case "katbot":   return { ...base, pose: "cross",      startup: 8,  active: 4, recovery: 16, damage: 9,  reach: 90, knockback: 9, crossUp: true, hitstun: 26, onBlock: -4 };          // NINE LIVES DASH
+    case "katbot":   return { ...base, pose: "cross",      startup: 8,  active: 4, recovery: 14, damage: 13, reach: 90, knockback: 9, crossUp: true, hitstun: 26, onBlock: -4 };          // NINE LIVES DASH
     case "hammad":   return { ...base, btn: "grab", pose: "grab", startup: 12, active: 3, recovery: 30, damage: 12, reach: 96, knockback: 6, hitstop: 10, noDodge: true };   // CHOKE SLAM
     default:         return base;
   }
@@ -381,7 +381,9 @@ function landHit(g: Game, i: 0 | 1, o: HitOpts) {
   if (!o.blocked && !o.flat && archOf(a.def).kind === "BRAWLER" && Math.random() < 0.25) { dmg *= 2; g.callout[i] = { text: "CRITICAL!", t: 45 }; g.sfx.push("hitHeavy"); }
   dmg *= takenMult(d.def) * (o.flat ? 1 : archOf(d.def).takenMod);
   if (!o.flat) { a.heat = Math.min(100, a.heat + (o.blocked ? 2 : 9)); d.heat = Math.min(100, d.heat + (o.blocked ? 3 : 4)); }
+  if (g.tut) dmg = Math.min(dmg, d.hp - 1);                       // nobody gets knocked out in class (a critical haymaker could do it)
   d.hp = Math.max(0, d.hp - dmg);
+  if (!o.blocked && !d.air && Math.abs(a.x - d.x) > 4) d.facing = a.x > d.x ? 1 : -1;    // hit from behind (a cross-up): turn round to face them
   d.move = null; d.flash = 6; d.hitstop = o.hitstop;
   if (!o.proj) a.hitstop = o.hitstop;                  // both freeze = the punch "lands"
   g.sparks.push({ x: o.sx, y: o.sy, t: 14, blocked: o.blocked });
@@ -446,7 +448,9 @@ function tryHit(g: Game, i: 0 | 1) {
 
   a.hitDone = true; a.connected = true;
   const levelOk = m.level === "low" ? d.crouch : m.level === "air" ? !d.crouch : true;
-  let blocked = d.back && canBlockState(d) && levelOk;
+  // a cross-up switches sides a frame before it lands: holding back from either side blocks it (too fast to read otherwise)
+  const dc = g.ctl[1 - i], holdingSide = dc.left || dc.right;
+  let blocked = (m.crossUp ? holdingSide : d.back) && canBlockState(d) && levelOk;
   let damage = m.damage, knockdown = m.knockdown, hitstun = m.hitstun, blockstun = m.blockstun;
   if (blocked && m.guardCrush) { blocked = false; damage *= 0.6; g.callout[i] = { text: "GUARD CRUSH!", t: 50 }; }     // the haymaker goes through a block
   if (m.antiAir && d.air) { damage *= m.antiAir; knockdown = true; g.callout[i] = { text: "OUT OF THE AIR!", t: 45 }; }
@@ -571,7 +575,7 @@ function stepFighter(g: Game, i: 0 | 1) {
       if (m.chainOnly && !f.air && fr < m.startup) f.x += f.facing * 3.2;
       if (m.lunge && !f.air && fr < m.startup) f.x = Math.max(40, Math.min(W - 40, f.x + f.facing * (m.lunge / m.startup)));
       if (m.crossUp && fr === m.startup - 1 && !o.air) {                            // blink to the far side, strike from behind
-        f.x = Math.max(40, Math.min(W - 40, o.x + f.facing * 60)); f.facing = (f.facing * -1) as 1 | -1; kickUpDust(g, f.x, 4, 40); g.sfx.push("dodge");
+        f.x = Math.max(40, Math.min(W - 40, o.x + f.facing * 60)); f.facing = o.x >= f.x ? 1 : -1; kickUpDust(g, f.x, 4, 40); g.sfx.push("dodge");   // rival in the corner: no room behind them, so don't end up facing the wall
       }
       if (m.projectile) { if (fr === m.startup) spawnProjectile(g, i); }
       else if (!f.hitDone && fr >= m.startup && fr < m.startup + m.active) tryHit(g, i);
@@ -584,6 +588,10 @@ function stepFighter(g: Game, i: 0 | 1) {
     case "wakeup":    if (f.sf >= f.dur) setState(f, "idle"); break;
     case "dodge": case "parry": case "duck": if (f.sf >= f.dur) setState(f, "idle"); break;
   }
+
+  // turn to face the rival before reading block or starting a move: after a jump over someone (theirs or yours),
+  // the first attack out of landing used to go off backwards, and every buffered move after it stayed turned away
+  if (live && isFree(f)) f.facing = o.x >= f.x ? 1 : -1;
 
   // crouch + "holding back" (= blocking) are read every frame you're allowed to guard
   if (canBlockState(f)) {
@@ -779,17 +787,17 @@ function cpuThink(g: Game) {
 /* ---------- first-play tutorial: ten short lessons on a sparring dummy, about a minute ---------- */
 interface TutStep { text: string; keys: string; touch: string; done: (g: Game) => boolean; jab?: boolean; prep?: (g: Game) => void; timeout: number }
 const TUT_STEPS: TutStep[] = [
-  { text: "WALK UP TO YOUR RIVAL", keys: "D or →", touch: "push the stick toward them", done: (g) => Math.abs(g.f[0].x - g.f[1].x) < 150, timeout: 900 },
-  { text: "MASH PUNCH FOR THE COMBO", keys: "J · J · J", touch: "P · P · P", done: (g) => g.ev.some((e) => e === "hit:0:LP2" || e === "hit:0:LP3" || (e.startsWith("combo:0:") && Number(e.split(":")[2]) >= 2)), timeout: 900 },
-  { text: "KICK — IT KNOCKS THEM DOWN", keys: "K  (crouch + K = sweep)", touch: "K", done: (g) => g.ev.some((e) => /^hit:0:(HK|CK|JK)$/.test(e)), timeout: 720 },
-  { text: "BLOCK THE JAB: HOLD BACK (AWAY FROM YOUR RIVAL)", keys: "hold A or ←", touch: "hold the stick away from them", done: (g) => g.ev.includes("blocked:0"), jab: true, timeout: 720 },
-  { text: "DUCK UNDER THE NEXT JAB", keys: "O", touch: "swipe ↓ on the arena", done: (g) => g.ev.includes("ducked:0"), jab: true, timeout: 720 },
-  { text: "DODGE THE NEXT JAB", keys: "U", touch: "swipe ← or → on the arena", done: (g) => g.ev.includes("evaded:0"), jab: true, timeout: 720 },
-  { text: "PARRY: PRESS JUST AS THE JAB LANDS", keys: "Space", touch: "two-finger tap on the arena", done: (g) => g.ev.includes("parry:0"), jab: true, timeout: 720 },
-  { text: "SPECIAL — YOUR BARS ARE FULL", keys: "L", touch: "S", done: (g) => g.ev.includes("special:0"), prep: (g) => { g.f[0].sta = 100; }, timeout: 600 },
-  { text: "GRAB AND SLAM — IT BREAKS A BLOCK", keys: "I", touch: "G", done: (g) => g.ev.includes("grab:0"), timeout: 600 },
-  { text: "YOUR SIGNATURE: HOLD PUNCH, THEN LET GO", keys: "hold J a moment, release", touch: "hold P a moment, release", done: (g) => g.ev.includes("sig:0"), timeout: 720 },
-  { text: "YOUR HEAT IS FULL — HIT THE FINISHER", keys: "L", touch: "S", done: (g) => g.ev.includes("finisher:0"), prep: (g) => { g.f[0].heat = 100; }, timeout: 600 },
+  { text: "WALK UP TO YOUR RIVAL", keys: "{right} or {right2}", touch: "push the stick toward them", done: (g) => Math.abs(g.f[0].x - g.f[1].x) < 150, timeout: 900 },
+  { text: "MASH PUNCH FOR THE COMBO", keys: "{punch} · {punch} · {punch}", touch: "P · P · P", done: (g) => g.ev.some((e) => e === "hit:0:LP2" || e === "hit:0:LP3" || (e.startsWith("combo:0:") && Number(e.split(":")[2]) >= 2)), timeout: 900 },
+  { text: "KICK — IT KNOCKS THEM DOWN", keys: "{kick}  (crouch + {kick} = sweep)", touch: "K", done: (g) => g.ev.some((e) => /^hit:0:(HK|CK|JK)$/.test(e)), timeout: 720 },
+  { text: "BLOCK THE JAB: HOLD BACK (AWAY FROM YOUR RIVAL)", keys: "hold {left} or {left2}", touch: "hold the stick away from them", done: (g) => g.ev.includes("blocked:0"), jab: true, timeout: 720 },
+  { text: "DUCK UNDER THE NEXT JAB", keys: "{duck}", touch: "swipe ↓ on the arena", done: (g) => g.ev.includes("ducked:0"), jab: true, timeout: 720 },
+  { text: "DODGE THE NEXT JAB", keys: "{dodge}", touch: "swipe ← or → on the arena", done: (g) => g.ev.includes("evaded:0"), jab: true, timeout: 720 },
+  { text: "PARRY: PRESS JUST AS THE JAB LANDS", keys: "{parry}", touch: "two-finger tap on the arena", done: (g) => g.ev.includes("parry:0"), jab: true, timeout: 720 },
+  { text: "SPECIAL — YOUR BARS ARE FULL", keys: "{special}", touch: "S", done: (g) => g.ev.includes("special:0"), prep: (g) => { g.f[0].sta = 100; }, timeout: 600 },
+  { text: "GRAB AND SLAM — IT BREAKS A BLOCK", keys: "{grab}", touch: "G", done: (g) => g.ev.includes("grab:0"), timeout: 600 },
+  { text: "YOUR SIGNATURE: HOLD PUNCH, THEN LET GO", keys: "hold {punch} a moment, release", touch: "hold P a moment, release", done: (g) => g.ev.includes("sig:0"), timeout: 720 },
+  { text: "YOUR HEAT IS FULL — HIT THE FINISHER", keys: "{special}", touch: "S", done: (g) => g.ev.includes("finisher:0"), prep: (g) => { g.f[0].heat = 100; }, timeout: 600 },
 ];
 function startTutorial(g: Game) {
   g.tut = { step: 0, t: 0, wait: 0 };
@@ -858,8 +866,9 @@ function tick(g: Game) {
       break;
     case "fight": {
       g.timer--;
-      const down = g.f.findIndex((f) => f.hp <= 0);
-      if (down >= 0) { endRound(g, 1 - down, "K.O."); g.sfx.push("say:ko"); }
+      const out0 = g.f[0].hp <= 0, out1 = g.f[1].hp <= 0;
+      if (out0 && out1) { endRound(g, -1, "DOUBLE K.O."); g.sfx.push("say:ko"); }          // traded the last hit: nobody takes the round
+      else if (out0 || out1) { endRound(g, out0 ? 1 : 0, "K.O."); g.sfx.push("say:ko"); }
       else if (g.timer <= 0) {
         const a = g.f[0].hp, b = g.f[1].hp;
         endRound(g, Math.abs(a - b) < 0.01 ? -1 : a > b ? 0 : 1, "TIME");
@@ -2084,7 +2093,9 @@ function drawHud(c: CanvasRenderingContext2D, g: Game, touch: boolean, project: 
   if (g.tut) {
     const st = TUT_STEPS[g.tut.step];
     if (st) {
-      const y = 150 * k, hint = touch ? st.touch : st.keys;
+      // key hints follow the player's own bindings: {punch} = player 1's key, {left2} = the second keyboard's (it also drives player 1 against the computer)
+      const keyHint = (s: string) => s.replace(/\{(\w+?)(2?)\}/g, (_, a: Action, two: string) => { const ks = keysFor(two ? 1 : 0, a); return ks.length ? keyName(ks[0]) : "?"; });
+      const y = 150 * k, hint = touch ? st.touch : keyHint(st.keys);
       c.save(); c.fillStyle = "rgba(0,0,0,0.62)";
       c.beginPath(); c.moveTo(0, y - 34 * k); c.lineTo(W, y - 40 * k); c.lineTo(W, y + 36 * k); c.lineTo(0, y + 42 * k); c.closePath(); c.fill();
       c.fillStyle = "#3AA0FF"; c.fillRect(0, y + 42 * k - 3, W, 3); c.restore();
@@ -2319,6 +2330,7 @@ function saveKeys(p: 0 | 1) { try { localStorage.setItem("pmg-keys-" + p, JSON.s
 function bindKey(p: 0 | 1, action: Action, code: string) {
   const m = KEYMAPS[p];
   for (const k of Object.keys(m)) if (m[k] === action || k === code) delete m[k];     // one key per action; a key does one thing
+  const other = KEYMAPS[(1 - p) as 0 | 1]; if (other[code]) { delete other[code]; saveKeys((1 - p) as 0 | 1); }   // …for one player only
   m[code] = action; saveKeys(p);
 }
 function resetKeys(p: 0 | 1) { const m = KEYMAPS[p]; for (const k of Object.keys(m)) delete m[k]; Object.assign(m, DEFAULT_KEYS[p]); saveKeys(p); }
@@ -2383,7 +2395,7 @@ const CSS = `
 .pmg-panel{animation:pmgPanel .28s cubic-bezier(.2,.9,.25,1) both}
 .pmg-over .pmg-col>*{animation:pmgRise .4s both}
 .pmg-over .pmg-col>*:nth-child(2){animation-delay:.08s}.pmg-over .pmg-col>*:nth-child(3){animation-delay:.16s}
-.pmg-wipe{position:fixed;inset:0;z-index:45;pointer-events:none;overflow:hidden}
+.pmg-wipe{position:fixed;inset:0;z-index:45;pointer-events:auto;overflow:hidden}
 .pmg-wipe::before,.pmg-wipe::after{content:"";position:absolute;top:-10%;bottom:-10%;left:0;width:120%;animation:pmgWipe .7s cubic-bezier(.7,0,.3,1) both}
 .pmg-wipe::before{background:#050304;border-right:14px solid #ffc21a;box-shadow:8px 0 0 #000}
 .pmg-wipe::after{background:#0b0c0f;animation-delay:.09s;opacity:.85}
@@ -3118,9 +3130,12 @@ export default function PMGFight3D({ onExit }: { onExit?: () => void } = {}) {
   const [screen, setScreen] = useState<"intro" | "menu" | "select" | "stage" | "fight">(() => (store.get("intro-seen", false) ? "menu" : "intro"));
   // screen changes go through a slanted wipe (motion-graphics style); reduced motion switches at once
   const [wipe, setWipe] = useState(false);
+  const moving = useRef(false);                                   // a wipe is under way: taps wait until it's done
   const go = (next: "intro" | "menu" | "select" | "stage" | "fight") => {
+    if (moving.current) return;
     if (Motion.reduced) { setScreen(next); return; }
-    setWipe(true); setTimeout(() => setScreen(next), 260); setTimeout(() => setWipe(false), 700);
+    moving.current = true;
+    setWipe(true); setTimeout(() => setScreen(next), 260); setTimeout(() => { setWipe(false); moving.current = false; }, 700);
   };
   useSound();                                                     // re-render when the reduced-motion switch flips
   const [loc, setLoc] = useState<LocationId>("streets");
@@ -3158,6 +3173,7 @@ export default function PMGFight3D({ onExit }: { onExit?: () => void } = {}) {
   const fighters = useMemo(() => picks.length === 2 ? [altOn ? withAlt(ROSTER[picks[0]]) : ROSTER[picks[0]], ROSTER[picks[1]]] : [], [picks, altOn]);
 
   const choose = (i: number) => {
+    if (moving.current || picks.length >= 2) return;              // a fast double tap can't add a third fighter
     if (quickPick) { quickFight(i); return; }
     const next = [...picks, i];
     if (next.length === 2) { setPicks(next); go("stage"); }
@@ -3397,7 +3413,7 @@ function FightView3D(props: {
         if (isHold(a)) kb[pi][a] = false;
         else if (a === "punch") { if (punchDown[pi] && g.frame - punchDown[pi] >= SIG_HOLD && !pausedRef.current) g.ctl[pi].queue.push("sig"); punchDown[pi] = 0; }
       };
-      const blur = () => kb.forEach((d) => { d.left = d.right = d.up = d.down = false; });
+      const blur = () => { kb.forEach((d) => { d.left = d.right = d.up = d.down = false; }); punchDown[0] = punchDown[1] = 0; };
       window.addEventListener("keydown", down); window.addEventListener("keyup", up); window.addEventListener("blur", blur);
       cleanups.push(() => { window.removeEventListener("keydown", down); window.removeEventListener("keyup", up); window.removeEventListener("blur", blur); });
       const onPad = () => setPadOn([...(navigator.getGamepads?.() ?? [])].some((p) => p && p.connected));
@@ -3420,7 +3436,7 @@ function FightView3D(props: {
             if (!now && prev[i] && act === "punch") { if (padPunch[pi] && g.frame - padPunch[pi] >= SIG_HOLD && !pausedRef.current) g.ctl[pi].queue.push("sig"); padPunch[pi] = 0; }
             prev[i] = now;
           }
-          if (b(9) && !prev[9]) setPaused((v) => !v); prev[9] = b(9);
+          if (b(9) && !prev[9]) { if (helpRef.current) setHelp(false); else setPaused((v) => !v); } prev[9] = b(9);
           slot++;
         }
       };
@@ -3442,7 +3458,8 @@ function FightView3D(props: {
       const loop = (now: number) => {
         const dtMs = Math.min(now - last, 100); last = now; acc += dtMs; clock += dtMs / 1000;
         let n = 0;
-        if (pausedRef.current) acc = 0; else { pollPads(); applyHolds(); }
+        pollPads();                                               // read the pads even while paused, so Start can resume
+        if (pausedRef.current) acc = 0; else applyHolds();
         while (acc >= FRAME_MS && n < 5) { tick(g); acc -= FRAME_MS; n++; }
         if (tutRef.current && !g.tut) { tutRef.current = false; setTutorial(false); }
         // size the drawing buffers to the element
