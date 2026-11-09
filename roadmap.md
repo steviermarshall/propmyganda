@@ -39,6 +39,9 @@
 - [x] Replace every PMG Fight model, logo, and soundtrack with the corrected uploaded files
 
 ## New tasks
+- [ ] Apply uploaded onboarding progress and funnel tracking SQL with staff-only reporting access.
+- [ ] Schedule onboarding followups hourly at minute 17.
+- [ ] Deploy onboarding, stripe-webhook, onboarding-followups and contact-agent unchanged.
 - [x] Store signed agreement version/hash, signing time/IP, splits, DSP title and self-produced flag on each sign-up order.
 - [x] Update PMG Fight in Propworld with the newly uploaded game code.
 - [x] Deploy the Spotify catalog.
