@@ -100,9 +100,9 @@ type ArchetypeKind = "BRAWLER" | "KICKBOXER" | "SUBMISSION";
 /** takenMod = damage taken × (the archetype's weakness), grabMod = grab damage and reach ×. Tuned with sim/matchup.ts so every fighter lands near 50 %. */
 interface ArchetypeStats { kind: ArchetypeKind; displayName: string; strikeMod: number; speedMod: number; reachMod: number; takenMod: number; grabMod: number; passiveDesc: string; weakness: string }
 const ARCHETYPES: Record<ArchetypeKind, ArchetypeStats> = {
-  BRAWLER:    { kind: "BRAWLER",    displayName: "Street Brawler",    strikeMod: 1.06, speedMod: 1.0,  reachMod: 0.9,  takenMod: 1.0,  grabMod: 1.0,  passiveDesc: "Haymaker Criticals: 25% chance to hit for double damage.", weakness: "Shortest reach in the game." },
+  BRAWLER:    { kind: "BRAWLER",    displayName: "Street Brawler",    strikeMod: 1.16, speedMod: 1.0,  reachMod: 0.9,  takenMod: 1.0,  grabMod: 1.0,  passiveDesc: "Haymaker Criticals: 25% chance to hit for double damage.", weakness: "Shortest reach in the game." },
   KICKBOXER:  { kind: "KICKBOXER",  displayName: "Kickboxer",         strikeMod: 1.12, speedMod: 1.35, reachMod: 1.3,  takenMod: 1.06, grabMod: 0.9,  passiveDesc: "Velocity Footwork: out-reach opponents with minimal frame lag.", weakness: "Glass chin: takes 6% more damage." },
-  SUBMISSION: { kind: "SUBMISSION", displayName: "Submission Expert", strikeMod: 1.0,  speedMod: 0.95, reachMod: 1.0,  takenMod: 1.0,  grabMod: 1.14,  passiveDesc: "Adrenaline Drain: grapples hit hard and drain the enemy's heat meter.", weakness: "Slowest hands." },
+  SUBMISSION: { kind: "SUBMISSION", displayName: "Submission Expert", strikeMod: 1.0,  speedMod: 0.95, reachMod: 1.0,  takenMod: 1.0,  grabMod: 1.04,  passiveDesc: "Adrenaline Drain: grapples hit hard and drain the enemy's heat meter.", weakness: "Slowest hands." },
 };
 const ARCHETYPE_OF: Record<FightStyle, ArchetypeKind> = { Streetfighter: "BRAWLER", Kickboxer: "KICKBOXER", Submission: "SUBMISSION" };
 const archOf = (d: FighterDef) => ARCHETYPES[ARCHETYPE_OF[d.fightStyle]];
@@ -120,7 +120,7 @@ interface FighterDef {
 }
 
 const ROSTER: FighterDef[] = [
-  { id: "jpeez",    name: "JPeez",    lookLabel: "Street wear",  fightStyle: "Streetfighter", arch: "aggressive", style: "Heavy hitter — slow, but every hit hurts", power: 9, speed: 6, defense: 4, special: 7, color: "#FF8A1F", sig: { name: "HEAT ROCK", kind: "record" }, quote: "Step up or step out.", finisher: "HEAT ROCK REVENGE", sigName: "HAYMAKER", sigDesc: "Slow, huge, and it smashes through a block." },
+  { id: "jpeez",    name: "JPeez",    lookLabel: "Street wear",  fightStyle: "Streetfighter", arch: "aggressive", style: "Heavy hitter — slow, but every hit hurts", power: 9, speed: 6, defense: 5, special: 7, color: "#FF8A1F", sig: { name: "HEAT ROCK", kind: "record" }, quote: "Step up or step out.", finisher: "HEAT ROCK REVENGE", sigName: "HAYMAKER", sigDesc: "Slow, huge, and it smashes through a block." },
   { id: "jahballa", name: "JahBalla", lookLabel: "Street wear",  headUp: 0.3, fightStyle: "Streetfighter", arch: "aggressive", style: "Brawler — heavy hands, nonstop pressure",  power: 8, speed: 7, defense: 5, special: 6, color: "#F5C400", sig: { name: "GOLD RUSH", kind: "gold" }, quote: "Respect ain't given here, it's taken.", finisher: "GOLD RUSH SLAM", sigName: "BODY SHOT", sigDesc: "Quick low hook: knocks down and fills your heat." },
   { id: "stockz",   name: "Stockz",   lookLabel: "High fashion", fightStyle: "Kickboxer", arch: "technical",  style: "Technician — fast, safe, precise",         power: 6, speed: 8, defense: 7, special: 8, color: "#3AA0FF", sig: { name: "BULL RUN", kind: "ticker" }, quote: "Your numbers just crashed.", finisher: "BULL RUN MATRIX", sigName: "STEP-IN KICK", sigDesc: "Lunges a full step forward and recovers fast." },
   { id: "zoe",      name: "Zoe",      lookLabel: "High fashion", fightStyle: "Kickboxer", arch: "balanced",   style: "All-rounder — quick feet, sharp kicks",    power: 6, speed: 6, defense: 7, special: 6, color: "#FF5FB0", sig: { name: "HIGH NOTE", kind: "note" }, quote: "Catch the rhythm of this hit.", finisher: "HIGH NOTE FREQUENCY", sigName: "HIGH KICK", sigDesc: "Head-height kick: knocks jumpers out of the air for extra damage." },
@@ -152,7 +152,11 @@ interface Move {
   crossUp?: boolean;               // blinks to the far side of the rival as the hit comes out
   heatGain?: number;               // extra heat for the attacker on hit
   noDodge?: boolean;               // a sidestep does not escape it (grabs only; a duck never beats a grab anyway)
+  onBlock?: number;                // frame advantage when blocked: + = the attacker moves first, − = the defender can punish
 }
+
+/** Counter-hit: striking a rival while their own attack is still winding up. */
+const COUNTER_DMG = 1.3, COUNTER_STUN = 12;
 
 const SP_COST = 30;
 
@@ -168,14 +172,14 @@ function movesFor(arch: Arch): Record<string, Move> {
   });
   return {
     // standing punch chain: press Punch up to three times
-    LP:  mk({ id: "LP",  btn: "punch", pose: "jab",   startup: 5 + d.su, recovery: 9 + d.rec,  damage: 5,         hitstun: 16, blockstun: 11 + d.bs, hitstop: 4, reach: 80, chain: "LP2", cancelStart: 7, cancelEnd: 14 + d.cw }),
-    LP2: mk({ id: "LP2", btn: "punch", pose: "cross", startup: 6 + d.su, recovery: 11 + d.rec, damage: 6,         hitstun: 17, blockstun: 11 + d.bs, hitstop: 5, reach: 82, knockback: 5, chain: "LP3", chainOnly: true, cancelStart: 8, cancelEnd: 16 + d.cw }),
-    LP3: mk({ id: "LP3", btn: "punch", pose: "hook",  startup: 8 + d.su, active: 4, recovery: 18 + d.rec, damage: 9 + d.dmg, hitstun: 22, blockstun: 13 + d.bs, hitstop: 9, reach: 88, knockback: 9, knockdown: true, chainOnly: true }),
+    LP:  mk({ id: "LP",  btn: "punch", pose: "jab",   startup: 5 + d.su, recovery: 9 + d.rec,  damage: 5,         hitstun: 16, blockstun: 11 + d.bs, hitstop: 4, reach: 80, chain: "LP2", cancelStart: 7, cancelEnd: 14 + d.cw, onBlock: 2 }),
+    LP2: mk({ id: "LP2", btn: "punch", pose: "cross", startup: 6 + d.su, recovery: 11 + d.rec, damage: 6,         hitstun: 17, blockstun: 11 + d.bs, hitstop: 5, reach: 82, knockback: 5, chain: "LP3", chainOnly: true, cancelStart: 8, cancelEnd: 16 + d.cw, onBlock: 0 }),
+    LP3: mk({ id: "LP3", btn: "punch", pose: "hook",  startup: 8 + d.su, active: 4, recovery: 18 + d.rec, damage: 9 + d.dmg, hitstun: 22, blockstun: 13 + d.bs, hitstop: 9, reach: 88, knockback: 9, knockdown: true, chainOnly: true, onBlock: -4 }),
     // standing kick: roundhouse, also a good anti-air
-    HK:  mk({ id: "HK",  btn: "kick", pose: "roundhouse", height: 140, startup: 11 + d.su, active: 5, recovery: 20 + d.rec, damage: 12 + d.dmg, hitstun: 22, blockstun: 13 + d.bs, hitstop: 9, reach: 104, knockback: 8, knockdown: true }),
+    HK:  mk({ id: "HK",  btn: "kick", pose: "roundhouse", height: 140, startup: 11 + d.su, active: 5, recovery: 20 + d.rec, damage: 12 + d.dmg, hitstun: 22, blockstun: 13 + d.bs, hitstop: 9, reach: 104, knockback: 8, knockdown: true, onBlock: -6 }),
     // crouching
-    CP:  mk({ id: "CP",  btn: "punch", pose: "lowpunch", ctx: "crouch", height: 108, startup: 4 + d.su, recovery: 8 + d.rec, damage: 4, hitstun: 14, blockstun: 10 + d.bs, hitstop: 4, reach: 78, knockback: 3 }),
-    CK:  mk({ id: "CK",  btn: "kick",  pose: "sweep", ctx: "crouch", level: "low", height: 10, startup: 8 + d.su, active: 4, recovery: 22 + d.rec, damage: 9 + d.dmg, hitstun: 20, blockstun: 12, hitstop: 7, reach: 112, knockback: 6, knockdown: true }),
+    CP:  mk({ id: "CP",  btn: "punch", pose: "lowpunch", ctx: "crouch", height: 108, startup: 4 + d.su, recovery: 8 + d.rec, damage: 4, hitstun: 14, blockstun: 10 + d.bs, hitstop: 4, reach: 78, knockback: 3, onBlock: 1 }),
+    CK:  mk({ id: "CK",  btn: "kick",  pose: "sweep", ctx: "crouch", level: "low", height: 10, startup: 8 + d.su, active: 4, recovery: 22 + d.rec, damage: 9 + d.dmg, hitstun: 20, blockstun: 12, hitstop: 7, reach: 112, knockback: 6, knockdown: true, onBlock: -10 }),
     // jumping
     JP:  mk({ id: "JP",  btn: "punch", pose: "airpunch", ctx: "air", level: "air", height: 90, startup: 3, active: 12, recovery: 6, damage: 7, hitstun: 18, blockstun: 12, hitstop: 6, reach: 76, knockback: 4 }),
     JK:  mk({ id: "JK",  btn: "kick",  pose: "airkick",  ctx: "air", level: "air", height: 60, startup: 4, active: 14, recovery: 6, damage: 9 + d.dmg, hitstun: 20, blockstun: 13, hitstop: 7, reach: 92, knockback: 5 }),
@@ -191,11 +195,11 @@ function sigMoveFor(id: string): Move {
   const base: Move = { id: "SIG", btn: "sig", pose: "hook", ctx: "stand", level: "high", height: 160, startup: 10, active: 4, recovery: 20, damage: 12,
     hitstun: 22, blockstun: 14, hitstop: 8, reach: 90, knockback: 8, knockdown: true, cost: 0, cancelStart: 0, cancelEnd: 0 };
   switch (id) {
-    case "jpeez":    return { ...base, pose: "hook",       startup: 18, active: 4, recovery: 24, damage: 18, hitstop: 12, reach: 86, knockback: 11, guardCrush: true };        // HAYMAKER
-    case "jahballa": return { ...base, pose: "lowpunch",   startup: 7,  active: 3, recovery: 16, damage: 10, height: 110, reach: 80, knockback: 7, heatGain: 20 };           // BODY SHOT
-    case "stockz":   return { ...base, pose: "roundhouse", startup: 9,  active: 5, recovery: 10, damage: 11, height: 130, reach: 120, knockback: 9, lunge: 70, blockstun: 12 }; // STEP-IN KICK (fast recovery: only -3 on block)
-    case "zoe":      return { ...base, pose: "roundhouse", startup: 6,  active: 6, recovery: 18, damage: 11, height: 195, reach: 96, knockback: 6, knockdown: false, antiAir: 1.6 }; // HIGH KICK
-    case "katbot":   return { ...base, pose: "cross",      startup: 8,  active: 4, recovery: 16, damage: 9,  reach: 90, knockback: 9, crossUp: true, hitstun: 26 };          // NINE LIVES DASH
+    case "jpeez":    return { ...base, pose: "hook",       startup: 14, active: 4, recovery: 24, damage: 19, hitstop: 12, reach: 86, knockback: 11, guardCrush: true };        // HAYMAKER
+    case "jahballa": return { ...base, pose: "lowpunch",   startup: 7,  active: 3, recovery: 16, damage: 10, height: 110, reach: 80, knockback: 7, heatGain: 20, onBlock: -6 };           // BODY SHOT
+    case "stockz":   return { ...base, pose: "roundhouse", startup: 9,  active: 5, recovery: 10, damage: 10, height: 130, reach: 112, knockback: 9, lunge: 60, onBlock: -5 }; // STEP-IN KICK (fast recovery: only -3 on block)
+    case "zoe":      return { ...base, pose: "roundhouse", startup: 6,  active: 6, recovery: 18, damage: 11, height: 195, reach: 100, knockback: 6, knockdown: false, antiAir: 1.6, onBlock: -6 }; // HIGH KICK
+    case "katbot":   return { ...base, pose: "cross",      startup: 8,  active: 4, recovery: 16, damage: 9,  reach: 90, knockback: 9, crossUp: true, hitstun: 26, onBlock: -4 };          // NINE LIVES DASH
     case "hammad":   return { ...base, btn: "grab", pose: "grab", startup: 12, active: 3, recovery: 30, damage: 12, reach: 96, knockback: 6, hitstop: 10, noDodge: true };   // CHOKE SLAM
     default:         return base;
   }
@@ -443,12 +447,23 @@ function tryHit(g: Game, i: 0 | 1) {
   a.hitDone = true; a.connected = true;
   const levelOk = m.level === "low" ? d.crouch : m.level === "air" ? !d.crouch : true;
   let blocked = d.back && canBlockState(d) && levelOk;
-  let damage = m.damage, knockdown = m.knockdown;
+  let damage = m.damage, knockdown = m.knockdown, hitstun = m.hitstun, blockstun = m.blockstun;
   if (blocked && m.guardCrush) { blocked = false; damage *= 0.6; g.callout[i] = { text: "GUARD CRUSH!", t: 50 }; }     // the haymaker goes through a block
   if (m.antiAir && d.air) { damage *= m.antiAir; knockdown = true; g.callout[i] = { text: "OUT OF THE AIR!", t: 45 }; }
+  // counter-hit: caught them winding up — more damage and longer stun, so a jab links into the roundhouse
+  if (!blocked && d.state === "attack" && d.move && !d.move.projectile && d.sf - 1 < d.move.startup) {
+    damage *= COUNTER_DMG; hitstun += COUNTER_STUN;
+    if (g.callout[i].t <= 0 || !/!$/.test(g.callout[i].text) || g.callout[i].text === "COUNTER!") g.callout[i] = { text: "COUNTER!", t: 40 };
+    g.sfx.push("hitHeavy"); g.ev.push(`counter:${i}`);
+  }
+  // frame advantage on block: the defender stays stuck exactly long enough that the attacker is +N (or −N) when both can act
+  if (blocked && m.onBlock !== undefined && !a.air) {
+    const left = m.startup + m.active + m.recovery - 1 - (a.sf - 1);          // frames of this move the attacker still has to play out
+    blockstun = Math.max(4, left + m.onBlock + 1);                             // +1: the defender's stun starts counting a frame later than the attacker's
+  }
   if (!blocked) g.ev.push(`hit:${i}:${m.id}`);
   landHit(g, i, {
-    damage, hitstun: m.hitstun, blockstun: m.blockstun, hitstop: m.hitstop, knockback: m.knockback,
+    damage, hitstun, blockstun, hitstop: m.hitstop, knockback: m.knockback,
     knockdown, sx: a.x + a.facing * Math.max(12, Math.min(dist, m.reach) * 0.85), sy: GROUND + hy,
     blocked, proj: false, dir: a.facing,
   });
@@ -683,7 +698,7 @@ function cpuThink(g: Game) {
         if (r < 0.3) { c.up = true; walk(toward); ai.airKick = true; return; }
         if (r < 0.75) { ai.guard = 22; ai.low = false; walk(-toward); return; }
       } else if (diving) {
-        if (r < 0.35) { c.queue.push("kick"); return; }
+        if (r < 0.35) { c.queue.push(me.def.id === "zoe" ? "sig" : "kick"); return; }      // Zoe's high kick is made for this
         if (r < 0.7) { ai.guard = 24; ai.low = false; walk(-toward); return; }
       } else if (r < 0.5 && opp.move) {
         ai.guard = 16; ai.low = opp.move.level === "low"; walk(-toward); c.down = ai.low; return;
@@ -691,25 +706,71 @@ function cpuThink(g: Game) {
     }
   }
 
+  // punish: the rival's move was blocked and they're still stuck in it — hit back before they recover
+  if (isFree(me) && opp.state === "attack" && opp.move && !opp.move.projectile && opp.sf - 1 > opp.move.startup + opp.move.active && dist < me.moves.LP.reach + 10
+      && Math.random() < [0.25, 0.5, 0.75][g.aiLevel]) {
+    const left = opp.move.startup + opp.move.active + opp.move.recovery - opp.sf;
+    c.queue.push(left > me.moves.HK.startup + 2 ? "kick" : "punch"); ai.t = 8; return;
+  }
+
   if (--ai.t > 0) { walk(ai.walk); return; }
   ai.t = 10 + Math.random() * 16;
   const r = Math.random();
   ai.walk = 0;
+  const kind = archOf(me.def).kind, sigRate = [0.08, 0.12, 0.16][g.aiLevel];
+  const oppDown = opp.state === "knockdown" || opp.state === "wakeup";
   if (dist > 320) {
     if (me.sta >= SP_COST && r < 0.35) c.queue.push("special"); else ai.walk = toward;
+  } else if (kind === "KICKBOXER") {
+    // KICKBOXER: lives at the end of its kick. Too close → step out; at kick range → poke; just outside → close in (Stockz lunges).
+    const poke = me.moves.HK.reach;
+    if (dist < 78) {
+      if (me.def.id === "katbot" && r < 0.3) c.queue.push("sig");                       // cross-up from point blank
+      else if (r < 0.5) { ai.walk = -toward; ai.t = 8 + Math.random() * 8; }
+      else if (r < 0.75) c.queue.push("punch");
+      else if (r < 0.85) c.queue.push("grab");
+      else { ai.crouch = 10; c.down = true; c.queue.push("kick"); }
+    } else if (dist <= poke + 6) {
+      if (r < 0.38) c.queue.push("kick");
+      else if (r < 0.52) { ai.crouch = 14; c.down = true; c.queue.push("kick"); }        // sweep
+      else if (r < 0.52 + sigRate) c.queue.push("sig");
+      else if (r < 0.8) c.queue.push("punch");
+      else ai.walk = -toward;
+    } else if (me.def.id === "stockz" && dist <= poke + 70 && r < 0.35) {
+      c.queue.push("sig");                                                                // step-in kick from outside their reach
+    } else if (dist > 170 && me.sta >= SP_COST && r < 0.25) {
+      c.queue.push("special");
+    } else ai.walk = toward;
+  } else if (kind === "SUBMISSION") {
+    // SUBMISSION: get them down, stand over them, choke them as they get up.
+    if (oppDown) { ai.walk = dist > 70 ? toward : 0; ai.t = 4; }
+    else if (opp.state === "idle" && opp.sf < 8 && dist < me.moves.SIG.reach + 10 && r < 0.45) c.queue.push("sig");      // wake-up choke
+    else if (dist > 170) {
+      if (me.sta >= SP_COST && r < 0.25) c.queue.push("special"); else ai.walk = toward;
+    } else if (dist > 92) {
+      if (dist < me.moves.SIG.reach + 6 && r < sigRate * 1.5) c.queue.push("sig"); else ai.walk = toward;
+    } else {
+      if (opp.state === "block" && r < 0.6) c.queue.push("sig");                         // a block won't save them
+      else if (r < 0.3) { ai.crouch = 14; c.down = true; c.queue.push("kick"); }       // sweep → knockdown → wake-up choke
+      else if (r < 0.45) c.queue.push("grab");
+      else if (r < 0.75) c.queue.push("punch");
+      else if (r < 0.88) c.queue.push("kick");
+      else ai.walk = -toward;
+    }
   } else if (dist > 170) {
     if (r < 0.18) { c.up = true; walk(toward); ai.airKick = true; return; }
     if (me.sta >= SP_COST && r < 0.3) c.queue.push("special"); else ai.walk = toward;
-  } else if (dist > 95) {
+  } else if (dist > 88) {
     ai.walk = toward;
   } else {
-    if (opp.state === "block" && r < 0.5) c.queue.push(me.def.id === "jpeez" || me.def.id === "hammad" ? "sig" : "grab");   // turtling? break the guard
+    // BRAWLER: walks you down and keeps swinging — punch strings, the signature on a block, rarely backs off
+    if (opp.state === "block" && r < 0.5) c.queue.push(me.def.id === "jpeez" ? "sig" : "grab");   // turtling? break the guard
     else if (r < 0.1) c.queue.push("grab");
-    else if (r < 0.1 + [0.08, 0.12, 0.16][g.aiLevel]) c.queue.push("sig");
-    else if (r < 0.35) c.queue.push("punch");
-    else if (r < 0.55) { ai.crouch = 14; c.down = true; c.queue.push("kick"); }
-    else if (r < 0.72) c.queue.push("kick");
-    else if (r < 0.84) { ai.crouch = 10; c.down = true; c.queue.push("punch"); }
+    else if (r < 0.1 + sigRate) c.queue.push("sig");
+    else if (r < 0.48) c.queue.push("punch");
+    else if (r < 0.62) { ai.crouch = 14; c.down = true; c.queue.push("kick"); }
+    else if (r < 0.78) c.queue.push("kick");
+    else if (r < 0.92) { ai.crouch = 10; c.down = true; c.queue.push("punch"); }
     else ai.walk = -toward;
   }
   walk(ai.walk);
@@ -2579,6 +2640,7 @@ function ControlsHelp({ touch, cpu }: { touch: boolean; cpu: boolean }) {
       <b>S</b><span>Special (needs 3 bars) — with full HEAT: the cinematic finisher</span>
       <b>G</b><span>Grab and slam — breaks through a block</span>
       <b>HOLD P</b><span>Hold Punch about a third of a second and let go: your fighter's <em>signature move</em> (each one is different)</span>
+      <b>COUNTER</b><span>Hit them while they're winding up: 30% more damage, and a jab then links into a kick</span>
       <h4>DEFEND — SWIPE THE ARENA</h4>
       <b>SWIPE ↓</b><span>Duck under punches, high kicks and specials</span>
       <b>SWIPE ← →</b><span>Dodge: sidestep anything except a grab</span>
@@ -2608,6 +2670,7 @@ function ControlsHelp({ touch, cpu }: { touch: boolean; cpu: boolean }) {
       {rows(0)}
       {!cpu && <><h4>PLAYER 2</h4>{rows(1)}</>}
       <h4>GAME</h4>
+      <b>COUNTER</b><span>hit them while they're winding up: 30% more damage, and a jab links into a kick · a blocked jab leaves you ahead, a blocked kick or sweep can be punished</span>
       <b>SIGNATURE</b><span>hold <kbd>{keysFor(0, "punch").map(keyName).join(" / ")}</kbd> about a third of a second, let go — every fighter's is different (see the select screen)</span>
       <b>PAUSE</b><span><kbd>P</kbd> or <kbd>Esc</kbd> · <small className="pmg-note">special also: <kbd>↓</kbd> <kbd>→</kbd> + punch</small></span>
       <b>CONTROLLER</b><span><small className="pmg-note">{PAD_HINT}</small></span>
