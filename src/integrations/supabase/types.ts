@@ -861,6 +861,36 @@ export type Database = {
         }
         Relationships: []
       }
+      funnel_events: {
+        Row: {
+          created_at: string
+          id: number
+          invite: boolean
+          order_id: string | null
+          step: number
+          tier: string | null
+          visitor: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          invite?: boolean
+          order_id?: string | null
+          step: number
+          tier?: string | null
+          visitor: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          invite?: boolean
+          order_id?: string | null
+          step?: number
+          tier?: string | null
+          visitor?: string
+        }
+        Relationships: []
+      }
       instagram_posts: {
         Row: {
           active: boolean | null
@@ -1093,6 +1123,7 @@ export type Database = {
           due_now_cents: number
           email: string
           explicit: boolean
+          followups: Json
           google_post_event_id: string | null
           google_session_event_id: string | null
           id: string
@@ -1101,6 +1132,7 @@ export type Database = {
           instagram_url: string | null
           invite_code: string | null
           ipi_number: string | null
+          last_step: number
           legal_name: string
           notes: string | null
           paid_at: string | null
@@ -1122,6 +1154,7 @@ export type Database = {
           signed_ip: string | null
           splits: Json | null
           status: string
+          step_at: string
           stripe_payment_intent: string | null
           stripe_session_id: string | null
           sync_errors: string | null
@@ -1131,6 +1164,7 @@ export type Database = {
           track_title: string | null
           updated_at: string
           uploads: Json
+          visitor: string | null
           wants_distribution: boolean
           youtube_url: string | null
         }
@@ -1148,6 +1182,7 @@ export type Database = {
           due_now_cents?: number
           email: string
           explicit?: boolean
+          followups?: Json
           google_post_event_id?: string | null
           google_session_event_id?: string | null
           id?: string
@@ -1156,6 +1191,7 @@ export type Database = {
           instagram_url?: string | null
           invite_code?: string | null
           ipi_number?: string | null
+          last_step?: number
           legal_name: string
           notes?: string | null
           paid_at?: string | null
@@ -1177,6 +1213,7 @@ export type Database = {
           signed_ip?: string | null
           splits?: Json | null
           status?: string
+          step_at?: string
           stripe_payment_intent?: string | null
           stripe_session_id?: string | null
           sync_errors?: string | null
@@ -1186,6 +1223,7 @@ export type Database = {
           track_title?: string | null
           updated_at?: string
           uploads?: Json
+          visitor?: string | null
           wants_distribution?: boolean
           youtube_url?: string | null
         }
@@ -1203,6 +1241,7 @@ export type Database = {
           due_now_cents?: number
           email?: string
           explicit?: boolean
+          followups?: Json
           google_post_event_id?: string | null
           google_session_event_id?: string | null
           id?: string
@@ -1211,6 +1250,7 @@ export type Database = {
           instagram_url?: string | null
           invite_code?: string | null
           ipi_number?: string | null
+          last_step?: number
           legal_name?: string
           notes?: string | null
           paid_at?: string | null
@@ -1232,6 +1272,7 @@ export type Database = {
           signed_ip?: string | null
           splits?: Json | null
           status?: string
+          step_at?: string
           stripe_payment_intent?: string | null
           stripe_session_id?: string | null
           sync_errors?: string | null
@@ -1241,6 +1282,7 @@ export type Database = {
           track_title?: string | null
           updated_at?: string
           uploads?: Json
+          visitor?: string | null
           wants_distribution?: boolean
           youtube_url?: string | null
         }
