@@ -64,6 +64,13 @@
       "when": 1793829630523,
       "tag": "0008_create_pmg_fight_profiles",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794198723130,
+      "tag": "0009_onboarding_progress_funnel_tracking",
+      "breakpoints": true
     }
   ]
 }
