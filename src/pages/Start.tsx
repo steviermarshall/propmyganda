@@ -2,10 +2,13 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } fro
 import { Link, useSearchParams } from "react-router-dom";
 import SEO from "@/components/SEO";
 import { AGREEMENT_TEXT, STANDARD_SPLITS } from "@/lib/agreement";
-import { AD_BUDGET_MAX, AD_BUDGET_MIN, PUBLIC_TIERS, TIERS, formatUsd, getTier, quote, type PaymentPlan, type Tier, type TierId } from "@/lib/tiers";
-import { api, fmtBytes, fmtSlot, loadSession, saveSession, type IgProfile, type Order, type Session, type Slot, type Upload } from "@/lib/onboarding";
+import { AD_BUDGET_MAX, AD_BUDGET_MIN, AFFIRM_MAX_CENTS, AFFIRM_MIN_CENTS, PUBLIC_TIERS, TIERS, formatUsd, getTier, monthlyEstimateCents, quote, type PaymentPlan, type Tier, type TierId } from "@/lib/tiers";
+import { api, fmtBytes, fmtSlot, loadSession, saveSession, visitorId, type IgProfile, type Order, type Session, type Slot, type Upload } from "@/lib/onboarding";
 import { Button, ErrorLine, Input, Note, Select, Textarea, Toggle } from "@/components/start/ui";
 import { AreaBlocks } from "@/components/start/prep";
+import QuestionsDrawer from "@/components/start/QuestionsDrawer";
+import { ROSTER_PROOF } from "@/lib/roster";
+import { useSpotifyCatalog, formatCount } from "@/lib/spotifyCatalog";
 
 const STEPS = ["Tier", "Details", "Upload", "Schedule", "Pay"] as const;
 const PRO_OPTIONS = ["", "BMI", "ASCAP", "SESAC", "Other", "None"];
@@ -23,6 +26,35 @@ function Stepper({ step }: { step: number }) {
 }
 
 // ── 1. Tier ────────────────────────────────────────────────────────────────
+/** Proof next to the prices: the roster with live Spotify numbers, and the rules that hold. */
+function Proof() {
+  const { data } = useSpotifyCatalog(ROSTER_PROOF.map((a) => ({ id: a.id, artistId: a.spotifyArtistId, trackId: a.spotifyTrackId })));
+  const artists = ROSTER_PROOF.map((a) => {
+    const c = data?.artists?.[a.id];
+    return { ...a, followers: c?.followers ?? null, url: c?.url ?? (a.spotifyArtistId ? `https://open.spotify.com/artist/${a.spotifyArtistId}` : "/artists") };
+  });
+  return (
+    <div className="mt-6 grid gap-px bg-[#F2EFE9]/15 md:grid-cols-[1fr_1fr]">
+      <div className="bg-[#0B0B0B] p-4">
+        <span className="block font-mono text-[10px] uppercase tracking-[0.18em] text-[#9A9A9E]">On the roster · released with PMG</span>
+        <ul className="mt-2 flex flex-wrap gap-x-5 gap-y-1">
+          {artists.map((a) => (
+            <li key={a.id} className="text-sm text-[#F2EFE9]">
+              <a href={a.url} target="_blank" rel="noreferrer" className="hover:text-[#FFD230]">{a.name}</a>
+              {a.followers !== null && <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-[#9A9A9E]"> · {formatCount(a.followers)} on Spotify</span>}
+            </li>
+          ))}
+          <li className="text-sm"><Link to="/artists" className="text-[#FFD230] underline">The roster →</Link></li>
+        </ul>
+      </div>
+      <div className="bg-[#0B0B0B] p-4 font-mono text-[10px] uppercase leading-5 tracking-[0.14em] text-[#9A9A9E]">
+        <span className="block text-[#F2EFE9]">The rules</span>
+        Your date is held the moment you pay. Move it free up to 7 days before the shoot. Payments by Stripe: cards, Apple Pay, Google Pay, Link, Affirm where shown. You keep your masters.
+      </div>
+    </div>
+  );
+}
+
 function priceLabel(t: Tier): string {
   if (t.revenueShare) return "$0 up front";
   if (t.inviteOnly) return "On us";
@@ -53,11 +85,17 @@ function TierStep({ tier, setTier, adBudget, setAdBudget, onNext, invite }: { ti
               <ul className="mt-4 space-y-1.5 font-mono text-[10px] uppercase leading-4 tracking-[0.12em] text-[#9A9A9E]">
                 {t.includes.map((i) => <li key={i}>› {i}</li>)}
               </ul>
-              {t.financing && <span className="mt-4 inline-block self-start bg-[#FFD230] px-2 py-1 font-mono text-[9px] uppercase tracking-[0.18em] text-[#0B0B0B]">Affirm · pay over time</span>}
+              {t.financing && t.priceCents >= AFFIRM_MIN_CENTS && t.priceCents <= AFFIRM_MAX_CENTS && (
+                <span className="mt-4 inline-block self-start bg-[#FFD230] px-2 py-1 font-mono text-[9px] uppercase tracking-[0.18em] text-[#0B0B0B]">
+                  or from about {formatUsd(monthlyEstimateCents(t.priceCents))}/mo with Affirm
+                </span>
+              )}
             </button>
           );
         })}
       </div>
+
+      <Proof />
 
       {q.tier.adBudgetAddOn && (
         <div className="mt-6 border border-[#F2EFE9]/30 p-5">
@@ -122,8 +160,31 @@ function DetailsStep({ initial, busy, onBack, onSubmit, forceDistribution }: { i
   const [d, setD] = useState<Details>(forceDistribution ? { ...initial, wants_distribution: true } : initial);
   const [ig, setIg] = useState<IgProfile | null>(null);
   const [igBusy, setIgBusy] = useState(false);
+  const [showLinks, setShowLinks] = useState(!!(initial.tiktok_url || initial.youtube_url));
+  const [errors, setErrors] = useState<Partial<Record<keyof Details, string>>>({});
   const [err, setErr] = useState<string | null>(null);
-  const set = <K extends keyof Details>(k: K, v: Details[K]) => setD((x) => ({ ...x, [k]: v }));
+  const set = <K extends keyof Details>(k: K, v: Details[K]) => { setD((x) => ({ ...x, [k]: v })); if (errors[k]) setErrors((e) => ({ ...e, [k]: undefined })); };
+
+  // One rule per field, run on blur and again on submit. Specific text, not "invalid".
+  const rules: Partial<Record<keyof Details, (v: Details) => string | undefined>> = {
+    artist_name: (v) => (v.artist_name.trim() ? undefined : "Your artist name, as it goes live."),
+    email: (v) => (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.email.trim()) ? undefined : "An email we can reach you at, like name@domain.com."),
+    instagram_handle: (v) => (v.instagram_handle.trim() ? undefined : "The collab post goes to your Instagram. Add the handle."),
+    phone: (v) => (!v.phone.trim() || /^[+\d][\d\s().-]{6,}$/.test(v.phone.trim()) ? undefined : "Digits only, with the area code."),
+    tiktok_url: (v) => (!v.tiktok_url.trim() || /tiktok\.com\//i.test(v.tiktok_url) || /^@?[\w.]+$/.test(v.tiktok_url.trim()) ? undefined : "A tiktok.com link or your @handle."),
+    youtube_url: (v) => (!v.youtube_url.trim() || /youtu(\.be|be\.com)\//i.test(v.youtube_url) || /^@?[\w.-]+$/.test(v.youtube_url.trim()) ? undefined : "A youtube.com link or your @handle."),
+    legal_name: (v) => (!v.wants_distribution || v.legal_name.trim() ? undefined : "Your full legal name goes on the release agreement."),
+    pro_affiliation: (v) => (!v.wants_distribution || v.pro_affiliation ? undefined : "Pick your PRO, or None."),
+    ipi_number: (v) => (!v.wants_distribution || /^(none|n\/a|no)$/i.test(v.ipi_number.trim()) || v.ipi_number.replace(/\D/g, "").length >= 9 ? undefined : "9 to 11 digits, or type none."),
+    distro_email: (v) => (!v.wants_distribution || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.distro_email.trim()) ? undefined : "The email on your distro account."),
+    producer_name: (v) => (!v.wants_distribution || v.self_produced || v.producer_name.trim() ? undefined : "Producer's legal name, or mark it self-produced."),
+    producer_stage_name: (v) => (!v.wants_distribution || v.self_produced || v.producer_stage_name.trim() ? undefined : "Producer's stage name."),
+    producer_pro: (v) => (!v.wants_distribution || v.self_produced || v.producer_pro ? undefined : "Producer's PRO, or None."),
+    producer_ipi: (v) => (!v.wants_distribution || v.self_produced || /^(none|n\/a|no)$/i.test(v.producer_ipi.trim()) || v.producer_ipi.replace(/\D/g, "").length >= 9 ? undefined : "9 to 11 digits, or none."),
+    producer_email: (v) => (!v.wants_distribution || v.self_produced || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.producer_email.trim()) ? undefined : "Producer's email, for their copy of the agreement."),
+    signature: (v) => (!v.wants_distribution ? undefined : !v.signature.trim() ? "Type your full legal name to sign." : v.signature.trim().toLowerCase() !== v.legal_name.trim().toLowerCase() ? "Must match your legal name exactly." : undefined),
+  };
+  const check = (k: keyof Details) => () => { const m = rules[k]?.(d); setErrors((e) => ({ ...e, [k]: m })); };
 
   async function findIg() {
     const h = d.instagram_handle.trim();
@@ -135,43 +196,45 @@ function DetailsStep({ initial, busy, onBack, onSubmit, forceDistribution }: { i
   function submit(e: FormEvent) {
     e.preventDefault();
     setErr(null);
-    if (!d.artist_name || !d.legal_name || !d.email) return setErr("Artist name, legal name and email are required.");
-    if (!d.instagram_handle) return setErr("Link your Instagram. The collab post goes to your page.");
-    if (d.wants_distribution) {
-      if (!d.pro_affiliation || !d.ipi_number || !d.distro_email) return setErr("Distribution needs your PRO, IPI number (or 'none') and distro email.");
-      if (!d.self_produced && (!d.producer_name || !d.producer_stage_name || !d.producer_pro || !d.producer_ipi || !d.producer_email)) return setErr("Fill in the producer, or mark the record self-produced.");
-      if (d.alt_splits && d.splits.pmg + d.splits.artist + d.splits.producer !== 100) return setErr("Alternate master splits must add up to 100.");
-      if (!d.agreement_accepted || !d.signature.trim()) return setErr("Read the agreement, tick the box and sign with your full legal name.");
-      if (d.signature.trim().toLowerCase() !== d.legal_name.trim().toLowerCase()) return setErr("Your signature must match your legal name exactly.");
+    const found: Partial<Record<keyof Details, string>> = {};
+    for (const k of Object.keys(rules) as (keyof Details)[]) { const m = rules[k]!(d); if (m) found[k] = m; }
+    if (d.wants_distribution && d.alt_splits && d.splits.pmg + d.splits.artist + d.splits.producer !== 100) found.splits = "Alternate master splits must add up to 100.";
+    if (d.wants_distribution && !d.agreement_accepted) found.agreement_accepted = "Tick the box once you have read the agreement.";
+    setErrors(found);
+    const first = Object.keys(found)[0];
+    if (first) {
+      const el = document.querySelector<HTMLElement>(`[name="${first}"]`) ?? document.querySelector<HTMLElement>('[aria-invalid="true"]');
+      el?.scrollIntoView({ block: "center", behavior: "smooth" }); el?.focus?.();
+      setErr(`${Object.keys(found).length} thing${Object.keys(found).length > 1 ? "s" : ""} to fix above.`);
+      return;
     }
     onSubmit(d);
   }
 
+  const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return (
-    <form onSubmit={submit} className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Input label="Artist name" hint="exactly as it goes live" required value={d.artist_name} onChange={(e) => set("artist_name", e.target.value)} />
-        <Input label="Legal name" required value={d.legal_name} onChange={(e) => set("legal_name", e.target.value)} />
-        <Input label="Email" hint="the one you check" type="email" required value={d.email} onChange={(e) => set("email", e.target.value)} />
-        <Input label="Phone" type="tel" value={d.phone} onChange={(e) => set("phone", e.target.value)} />
-      </div>
-
+    <form onSubmit={submit} noValidate className="mx-auto max-w-xl space-y-5">
+      <Input id="artist_name" name="artist_name" label="Artist name" hint="exactly as it goes live" required autoComplete="nickname" value={d.artist_name} onChange={(e) => set("artist_name", e.target.value)} onBlur={check("artist_name")} error={errors.artist_name} />
+      <Input id="email" name="email" label="Email" hint="the one you check" type="email" inputMode="email" autoComplete="email" required value={d.email} onChange={(e) => set("email", e.target.value)} onBlur={check("email")} error={errors.email} />
       <div>
         <div className="flex items-end gap-2">
-          <div className="flex-1"><Input label="Instagram" hint="handle or link" placeholder="@yourname" value={d.instagram_handle} onChange={(e) => { set("instagram_handle", e.target.value); setIg(null); }} onBlur={findIg} /></div>
+          <div className="flex-1"><Input id="instagram_handle" name="instagram_handle" label="Instagram" hint="handle or link" required placeholder="@yourname" autoComplete="off" autoCapitalize="none" value={d.instagram_handle} onChange={(e) => { set("instagram_handle", e.target.value); setIg(null); }} onBlur={() => { check("instagram_handle")(); findIg(); }} error={errors.instagram_handle} /></div>
           <Button tone="ghost" onClick={findIg} disabled={igBusy || !d.instagram_handle}>{igBusy ? "…" : "Find"}</Button>
         </div>
         {ig && <IgCard p={ig} />}
       </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Input label="TikTok" placeholder="tiktok.com/@…" value={d.tiktok_url} onChange={(e) => set("tiktok_url", e.target.value)} />
-        <Input label="YouTube" placeholder="youtube.com/@…" value={d.youtube_url} onChange={(e) => set("youtube_url", e.target.value)} />
-      </div>
+      <Input id="phone" name="phone" label="Phone" hint="for shoot-day texts only" optional type="tel" inputMode="tel" autoComplete="tel" value={d.phone} onChange={(e) => set("phone", e.target.value)} onBlur={check("phone")} error={errors.phone} />
+      <Input id="track_title" name="track_title" label="Track title" hint="exactly as it goes live · can come later" optional value={d.track_title} onChange={(e) => set("track_title", e.target.value)} />
+      <Toggle label="Explicit" hint="be honest, a wrong answer gets throttled" checked={d.explicit} onChange={(v) => set("explicit", v)} />
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Input label="Track title" hint="exactly as it goes live" value={d.track_title} onChange={(e) => set("track_title", e.target.value)} />
-        <Toggle label="Explicit" hint="be honest, a wrong answer gets throttled" checked={d.explicit} onChange={(v) => set("explicit", v)} />
-      </div>
+      {!showLinks ? (
+        <button type="button" onClick={() => setShowLinks(true)} className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#FFD230]">+ Add TikTok or YouTube</button>
+      ) : (
+        <div className="space-y-5">
+          <Input id="tiktok_url" name="tiktok_url" label="TikTok" optional placeholder="tiktok.com/@…" type="url" inputMode="url" autoComplete="url" value={d.tiktok_url} onChange={(e) => set("tiktok_url", e.target.value)} onBlur={check("tiktok_url")} error={errors.tiktok_url} />
+          <Input id="youtube_url" name="youtube_url" label="YouTube" optional placeholder="youtube.com/@…" type="url" inputMode="url" autoComplete="url" value={d.youtube_url} onChange={(e) => set("youtube_url", e.target.value)} onBlur={check("youtube_url")} error={errors.youtube_url} />
+        </div>
+      )}
 
       <Select label="Ad results" hint="how you want to see what the ad dollars did" value={d.report_preference} onChange={(e) => set("report_preference", e.target.value as Details["report_preference"])}>
         <option value="email">Emailed report when the run ends</option>
@@ -189,24 +252,23 @@ function DetailsStep({ initial, busy, onBack, onSubmit, forceDistribution }: { i
       )}
       {d.wants_distribution && (
         <div className="space-y-5 border border-[#F2EFE9]/30 p-4">
+          <Input id="legal_name" name="legal_name" label="Legal name" hint="goes on the agreement" required autoComplete="name" value={d.legal_name} onChange={(e) => set("legal_name", e.target.value)} onBlur={check("legal_name")} error={errors.legal_name} />
           <div>
             <Note>Standard DSP title: "{d.artist_name || "Your Artist Name"}" Propmyganda Performance</Note>
-            <Input label="Different title?" hint="leave blank to use the standard title" value={d.dsp_title} onChange={(e) => set("dsp_title", e.target.value)} />
+            <Input id="dsp_title" name="dsp_title" label="Different title?" optional hint="leave blank to use the standard title" value={d.dsp_title} onChange={(e) => set("dsp_title", e.target.value)} />
           </div>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <Select label="Your PRO" value={d.pro_affiliation} onChange={(e) => set("pro_affiliation", e.target.value)}>{PRO_OPTIONS.map((o) => <option key={o} value={o}>{o || "Select"}</option>)}</Select>
-            <Input label="IPI number" hint="9 to 11 digits, or 'none'" value={d.ipi_number} onChange={(e) => set("ipi_number", e.target.value)} />
-            <Input label="Distro email" hint="the email on your DistroKid / UnitedMasters account" type="email" value={d.distro_email} onChange={(e) => set("distro_email", e.target.value)} />
-          </div>
+          <Select name="pro_affiliation" label="Your PRO" required value={d.pro_affiliation} onChange={(e) => set("pro_affiliation", e.target.value)} onBlur={check("pro_affiliation")} error={errors.pro_affiliation}>{PRO_OPTIONS.map((o) => <option key={o} value={o}>{o || "Select"}</option>)}</Select>
+          <Input id="ipi_number" name="ipi_number" label="IPI number" required hint="9 to 11 digits, or 'none'" inputMode="numeric" value={d.ipi_number} onChange={(e) => set("ipi_number", e.target.value)} onBlur={check("ipi_number")} error={errors.ipi_number} />
+          <Input id="distro_email" name="distro_email" label="Distro email" required hint="the email on your DistroKid / UnitedMasters account" type="email" inputMode="email" value={d.distro_email} onChange={(e) => set("distro_email", e.target.value)} onBlur={check("distro_email")} error={errors.distro_email} />
 
           <Toggle label="I produced this record myself" hint="producer credit and split stay with you" checked={d.self_produced} onChange={(v) => set("self_produced", v)} />
           {!d.self_produced && (
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Input label="Producer legal name" value={d.producer_name} onChange={(e) => set("producer_name", e.target.value)} />
-              <Input label="Producer stage name" value={d.producer_stage_name} onChange={(e) => set("producer_stage_name", e.target.value)} />
-              <Select label="Producer PRO" value={d.producer_pro} onChange={(e) => set("producer_pro", e.target.value)}>{PRO_OPTIONS.map((o) => <option key={o} value={o}>{o || "Select"}</option>)}</Select>
-              <Input label="Producer IPI" hint="9 to 11 digits, or 'none'" value={d.producer_ipi} onChange={(e) => set("producer_ipi", e.target.value)} />
-              <Input label="Producer email" hint="they get a copy of the agreement" type="email" value={d.producer_email} onChange={(e) => set("producer_email", e.target.value)} />
+            <div className="space-y-5">
+              <Input id="producer_name" name="producer_name" label="Producer legal name" required value={d.producer_name} onChange={(e) => set("producer_name", e.target.value)} onBlur={check("producer_name")} error={errors.producer_name} />
+              <Input id="producer_stage_name" name="producer_stage_name" label="Producer stage name" required value={d.producer_stage_name} onChange={(e) => set("producer_stage_name", e.target.value)} onBlur={check("producer_stage_name")} error={errors.producer_stage_name} />
+              <Select name="producer_pro" label="Producer PRO" required value={d.producer_pro} onChange={(e) => set("producer_pro", e.target.value)} onBlur={check("producer_pro")} error={errors.producer_pro}>{PRO_OPTIONS.map((o) => <option key={o} value={o}>{o || "Select"}</option>)}</Select>
+              <Input id="producer_ipi" name="producer_ipi" label="Producer IPI" required hint="9 to 11 digits, or 'none'" inputMode="numeric" value={d.producer_ipi} onChange={(e) => set("producer_ipi", e.target.value)} onBlur={check("producer_ipi")} error={errors.producer_ipi} />
+              <Input id="producer_email" name="producer_email" label="Producer email" required hint="they get a copy of the agreement" type="email" inputMode="email" value={d.producer_email} onChange={(e) => set("producer_email", e.target.value)} onBlur={check("producer_email")} error={errors.producer_email} />
             </div>
           )}
 
@@ -220,9 +282,9 @@ function DetailsStep({ initial, busy, onBack, onSubmit, forceDistribution }: { i
             {d.alt_splits && (
               <div className="mt-3 grid gap-3 sm:grid-cols-3">
                 {(["pmg", "artist", "producer"] as const).map((k) => (
-                  <Input key={k} label={`${k === "pmg" ? "PMG" : k[0].toUpperCase() + k.slice(1)} %`} type="number" min={0} max={100} value={d.splits[k]} onChange={(e) => set("splits", { ...d.splits, [k]: Number(e.target.value) })} />
+                  <Input key={k} label={`${k === "pmg" ? "PMG" : k[0].toUpperCase() + k.slice(1)} %`} type="number" inputMode="numeric" min={0} max={100} value={d.splits[k]} onChange={(e) => set("splits", { ...d.splits, [k]: Number(e.target.value) })} />
                 ))}
-                <span className="font-mono text-[10px] uppercase tracking-[0.14em] sm:col-span-3" style={{ color: d.splits.pmg + d.splits.artist + d.splits.producer === 100 ? "#9A9A9E" : "#FF5A36" }}>
+                <span className="font-mono text-[10px] uppercase tracking-[0.14em] sm:col-span-3" style={{ color: d.splits.pmg + d.splits.artist + d.splits.producer === 100 ? "#9A9A9E" : "#FFD230" }}>
                   Total {d.splits.pmg + d.splits.artist + d.splits.producer}% · must be 100
                 </span>
               </div>
@@ -234,16 +296,17 @@ function DetailsStep({ initial, busy, onBack, onSubmit, forceDistribution }: { i
             <pre className="mt-2 max-h-72 overflow-y-auto whitespace-pre-wrap border border-[#F2EFE9]/20 bg-[#0B0B0B] p-4 font-sans text-[13px] leading-5 text-[#F2EFE9]/85">{AGREEMENT_TEXT}</pre>
           </div>
           <Toggle label="I have read and agree to the PMG Streaming Release Agreement" hint="binding electronic contract · a signed copy is emailed to you" checked={d.agreement_accepted} onChange={(v) => set("agreement_accepted", v)} />
-          <Input label="Signature" hint={`type your full legal name${d.legal_name ? ` · ${d.legal_name}` : ""}`} value={d.signature} onChange={(e) => set("signature", e.target.value)} />
+          {errors.agreement_accepted && <ErrorLine>{errors.agreement_accepted}</ErrorLine>}
+          <Input id="signature" name="signature" label="Signature" required hint={`type your full legal name${d.legal_name ? ` · ${d.legal_name}` : ""}`} autoComplete="off" value={d.signature} onChange={(e) => set("signature", e.target.value)} onBlur={check("signature")} error={errors.signature} />
         </div>
       )}
 
-      <Textarea label="Notes" hint="optional" value={d.notes} onChange={(e) => set("notes", e.target.value)} />
+      <Textarea label="Notes" optional value={d.notes} onChange={(e) => set("notes", e.target.value)} />
 
       {err && <ErrorLine>{err}</ErrorLine>}
       <div className="flex items-center justify-between gap-4 border-t border-[#F2EFE9]/20 pt-6">
         <Button tone="ghost" onClick={onBack}>← Back</Button>
-        <Button type="submit" disabled={busy}>{busy ? "Saving…" : "Continue →"}</Button>
+        <Button type="submit" disabled={busy || !emailOk.test(d.email) || !d.artist_name.trim()}>{busy ? "Saving…" : "Continue →"}</Button>
       </div>
     </form>
   );
@@ -472,7 +535,18 @@ function PayStep({ session, order, onBack }: { session: Session; order: Order; o
       {free ? (
         <Note>Nothing to charge. Confirm and your date is held, the calendar is booked and the agreement goes out by email.</Note>
       ) : (
-        <Note>Checkout runs on Stripe. Card{q.tier.financing ? ", or Affirm to pay over time" : ""}. Receipt by email. No payola · 0.00.</Note>
+        <div className="grid gap-px bg-[#F2EFE9]/15 sm:grid-cols-3">
+          {[
+            ["Payments by Stripe", `Cards · Apple Pay · Google Pay · Link${q.tier.financing && q.dueNowCents >= AFFIRM_MIN_CENTS ? " · Affirm, pay over time" : ""}`],
+            ["Your date, held", "Paid means booked. Move the shoot free up to 7 days before."],
+            ["A person on the other end", "Jay confirms by email. Questions now: the chat, bottom left."],
+          ].map(([k, v]) => (
+            <div key={k} className="bg-[#0B0B0B] p-3">
+              <span className="block text-[13px] text-[#F2EFE9]">{k}</span>
+              <span className="block font-mono text-[10px] uppercase leading-4 tracking-[0.12em] text-[#9A9A9E]">{v}</span>
+            </div>
+          ))}
+        </div>
       )}
       {err && <ErrorLine>{err}</ErrorLine>}
       <div className="flex items-center justify-between gap-4 border-t border-[#F2EFE9]/20 pt-6">
@@ -530,6 +604,15 @@ export default function Start() {
     }).catch(() => { saveSession(null); setSession(null); });
   }, [params]);
 
+  // Funnel: one event per step reached, and the furthest step on the order itself.
+  const tracked = useRef<Set<number>>(new Set());
+  useEffect(() => {
+    if (tracked.current.has(step)) return;
+    tracked.current.add(step);
+    api.track({ visitor: visitorId(), step: step + 1, tier, invite: !!invite, orderId: session?.orderId });
+    if (session && step >= 2) api.update(session, {}, step + 1).catch(() => undefined);
+  }, [step, tier, invite, session]);
+
   const go = (n: number) => { setStep(n); window.scrollTo({ top: 0, behavior: "smooth" }); if (session) saveSession({ ...session, step: n }); };
 
   async function submitDetails(d: Details) {
@@ -541,7 +624,7 @@ export default function Start() {
         const { order: o } = await api.update(session, { ...payload, tier, adBudgetCents: adBudget });
         setOrder(o);
       } else {
-        const r = await api.create({ tier, adBudgetCents: adBudget, invite: invite?.code, ...payload });
+        const r = await api.create({ tier, adBudgetCents: adBudget, invite: invite?.code, visitor: visitorId(), ...payload });
         const s = { orderId: r.orderId, token: r.token, step: 2 };
         setSession(s); saveSession(s);
         const { order: o } = await api.status(s);
@@ -586,6 +669,7 @@ export default function Start() {
           </div>
         </div>
       </section>
+      {(step === 0 || step === 4) && <QuestionsDrawer />}
     </main>
   );
 }

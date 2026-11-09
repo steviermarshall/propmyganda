@@ -48,6 +48,7 @@ import RoadmapBoard from "./pages/admin/RoadmapBoard";
 import ContactInquiries from "./pages/admin/ContactInquiries";
 import NewsWire from "./pages/admin/NewsWire";
 import Invites from "./pages/admin/Invites";
+import Funnel from "./pages/admin/Funnel";
 import OAuthConsent from "./pages/OAuthConsent";
 
 const queryClient = new QueryClient();
@@ -97,6 +98,7 @@ const AppRoutes = () => {
         <Route path="/admin/contact" element={<CrmProtectedRoute allowedRoles={["admin","jay"]}><ContactInquiries /></CrmProtectedRoute>} />
         <Route path="/admin/wire" element={<CrmProtectedRoute allowedRoles={["admin","jay","editor"]}><NewsWire /></CrmProtectedRoute>} />
         <Route path="/admin/invites" element={<CrmProtectedRoute allowedRoles={["admin","jay"]}><Invites /></CrmProtectedRoute>} />
+        <Route path="/admin/funnel" element={<CrmProtectedRoute allowedRoles={["admin","jay"]}><Funnel /></CrmProtectedRoute>} />
       </Routes>
     );
   }

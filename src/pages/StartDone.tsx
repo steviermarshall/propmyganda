@@ -5,6 +5,7 @@ import { api, fmtSlot, saveSession, type Order } from "@/lib/onboarding";
 import { formatUsd, getTier } from "@/lib/tiers";
 import { Note } from "@/components/start/ui";
 import { AreaBlocks, TipsBlocks } from "@/components/start/prep";
+import AddOns from "@/components/start/AddOns";
 
 export default function StartDone() {
   const [params] = useSearchParams();
@@ -76,6 +77,7 @@ export default function StartDone() {
           <AreaBlocks from={1} />
           <p className="mt-10 font-mono text-[10px] uppercase tracking-[0.3em] text-[#9A9A9E]">Make it land</p>
           <TipsBlocks from={3} />
+          {paid && <AddOns orderRef={order?.catalogue_no} />}
           <p className="mt-4 font-mono text-[11px] uppercase tracking-[0.14em] text-[#9A9A9E]">Keep this: <Link to="/start/prep" className="text-[#FFD230] underline">propmyganda.com/start/prep</Link></p>
         </div>
 

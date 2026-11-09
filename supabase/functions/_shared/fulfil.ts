@@ -8,6 +8,7 @@ import { formatUsd, getTier } from "./tiers.ts";
 import { EDITING_COLUMNS, SESSION_MINUTES, distributionRow, editingRow, type OrderRow } from "./onboarding.ts";
 import { AGREEMENT_TEXT, AGREEMENT_VERSION, splitsLine } from "./agreement.ts";
 import { sendEmail } from "./email.ts";
+import { ADDONS } from "./addons.ts";
 
 const DEFAULT_DISTRO_SHEET = "1-lGUtKmwAL7SmfaAHXbbPZK7715Detj1M6Ts_r6-kls";
 
@@ -77,7 +78,9 @@ export async function fulfil(supabase: SupabaseClient, order: OrderRow, paidStat
       `Files received: ${uploads.length}`, "",
       "Before your date: accounts public, collab requests on, accept the invite when it lands.",
       "Read this before the shoot and the post: https://propmyganda.com/start/prep",
-      "Reply to this email for anything. One thread, start to finish.", "", "— PMG",
+      "Reply to this email for anything. One thread, start to finish.", "",
+      "Once you're booked, these are open to you by request. Reply with the one you want and we quote it:",
+      ...ADDONS.map((a) => `  · ${a.name} — ${a.from}`), "", "— PMG",
       ...(order.wants_distribution ? [
         "", "────────", `Your signed copy · PMG Streaming Release Agreement · version ${AGREEMENT_VERSION}`,
         `Signed by ${order.signature ?? order.legal_name} on ${(order as unknown as { signed_at?: string }).signed_at ?? "—"}`,

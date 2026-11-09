@@ -1,41 +1,58 @@
 import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
 
 // Form pieces for /start in the brand system: ink, bone, one yellow accent, sharp corners.
+// Every field says whether it is required or optional, and carries its own error line.
 
-export function Label({ children, hint }: { children: ReactNode; hint?: string }) {
+export function Label({ children, hint, required, optional }: { children: ReactNode; hint?: string; required?: boolean; optional?: boolean }) {
   return (
-    <span className="mb-1.5 flex items-baseline justify-between font-mono text-[10px] uppercase tracking-[0.18em] text-[#9A9A9E]">
-      <span>{children}</span>
-      {hint && <span className="normal-case tracking-normal">{hint}</span>}
+    <span className="mb-1.5 flex items-baseline justify-between gap-3 font-mono text-[10px] uppercase tracking-[0.18em] text-[#9A9A9E]">
+      <span>
+        {children}
+        {required && <span className="ml-2 text-[#FFD230]">required</span>}
+        {optional && <span className="ml-2 text-[#9A9A9E]/70">optional</span>}
+      </span>
+      {hint && <span className="text-right normal-case tracking-normal">{hint}</span>}
     </span>
   );
 }
 
-const field = "w-full border border-[#F2EFE9]/30 bg-transparent px-3 py-3 text-[15px] text-[#F2EFE9] outline-none placeholder:text-[#F2EFE9]/30 focus:border-[#FFD230]";
+const field = "w-full border bg-transparent px-3 py-3 text-[15px] text-[#F2EFE9] outline-none placeholder:text-[#F2EFE9]/30 focus:border-[#FFD230]";
+const border = (error?: string) => (error ? "border-[#FFD230]" : "border-[#F2EFE9]/30");
 
-export function Input({ label, hint, ...props }: InputHTMLAttributes<HTMLInputElement> & { label: string; hint?: string }) {
+export function FieldError({ children, id }: { children?: string; id?: string }) {
+  if (!children) return null;
+  return <span id={id} role="alert" className="mt-1 block font-mono text-[10px] uppercase tracking-[0.14em] text-[#FFD230]">{children}</span>;
+}
+
+type Marks = { label: string; hint?: string; error?: string; optional?: boolean };
+
+export function Input({ label, hint, error, optional, required, id, ...props }: InputHTMLAttributes<HTMLInputElement> & Marks) {
+  const errId = id ? `${id}-error` : undefined;
   return (
     <label className="block">
-      <Label hint={hint}>{label}</Label>
-      <input {...props} className={`${field} ${props.className ?? ""}`} />
+      <Label hint={hint} required={required} optional={optional}>{label}</Label>
+      <input id={id} aria-invalid={!!error || undefined} aria-describedby={error ? errId : undefined} aria-required={required || undefined} {...props} className={`${field} ${border(error)} ${props.className ?? ""}`} />
+      <FieldError id={errId}>{error}</FieldError>
     </label>
   );
 }
 
-export function Select({ label, hint, children, ...props }: SelectHTMLAttributes<HTMLSelectElement> & { label: string; hint?: string }) {
+export function Select({ label, hint, error, optional, required, children, ...props }: SelectHTMLAttributes<HTMLSelectElement> & Marks) {
   return (
     <label className="block">
-      <Label hint={hint}>{label}</Label>
-      <select {...props} className={`${field} appearance-none bg-[#0B0B0B]`}>{children}</select>
+      <Label hint={hint} required={required} optional={optional}>{label}</Label>
+      <select aria-invalid={!!error || undefined} aria-required={required || undefined} {...props} className={`${field} ${border(error)} appearance-none bg-[#0B0B0B]`}>{children}</select>
+      <FieldError>{error}</FieldError>
     </label>
   );
 }
 
-export function Textarea({ label, hint, ...props }: TextareaHTMLAttributes<HTMLTextAreaElement> & { label: string; hint?: string }) {
+export function Textarea({ label, hint, error, optional, required, ...props }: TextareaHTMLAttributes<HTMLTextAreaElement> & Marks) {
   return (
     <label className="block">
-      <Label hint={hint}>{label}</Label>
-      <textarea {...props} className={`${field} min-h-[96px]`} />
+      <Label hint={hint} required={required} optional={optional}>{label}</Label>
+      <textarea aria-invalid={!!error || undefined} {...props} className={`${field} ${border(error)} min-h-[96px]`} />
+      <FieldError>{error}</FieldError>
     </label>
   );
 }

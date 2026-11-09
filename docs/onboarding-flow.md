@@ -81,3 +81,14 @@ platforms, once per client:
 1. Stripe in test mode: set `STRIPE_SECRET_KEY` to `sk_test_…` and the webhook secret from a test endpoint.
 2. Open `/start`, run through with a real file, pay with card `4242 4242 4242 4242`.
 3. Check: the order row is `scheduled`, two events on the calendar, a row in the editing sheet (and the distribution sheet if ticked), the email arrived. `sync_errors` on the row names anything that failed.
+
+
+## Measurement and follow-ups
+
+- Every step view posts a `track` event (anonymous per-device id) to `funnel_events`; every order carries `last_step`, the furthest step reached. `/admin/funnel` shows visitors per step, paid, by plan, and who stopped before paying, for 7, 30 or 90 days.
+- `onboarding-followups` runs hourly from pg_cron (`supabase/pmg_onboarding_cron.sql`): a recovery email 1 hour and 24 hours after an order stops before paying (with the resume link), and reminders 7 days and 48 hours before the shoot and before the release. Sent emails are recorded in `followups` on the order so nothing goes twice. Optional `CRON_SECRET` secret, checked against the `x-cron-secret` header.
+- Pay over time: Affirm is on for Basic, Mid and Viral; the Tier cards show "from about $X/mo" as twelve equal payments before interest.
+- Legal name is only asked on the distribution path. Paid plans take the cardholder name from Stripe at payment.
+- Add-ons are shown only after a booking is complete: on the done page and the prep page, after the area guide and the tips, and in the confirmation email. Never inside the booking steps. Data in `_shared/addons.ts` and `src/lib/addons.ts`.
+
+Deploy after these changes: `onboarding`, `stripe-webhook`, `onboarding-followups`, `contact-agent`. Run migration `20261109_019` and `supabase/pmg_onboarding_cron.sql`.

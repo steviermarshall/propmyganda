@@ -139,8 +139,8 @@ async function calendarBusy(fromISO: string, toISO: string): Promise<Busy[]> {
 }
 
 /** Bump with every change so a GET on the function shows which build is live (Lovable only redeploys functions it notices changed). */
-const FUNCTION_VERSION = "2026-11-04.4";
-const ACTIONS = ["tiers", "agreement", "invite-check", "create", "update", "ig-lookup", "upload-url", "upload-done", "availability", "checkout", "confirm", "status"];
+const FUNCTION_VERSION = "2026-11-09.1";
+const ACTIONS = ["tiers", "agreement", "track", "invite-check", "create", "update", "ig-lookup", "upload-url", "upload-done", "availability", "checkout", "confirm", "status"];
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -153,6 +153,14 @@ Deno.serve(async (req) => {
   try {
     if (action === "tiers") return json({ tiers: TIERS });
     if (action === "agreement") return json({ version: AGREEMENT_VERSION, text: AGREEMENT_TEXT });
+
+    // Funnel: one row per step view, keyed by an anonymous per-device id. Steps 1 to 5.
+    if (action === "track") {
+      const visitor = str(body.visitor, 64); const step = Number(body.step);
+      if (!visitor || !(step >= 1 && step <= 6)) return bad("visitor and step");
+      await supabase.from("funnel_events").insert({ visitor, step, tier: str(body.tier, 20) || null, invite: body.invite === true, order_id: typeof body.orderId === "string" && /^[0-9a-f-]{36}$/i.test(body.orderId) ? body.orderId : null });
+      return json({ ok: true });
+    }
 
     if (action === "invite-check") {
       const r = await checkInvite(inviteCode(body.invite));
@@ -171,7 +179,9 @@ Deno.serve(async (req) => {
       }
       const details = cleanDetails(body);
       if (tier.distribution) details.wants_distribution = true;
-      if (!details.artist_name || !details.legal_name) return bad("Artist name and legal name are required");
+      if (!details.artist_name) return bad("Artist name is required");
+      // Legal name is only collected on the distribution path (it is on the contract). Paid plans take the cardholder name from Stripe.
+      if (!details.legal_name) details.legal_name = details.artist_name;
       const mail = email(body.email);
       if (!mail) return bad("A valid email is required");
       let stamp: Record<string, unknown> = {};
@@ -180,6 +190,7 @@ Deno.serve(async (req) => {
           details.producer_name = details.legal_name; details.producer_stage_name = details.artist_name;
           details.producer_pro = details.pro_affiliation; details.producer_ipi = details.ipi_number; details.producer_email = mail;
         }
+        if (details.legal_name === details.artist_name && !String(body.legal_name ?? "").trim()) return bad("Your legal name is required for the release agreement");
         const problem = distributionProblems(details);
         if (problem) return bad(problem);
         stamp = await signatureStamp(req);
@@ -191,6 +202,7 @@ Deno.serve(async (req) => {
       const fields = {
         ...details, ...stamp, email: mail, tier: tier.id, ad_budget_cents: q.adBudgetCents, total_cents: q.totalCents,
         payment_plan: q.plan, due_now_cents: q.dueNowCents, status: "draft", invite_code: invite, updated_at: new Date().toISOString(),
+        last_step: 2, step_at: new Date().toISOString(), visitor: str(body.visitor, 64) || null,
       };
       if (open) {
         const { error } = await supabase.from("onboarding_orders").update(fields).eq("id", open.id);
@@ -217,6 +229,8 @@ Deno.serve(async (req) => {
       if (getTier(order.tier)?.distribution) patch.wants_distribution = true;
       if (patch.agreement_accepted && patch.signature) Object.assign(patch, await signatureStamp(req));
       if (p?.email) { const m = email(p.email); if (m) patch.email = m; }
+      const step = Number(body.step);
+      if (step >= 2 && step <= 5 && step > Number((order as unknown as { last_step?: number }).last_step ?? 0)) { patch.last_step = step; patch.step_at = new Date().toISOString(); }
       if ("post_at" in p) patch.post_at = p.post_at ? new Date(String(p.post_at)).toISOString() : null;
       if ("session_at" in p) patch.session_at = p.session_at ? new Date(String(p.session_at)).toISOString() : null;
       const newTier = p?.tier ? getTier(str(p.tier, 20)) : null;
@@ -312,7 +326,7 @@ Deno.serve(async (req) => {
         await supabase.from("onboarding_invites").update({ used_count: r.invite.used_count + 1 }).eq("code", order.invite_code);
       }
       const paidAt = new Date().toISOString();
-      await supabase.from("onboarding_orders").update({ status: "paid", paid_at: paidAt, payment_plan: "full", due_now_cents: 0, total_cents: 0 }).eq("id", order.id);
+      await supabase.from("onboarding_orders").update({ status: "paid", paid_at: paidAt, payment_plan: "full", due_now_cents: 0, total_cents: 0, last_step: 6, step_at: paidAt }).eq("id", order.id);
       const { patch, errors } = await fulfil(supabase, { ...(order as OrderRow), status: "paid" }, "paid");
       await supabase.from("onboarding_orders").update(patch).eq("id", order.id);
       return json({ ok: true, errors });

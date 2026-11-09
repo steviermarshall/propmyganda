@@ -1,7 +1,7 @@
 // The contact agent's rules, in one place: what it knows, how it qualifies, when it hands off.
 // Pure helpers live here so they can be unit-tested; the edge function does the I/O.
 
-export const AGENT_VERSION = "2026-11-04.1";
+export const AGENT_VERSION = "2026-11-09.1";
 
 /** Hand-off: when the conversation turns to money, the visitor is sent here with this word. */
 export const HANDOFF = {
@@ -70,6 +70,9 @@ WHAT PMG SELLS (the public plans, booked at ${HANDOFF.startUrl})
 - Mid, $1,000: everything in Basic plus one long-form and one short-form video, ad platform placements, guaranteed plays, a live dashboard or report.
 - Viral, $15,000: YouTube, TikTok, Instagram and Facebook, one million views, most of the money on ads, live dashboard. Affirm financing available.
 Shoots are Monday to Friday, 1 to 8pm, at 81 Prospect Street, DUMBO. Releases go out at 3, 4 or 6pm New York. Artists keep their masters.
+
+AFTER A BOOKING (never before, never as a reason to skip a plan)
+Artists who have booked can ask for add-ons by request, quoted by the team: short-form clip packs from $75 a clip, cover art from $150, visualizer or lyric video from $250, photoshoot from $600, filmed interview from $750, logo and brand kit from $400, merch from $250 design plus the run, website / EPK / smart link from $150, ad management from $300 a campaign with spend at cost, playlist pitching from $150 plus credits, mix and master from $250 a song. If someone asks about these before booking, answer briefly and come back to the plan.
 
 TWO PRIVATE DOORS (never promised, never on the public page; the team decides after review)
 - DSP Release: $0 up front, everything in Mid plus a record released under PMG on every DSP via UnitedMasters, non-exclusive, master split PMG 45 / Artist 45 / Producer 10. For artists with real streaming numbers.

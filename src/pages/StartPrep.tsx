@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import SEO from "@/components/SEO";
 import { AreaBlocks, TipsBlocks } from "@/components/start/prep";
+import AddOns from "@/components/start/AddOns";
 
 // What an artist can do to make the post land, plus how to get to the room and
 // what's around it. Plain, short, the way the rest of the flow reads.
@@ -19,6 +20,7 @@ export default function StartPrep() {
 
         <AreaBlocks from={1} />
         <TipsBlocks from={3} />
+        <AddOns />
 
         <div className="mt-10 flex flex-wrap gap-3">
           <Link to="/start" className="bg-[#FFD230] px-6 py-4 font-mono text-[11px] uppercase tracking-[0.2em] text-[#0B0B0B]">Back to your order →</Link>

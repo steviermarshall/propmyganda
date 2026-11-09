@@ -71,7 +71,7 @@ export const TIERS: Tier[] = [
     ],
     adBudgetAddOn: true,
     depositAllowed: false,
-    financing: false,
+    financing: true,
     bookings: ["post", "session"],
     public: true,
   },
@@ -83,7 +83,7 @@ export const TIERS: Tier[] = [
     includes: MID_INCLUDES,
     adBudgetAddOn: false,
     depositAllowed: true,
-    financing: false,
+    financing: true,
     bookings: ["post", "session"],
     public: true,
   },
@@ -160,4 +160,13 @@ export function clampAdBudget(cents: number): number {
 
 export function formatUsd(cents: number): string {
   return (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: cents % 100 === 0 ? 0 : 2 });
+}
+
+/** Stripe's Affirm limits, in cents. */
+export const AFFIRM_MIN_CENTS = 5_000;
+export const AFFIRM_MAX_CENTS = 3_000_000;
+
+/** A plain-English "from about $X/mo" for a pay-over-time badge: 12 equal payments, before any interest. */
+export function monthlyEstimateCents(totalCents: number, months = 12): number {
+  return Math.ceil(totalCents / months);
 }

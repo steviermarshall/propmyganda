@@ -42,7 +42,9 @@ export async function call<T = Record<string, unknown>>(action: string, body: Re
 
 export const api = {
   create: (body: Record<string, unknown>) => call<{ orderId: string; token: string; catalogueNo: string; quote: Quote }>("create", body),
-  update: (s: Session, patch: Record<string, unknown>) => call<{ order: Order }>("update", { orderId: s.orderId, token: s.token, patch }),
+  update: (s: Session, patch: Record<string, unknown>, step?: number) => call<{ order: Order }>("update", { orderId: s.orderId, token: s.token, patch, step }),
+  /** Funnel: one row per step view. Never throws; measurement must not break the flow. */
+  track: (body: { visitor: string; step: number; tier?: string; invite?: boolean; orderId?: string }) => call("track", body).catch(() => undefined),
   igLookup: (handle: string) => call<IgProfile>("ig-lookup", { handle }),
   availability: (s: Session, kind: "post" | "session") => call<{ slots: Slot[] }>("availability", { orderId: s.orderId, token: s.token, kind }),
   checkout: (s: Session, plan: "full" | "deposit") => call<{ url?: string; error?: string; configured?: boolean }>("checkout", { orderId: s.orderId, token: s.token, plan }),
@@ -68,4 +70,14 @@ export function fmtBytes(n: number): string {
   if (n > 1e9) return `${(n / 1e9).toFixed(1)} GB`;
   if (n > 1e6) return `${(n / 1e6).toFixed(0)} MB`;
   return `${Math.max(1, Math.round(n / 1e3))} KB`;
+}
+
+const VISITOR_KEY = "pmg-visitor";
+/** An anonymous per-device id for the funnel. Not tied to a person. */
+export function visitorId(): string {
+  try {
+    let v = localStorage.getItem(VISITOR_KEY);
+    if (!v) { v = crypto.randomUUID(); localStorage.setItem(VISITOR_KEY, v); }
+    return v;
+  } catch { return "anon"; }
 }

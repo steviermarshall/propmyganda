@@ -83,7 +83,7 @@ Each price sits just under the NYC market and just above marketplace freelancers
 | Tour poster / Canvas | $150 to $300 / $50 to $75 | |
 | **Release Package** | **$2,500 to $3,500**: cover art, visualizer, 6 clips, smart link, $500 managed ad spend, pitching credits | Fills the $1,000 to $15,000 gap, matches the observed bundle band |
 
-Three add-ons fit the current flow with the least work: the Release Package as a fourth public tier, and clip packs plus cover art as add-ons on the Tier step next to the existing ad-budget add-on. The rest are quotes, which is what the contact agent already routes to the team.
+Decision: the add-ons are a separate line of business and never appear inside the booking steps. They are offered after the booking is complete, on the done page and the prep page, next to the area guide and the tips, and quoted by request through the thread or the contact agent.
 
 ## Part 2 · How /start grades against the best-converting flows
 
@@ -166,6 +166,6 @@ Ten passes, five partials, nine fails. Against the 70% abandonment baseline and 
 | 7 | No reminders | Email at 7 days and 48 hours before the shoot and before the release; SMS if a phone was given, with the phone field explained as "for shoot-day texts" | One day, SMS needs Twilio or Resend SMS |
 | 8 | Deposit balance is manual | A balance-due date (7 days before the release), a Stripe payment link emailed automatically, release held until paid | One day |
 | 9 | Reschedule is manual | A self-serve reschedule link from the done page and the confirmation email, same rules as booking | Half a day |
-| 10 | Fourth tier | The Release Package at $2,500 to $3,500 between Mid and Viral, and clip packs plus cover art as add-ons on the Tier step | One day |
+| 10 | Add-ons unseen | After booking only: the add-on options on the done page and the prep page, next to the area guide and the tips, quoted by request. Never inside the booking steps | Half a day |
 
-Items 1 to 6 are the conversion work. Items 7 to 9 are the blueprint items still waiting on sign-off. Item 10 is Part 1 of this document landing in the product.
+Items 1 to 6 are the conversion work. Items 7 to 9 are the blueprint items still waiting on sign-off. Item 10 is Part 1 of this document, shown only after the booking is complete.

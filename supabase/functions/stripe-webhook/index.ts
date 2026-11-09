@@ -35,8 +35,11 @@ Deno.serve(async (req) => {
   if (order.paid_at) return ok({ received: true, duplicate: true });
 
   const paidStatus = order.payment_plan === "deposit" ? "deposit_paid" : "paid";
+  const cardholder = String(session.customer_details?.name ?? "").trim();
   await supabase.from("onboarding_orders").update({
     status: paidStatus, paid_at: new Date().toISOString(), stripe_payment_intent: session.payment_intent ?? null, stripe_session_id: session.id,
+    last_step: 6, step_at: new Date().toISOString(),
+    ...(cardholder && order.legal_name === order.artist_name ? { legal_name: cardholder } : {}),
   }).eq("id", order.id);
 
   const { patch, errors } = await fulfil(supabase, order as OrderRow, paidStatus);
