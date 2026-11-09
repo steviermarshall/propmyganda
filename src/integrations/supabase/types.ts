@@ -1115,6 +1115,9 @@ export type Database = {
           agreement_hash: string | null
           agreement_version: string | null
           artist_name: string
+          balance_method: string | null
+          balance_note: string | null
+          balance_paid_at: string | null
           catalogue_no: string | null
           client_token: string
           created_at: string
@@ -1155,7 +1158,9 @@ export type Database = {
           splits: Json | null
           status: string
           step_at: string
+          stripe_customer_id: string | null
           stripe_payment_intent: string | null
+          stripe_payment_method_id: string | null
           stripe_session_id: string | null
           sync_errors: string | null
           tier: string
@@ -1174,6 +1179,9 @@ export type Database = {
           agreement_hash?: string | null
           agreement_version?: string | null
           artist_name: string
+          balance_method?: string | null
+          balance_note?: string | null
+          balance_paid_at?: string | null
           catalogue_no?: string | null
           client_token?: string
           created_at?: string
@@ -1214,7 +1222,9 @@ export type Database = {
           splits?: Json | null
           status?: string
           step_at?: string
+          stripe_customer_id?: string | null
           stripe_payment_intent?: string | null
+          stripe_payment_method_id?: string | null
           stripe_session_id?: string | null
           sync_errors?: string | null
           tier: string
@@ -1233,6 +1243,9 @@ export type Database = {
           agreement_hash?: string | null
           agreement_version?: string | null
           artist_name?: string
+          balance_method?: string | null
+          balance_note?: string | null
+          balance_paid_at?: string | null
           catalogue_no?: string | null
           client_token?: string
           created_at?: string
@@ -1273,7 +1286,9 @@ export type Database = {
           splits?: Json | null
           status?: string
           step_at?: string
+          stripe_customer_id?: string | null
           stripe_payment_intent?: string | null
+          stripe_payment_method_id?: string | null
           stripe_session_id?: string | null
           sync_errors?: string | null
           tier?: string
