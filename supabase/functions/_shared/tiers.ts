@@ -70,7 +70,7 @@ export const TIERS: Tier[] = [
       "Add-on: extra ad budget, any amount",
     ],
     adBudgetAddOn: true,
-    depositAllowed: false,
+    depositAllowed: true,
     financing: true,
     bookings: ["post", "session"],
     public: true,

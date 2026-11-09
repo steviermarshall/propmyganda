@@ -4,6 +4,7 @@
 export interface FollowupOrder {
   id: string; status: string; email: string | null; created_at: string; paid_at: string | null;
   session_at: string | null; post_at: string | null; followups: Record<string, string> | null; last_step?: number | null;
+  payment_plan?: string; total_cents?: number; due_now_cents?: number; balance_paid_at?: string | null; stripe_customer_id?: string | null; stripe_payment_method_id?: string | null;
 }
 
 export type FollowupKey = "recovery1" | "recovery2" | "shoot7" | "shoot48" | "release7" | "release48";
@@ -40,4 +41,18 @@ export function dueFollowups(o: FollowupOrder, now = new Date()): FollowupKey[] 
 
 export function nyWhen(iso: string): string {
   return new Date(iso).toLocaleString("en-US", { timeZone: "America/New_York", weekday: "long", month: "long", day: "numeric", hour: "numeric", minute: "2-digit" }) + " ET";
+}
+
+export const BALANCE_PULL_BEFORE_MS = 36 * H; // the day before: the hourly run inside 36 hours charges once
+
+/** A deposit order whose balance is still open and whose first date (shoot, else release) is inside the pull window. */
+export function balanceDue(o: FollowupOrder, now = new Date()): { cents: number; at: string } | null {
+  if (o.payment_plan !== "deposit" || !o.paid_at || o.balance_paid_at) return null;
+  const cents = (o.total_cents ?? 0) - (o.due_now_cents ?? 0);
+  if (cents <= 0) return null;
+  const at = o.session_at ?? o.post_at;
+  if (!at) return null;
+  const left = new Date(at).getTime() - now.getTime();
+  if (left <= 0 || left > BALANCE_PULL_BEFORE_MS) return null;
+  return { cents, at };
 }

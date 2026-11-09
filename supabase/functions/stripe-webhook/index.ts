@@ -32,13 +32,31 @@ Deno.serve(async (req) => {
   const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
   const { data: order } = await supabase.from("onboarding_orders").select("*").eq("id", orderId).maybeSingle();
   if (!order) return new Response("Order not found", { status: 404 });
+
+  // The balance on a deposit order: mark it and stop. The booking was fulfilled when the deposit landed.
+  if (session.metadata?.kind === "balance") {
+    if (order.balance_paid_at) return ok({ received: true, duplicate: true });
+    await supabase.from("onboarding_orders").update({ balance_paid_at: new Date().toISOString(), balance_method: "link", status: "paid", balance_note: session.payment_intent ?? null }).eq("id", order.id);
+    return ok({ received: true, balance: true });
+  }
   if (order.paid_at) return ok({ received: true, duplicate: true });
+
+  // A deposit saved the card (setup_future_usage); keep the customer and payment method for the day-before pull.
+  let saved: Record<string, unknown> = {};
+  if (session.metadata?.kind === "deposit" && session.customer && session.payment_intent) {
+    try {
+      const key = Deno.env.get("STRIPE_SECRET_KEY");
+      const r = await fetch(`https://api.stripe.com/v1/payment_intents/${session.payment_intent}`, { headers: { Authorization: `Bearer ${key}` } });
+      const pi = await r.json();
+      if (r.ok && pi.payment_method) saved = { stripe_customer_id: session.customer, stripe_payment_method_id: pi.payment_method };
+    } catch (e) { console.error("payment method lookup failed", e instanceof Error ? e.message : e); }
+  }
 
   const paidStatus = order.payment_plan === "deposit" ? "deposit_paid" : "paid";
   const cardholder = String(session.customer_details?.name ?? "").trim();
   await supabase.from("onboarding_orders").update({
     status: paidStatus, paid_at: new Date().toISOString(), stripe_payment_intent: session.payment_intent ?? null, stripe_session_id: session.id,
-    last_step: 6, step_at: new Date().toISOString(),
+    last_step: 6, step_at: new Date().toISOString(), ...saved,
     ...(cardholder && order.legal_name === order.artist_name ? { legal_name: cardholder } : {}),
   }).eq("id", order.id);
 

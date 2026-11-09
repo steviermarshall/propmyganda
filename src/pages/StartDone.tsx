@@ -4,7 +4,6 @@ import SEO from "@/components/SEO";
 import { api, fmtSlot, saveSession, type Order } from "@/lib/onboarding";
 import { formatUsd, getTier } from "@/lib/tiers";
 import { Note } from "@/components/start/ui";
-import { AreaBlocks, TipsBlocks } from "@/components/start/prep";
 import AddOns from "@/components/start/AddOns";
 
 export default function StartDone() {
@@ -50,8 +49,9 @@ export default function StartDone() {
                 ["Artist", order.artist_name],
                 ["Tier", `${tier?.name ?? order.tier} · ${formatUsd(order.total_cents)}`],
                 ["Paid", paid ? `${formatUsd(order.due_now_cents)}${order.payment_plan === "deposit" ? " deposit" : ""}` : "pending"],
-                ["Release", order.post_at ? `${fmtSlot(order.post_at)} ET` : "we'll place you by email"],
                 ...(order.session_at ? [["Shoot", `${fmtSlot(order.session_at)} ET · 30 min`]] : []),
+                ["Release", order.post_at ? `${fmtSlot(order.post_at)} ET` : "we'll place you by email"],
+                ...(order.payment_plan === "deposit" ? [["Balance", order.balance_paid_at ? `paid · ${order.balance_method ?? ""}` : `${formatUsd(order.total_cents - order.due_now_cents)} · the day before the shoot, by link, or cash`]] : []),
                 ["Files", String(order.uploads?.length ?? 0)],
                 ["Status", order.status.replace("_", " ")],
               ].map(([k, v]) => (
@@ -68,18 +68,13 @@ export default function StartDone() {
             <p>02 — Edits get made. Revisions happen in that window, not the day of.</p>
             <p>03 — Your record goes out on the date you picked. Collab posts push to TikTok, Instagram and YouTube.</p>
             <p>04 — Ad report or dashboard link lands the way you asked.</p>
-            <p className="pt-2 text-[#9A9A9E]">Before your date: accounts public, collab requests on, accept the invite when it comes through.</p>
+            <p className="pt-2 text-[#9A9A9E]">Your email has the full guide: getting to the room, what's around it, and how to make the post land. It's also at <Link to="/start/prep" className="text-[#FFD230] underline">propmyganda.com/start/prep</Link>.</p>
+            {order?.payment_plan === "deposit" && !order.balance_paid_at && <p className="pt-2"><Link to={`/start/balance?order=${orderId}&token=${token}`} className="text-[#FFD230] underline">Pay the balance now</Link> — or we charge the card the day before, or bring cash.</p>}
+            {params.get("balance") === "paid" && <p className="pt-2 text-[#FFD230]">Balance paid. You're paid in full.</p>}
           </div>
         </div>
 
-        <div className="mt-12">
-          <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-[#9A9A9E]">Your day in DUMBO</p>
-          <AreaBlocks from={1} />
-          <p className="mt-10 font-mono text-[10px] uppercase tracking-[0.3em] text-[#9A9A9E]">Make it land</p>
-          <TipsBlocks from={3} />
-          {paid && <AddOns orderRef={order?.catalogue_no} />}
-          <p className="mt-4 font-mono text-[11px] uppercase tracking-[0.14em] text-[#9A9A9E]">Keep this: <Link to="/start/prep" className="text-[#FFD230] underline">propmyganda.com/start/prep</Link></p>
-        </div>
+        {paid && <div className="mt-12"><AddOns orderRef={order?.catalogue_no} /></div>}
 
         <div className="max-w-xl">
 

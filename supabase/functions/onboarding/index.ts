@@ -139,8 +139,8 @@ async function calendarBusy(fromISO: string, toISO: string): Promise<Busy[]> {
 }
 
 /** Bump with every change so a GET on the function shows which build is live (Lovable only redeploys functions it notices changed). */
-const FUNCTION_VERSION = "2026-11-09.1";
-const ACTIONS = ["tiers", "agreement", "track", "invite-check", "create", "update", "ig-lookup", "upload-url", "upload-done", "availability", "checkout", "confirm", "status"];
+const FUNCTION_VERSION = "2026-11-09.2";
+const ACTIONS = ["tiers", "agreement", "track", "invite-check", "create", "update", "ig-lookup", "upload-url", "upload-done", "availability", "checkout", "balance-link", "confirm", "status"];
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -290,17 +290,20 @@ Deno.serve(async (req) => {
       const q = quote(order.tier, order.ad_budget_cents, (str(body.plan, 10) as PaymentPlan) || order.payment_plan);
       if (q.dueNowCents <= 0) return bad("Nothing to pay on this plan — use confirm");
       await supabase.from("onboarding_orders").update({ payment_plan: q.plan, due_now_cents: q.dueNowCents, total_cents: q.totalCents, status: "pending_payment" }).eq("id", order.id);
-      const label = q.plan === "deposit" ? `${q.tier.name} — 50% deposit` : `${q.tier.name} tier`;
-      const description = [`PMG ${q.tier.name} · ${order.catalogue_no}`, q.adBudgetCents ? `incl. ${formatUsd(q.adBudgetCents)} extra ad budget` : "", q.plan === "deposit" ? `Balance ${formatUsd(q.balanceCents)} due before posting` : ""].filter(Boolean).join(" · ");
-      const methods = ["card", ...(q.tier.financing && q.dueNowCents >= 5_000 && q.dueNowCents <= 3_000_000 ? ["affirm"] : [])];
+      const label = q.plan === "deposit" ? `${q.tier.name} — 50% deposit, locks your date` : `${q.tier.name} tier`;
+      const description = [`PMG ${q.tier.name} · ${order.catalogue_no}`, q.adBudgetCents ? `incl. ${formatUsd(q.adBudgetCents)} extra ad budget` : "", q.plan === "deposit" ? `Balance ${formatUsd(q.balanceCents)} charged to this card the day before the shoot, or paid by link or cash` : ""].filter(Boolean).join(" · ");
+      // A deposit saves the card so the balance can be pulled the day before; Affirm cannot be saved, so it is full-pay only.
+      const deposit = q.plan === "deposit";
+      const methods = ["card", ...(!deposit && q.tier.financing && q.dueNowCents >= 5_000 && q.dueNowCents <= 3_000_000 ? ["affirm"] : [])];
       const params = {
         mode: "payment",
         customer_email: order.email,
         client_reference_id: order.id,
         payment_method_types: methods,
         line_items: [{ quantity: 1, price_data: { currency: "usd", unit_amount: q.dueNowCents, product_data: { name: label, description } } }],
-        metadata: { order_id: order.id, tier: order.tier, plan: q.plan, catalogue_no: order.catalogue_no ?? "" },
-        payment_intent_data: { description: `${order.artist_name} · ${label}`, metadata: { order_id: order.id } },
+        metadata: { order_id: order.id, tier: order.tier, plan: q.plan, kind: deposit ? "deposit" : "full", catalogue_no: order.catalogue_no ?? "" },
+        payment_intent_data: { description: `${order.artist_name} · ${label}`, metadata: { order_id: order.id, kind: deposit ? "deposit" : "full" }, ...(deposit ? { setup_future_usage: "off_session" } : {}) },
+        ...(deposit ? { customer_creation: "always", custom_text: { submit: { message: `By paying the deposit you agree that PMG charges the remaining ${formatUsd(q.balanceCents)} to this card the day before your shoot, unless you pay it earlier by link or in cash.` } } } : {}),
         success_url: `${site}/start/done?order=${order.id}&token=${order.client_token}`,
         cancel_url: `${site}/start?resume=${order.id}&token=${order.client_token}`,
       };
@@ -313,6 +316,30 @@ Deno.serve(async (req) => {
       if (!res.ok) return json({ error: session.error?.message ?? "Stripe error" }, 502);
       await supabase.from("onboarding_orders").update({ stripe_session_id: session.id }).eq("id", order.id);
       return json({ url: session.url, dueNowCents: q.dueNowCents });
+    }
+
+    // Balance link: pay the remaining amount on a deposit order any time before the date.
+    if (action === "balance-link") {
+      const key = Deno.env.get("STRIPE_SECRET_KEY");
+      if (!key) return json({ error: "Payments are not switched on yet (STRIPE_SECRET_KEY missing)", configured: false }, 503);
+      const site = Deno.env.get("SITE_URL") ?? "https://propmyganda.com";
+      const o = order as unknown as { balance_paid_at?: string | null };
+      const cents = order.total_cents - order.due_now_cents;
+      if (order.payment_plan !== "deposit" || !order.paid_at) return bad("No balance on this order");
+      if (o.balance_paid_at || cents <= 0) return json({ paid: true });
+      const res = await fetch("https://api.stripe.com/v1/checkout/sessions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/x-www-form-urlencoded", "Idempotency-Key": `balance-link:${order.id}:${cents}:${new Date().toISOString().slice(0, 13)}` },
+        body: formEncode({
+          mode: "payment", customer_email: order.email, client_reference_id: order.id, payment_method_types: ["card"],
+          line_items: [{ quantity: 1, price_data: { currency: "usd", unit_amount: cents, product_data: { name: `PMG ${getTier(order.tier)?.name ?? order.tier} — balance`, description: `${order.catalogue_no} · remaining after your deposit` } } }],
+          metadata: { order_id: order.id, kind: "balance" }, payment_intent_data: { description: `${order.artist_name} · balance`, metadata: { order_id: order.id, kind: "balance" } },
+          success_url: `${site}/start/done?order=${order.id}&token=${order.client_token}&balance=paid`, cancel_url: `${site}/start/done?order=${order.id}&token=${order.client_token}`,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) return json({ error: data.error?.message ?? `Stripe ${res.status}` }, 502);
+      return json({ url: data.url, cents });
     }
 
     if (action === "confirm") {

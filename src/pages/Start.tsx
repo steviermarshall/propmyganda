@@ -7,8 +7,6 @@ import { api, fmtBytes, fmtSlot, loadSession, saveSession, visitorId, type IgPro
 import { Button, ErrorLine, Input, Note, Select, Textarea, Toggle } from "@/components/start/ui";
 import { AreaBlocks } from "@/components/start/prep";
 import QuestionsDrawer from "@/components/start/QuestionsDrawer";
-import { ROSTER_PROOF } from "@/lib/roster";
-import { useSpotifyCatalog, formatCount } from "@/lib/spotifyCatalog";
 
 const STEPS = ["Tier", "Details", "Upload", "Schedule", "Pay"] as const;
 const PRO_OPTIONS = ["", "BMI", "ASCAP", "SESAC", "Other", "None"];
@@ -26,35 +24,6 @@ function Stepper({ step }: { step: number }) {
 }
 
 // ── 1. Tier ────────────────────────────────────────────────────────────────
-/** Proof next to the prices: the roster with live Spotify numbers, and the rules that hold. */
-function Proof() {
-  const { data } = useSpotifyCatalog(ROSTER_PROOF.map((a) => ({ id: a.id, artistId: a.spotifyArtistId, trackId: a.spotifyTrackId })));
-  const artists = ROSTER_PROOF.map((a) => {
-    const c = data?.artists?.[a.id];
-    return { ...a, followers: c?.followers ?? null, url: c?.url ?? (a.spotifyArtistId ? `https://open.spotify.com/artist/${a.spotifyArtistId}` : "/artists") };
-  });
-  return (
-    <div className="mt-6 grid gap-px bg-[#F2EFE9]/15 md:grid-cols-[1fr_1fr]">
-      <div className="bg-[#0B0B0B] p-4">
-        <span className="block font-mono text-[10px] uppercase tracking-[0.18em] text-[#9A9A9E]">On the roster · released with PMG</span>
-        <ul className="mt-2 flex flex-wrap gap-x-5 gap-y-1">
-          {artists.map((a) => (
-            <li key={a.id} className="text-sm text-[#F2EFE9]">
-              <a href={a.url} target="_blank" rel="noreferrer" className="hover:text-[#FFD230]">{a.name}</a>
-              {a.followers !== null && <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-[#9A9A9E]"> · {formatCount(a.followers)} on Spotify</span>}
-            </li>
-          ))}
-          <li className="text-sm"><Link to="/artists" className="text-[#FFD230] underline">The roster →</Link></li>
-        </ul>
-      </div>
-      <div className="bg-[#0B0B0B] p-4 font-mono text-[10px] uppercase leading-5 tracking-[0.14em] text-[#9A9A9E]">
-        <span className="block text-[#F2EFE9]">The rules</span>
-        Your date is held the moment you pay. Move it free up to 7 days before the shoot. Payments by Stripe: cards, Apple Pay, Google Pay, Link, Affirm where shown. You keep your masters.
-      </div>
-    </div>
-  );
-}
-
 function priceLabel(t: Tier): string {
   if (t.revenueShare) return "$0 up front";
   if (t.inviteOnly) return "On us";
@@ -95,7 +64,16 @@ function TierStep({ tier, setTier, adBudget, setAdBudget, onNext, invite }: { ti
         })}
       </div>
 
-      <Proof />
+      <div className="mt-6 grid gap-px bg-[#F2EFE9]/15 md:grid-cols-2">
+        <div className="bg-[#0B0B0B] p-4">
+          <span className="block font-mono text-[10px] uppercase tracking-[0.18em] text-[#9A9A9E]">What it looks like</span>
+          <Link to="/artists" className="mt-1 block text-sm text-[#FFD230] underline">See the previous highlighted videos →</Link>
+        </div>
+        <div className="bg-[#0B0B0B] p-4 font-mono text-[10px] uppercase leading-5 tracking-[0.14em] text-[#9A9A9E]">
+          <span className="block text-[#F2EFE9]">The rules</span>
+          A 50% deposit locks your date; the rest the day before, by link, or in cash. Move the shoot free up to 7 days out. Payments by Stripe. You keep your masters.
+        </div>
+      </div>
 
       {q.tier.adBudgetAddOn && (
         <div className="mt-6 border border-[#F2EFE9]/30 p-5">
@@ -156,8 +134,8 @@ function IgCard({ p }: { p: IgProfile }) {
   );
 }
 
-function DetailsStep({ initial, busy, onBack, onSubmit, forceDistribution }: { initial: Details; busy: boolean; onBack: () => void; onSubmit: (d: Details) => void; forceDistribution: boolean }) {
-  const [d, setD] = useState<Details>(forceDistribution ? { ...initial, wants_distribution: true } : initial);
+function DetailsStep({ initial, busy, onBack, onSubmit, forceDistribution, showAdResults }: { initial: Details; busy: boolean; onBack: () => void; onSubmit: (d: Details) => void; forceDistribution: boolean; showAdResults: boolean }) {
+  const [d, setD] = useState<Details>({ ...initial, wants_distribution: forceDistribution });
   const [ig, setIg] = useState<IgProfile | null>(null);
   const [igBusy, setIgBusy] = useState(false);
   const [showLinks, setShowLinks] = useState(!!(initial.tiktok_url || initial.youtube_url));
@@ -225,8 +203,6 @@ function DetailsStep({ initial, busy, onBack, onSubmit, forceDistribution }: { i
       </div>
       <Input id="phone" name="phone" label="Phone" hint="for shoot-day texts only" optional type="tel" inputMode="tel" autoComplete="tel" value={d.phone} onChange={(e) => set("phone", e.target.value)} onBlur={check("phone")} error={errors.phone} />
       <Input id="track_title" name="track_title" label="Track title" hint="exactly as it goes live · can come later" optional value={d.track_title} onChange={(e) => set("track_title", e.target.value)} />
-      <Toggle label="Explicit" hint="be honest, a wrong answer gets throttled" checked={d.explicit} onChange={(v) => set("explicit", v)} />
-
       {!showLinks ? (
         <button type="button" onClick={() => setShowLinks(true)} className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#FFD230]">+ Add TikTok or YouTube</button>
       ) : (
@@ -236,19 +212,19 @@ function DetailsStep({ initial, busy, onBack, onSubmit, forceDistribution }: { i
         </div>
       )}
 
-      <Select label="Ad results" hint="how you want to see what the ad dollars did" value={d.report_preference} onChange={(e) => set("report_preference", e.target.value as Details["report_preference"])}>
-        <option value="email">Emailed report when the run ends</option>
-        <option value="dashboard">Live shared dashboard link</option>
-        <option value="both">Both</option>
-      </Select>
+      {showAdResults && (
+        <Select label="Ad results" hint="how you want to see what the ad dollars did" value={d.report_preference} onChange={(e) => set("report_preference", e.target.value as Details["report_preference"])}>
+          <option value="email">Emailed report when the run ends</option>
+          <option value="dashboard">Live shared dashboard link</option>
+          <option value="both">Both</option>
+        </Select>
+      )}
 
-      {forceDistribution ? (
+      {forceDistribution && (
         <div className="border border-[#FFD230] px-3 py-3">
           <span className="block text-[15px] text-[#F2EFE9]">DSP Release · PMG distribution included</span>
           <span className="block font-mono text-[10px] uppercase tracking-[0.14em] text-[#9A9A9E]">Released under Propmyganda on every DSP · the release agreement below is part of this plan</span>
         </div>
-      ) : (
-        <Toggle label="Add PMG distribution to DSPs" hint="Spotify, Apple, Tidal and the rest · fills the release agreement" checked={d.wants_distribution} onChange={(v) => set("wants_distribution", v)} />
       )}
       {d.wants_distribution && (
         <div className="space-y-5 border border-[#F2EFE9]/30 p-4">
@@ -442,30 +418,36 @@ function ScheduleStep({ session, needsSession, postAt, sessionAt, onBack, onNext
     if (needsSession) api.availability(session, "session").then((r) => setSess(r.slots)).catch(() => setSess([]));
   }, [session, needsSession]);
 
+  const [skipRelease, setSkipRelease] = useState(false);
+  const shootReady = !needsSession || !!pickSess || (sess?.length ?? 0) === 0;
   return (
     <div className="space-y-10">
-      <div>
-        <p className="mb-1 font-display text-2xl uppercase leading-none tracking-[-0.03em] text-[#F2EFE9]">Release date and time</p>
-        <Note>Posts go out at 3, 4 or 6pm New York. The date you pick is the date. It comes off the board for everyone else.</Note>
-        <div className="mt-4"><DayTimePicker slots={post} value={pickPost} onPick={setPickPost} allTimes={RELEASE_TIMES} /></div>
-        {pickPost && <p className="mt-3 font-mono text-[11px] uppercase tracking-[0.18em] text-[#FFD230]">Release · {fmtSlot(pickPost)} ET</p>}
-      </div>
-
       {needsSession && (
         <div>
           <p className="mb-1 font-display text-2xl uppercase leading-none tracking-[-0.03em] text-[#F2EFE9]">Book your shoot</p>
           <Note>30 minutes in the room, DUMBO. Monday to Friday, 1 to 8pm, on the hour. Live from the PMG calendar: a struck-out time is already taken.</Note>
           <div className="mt-4"><DayTimePicker slots={sess} value={pickSess} onPick={setPickSess} allTimes={SHOOT_TIMES} /></div>
           {pickSess && <p className="mt-3 font-mono text-[11px] uppercase tracking-[0.18em] text-[#FFD230]">Shoot · {fmtSlot(pickSess)} ET · 30 min</p>}
-          <p className="mt-3 font-mono text-[10px] uppercase tracking-[0.18em] text-[#9A9A9E]">
-            Parking, the subway and what to do before and after: <Link to="/start/prep" target="_blank" className="text-[#FFD230] underline">the prep page</Link>.
-          </p>
         </div>
       )}
 
+      <div>
+        <p className="mb-1 font-display text-2xl uppercase leading-none tracking-[-0.03em] text-[#F2EFE9]">Release date and time</p>
+        <Note>Posts go out at 3, 4 or 6pm New York. Pick it now and it comes off the board for everyone else, or skip and we place you by email.</Note>
+        {!skipRelease ? (
+          <>
+            <div className="mt-4"><DayTimePicker slots={post} value={pickPost} onPick={setPickPost} allTimes={RELEASE_TIMES} /></div>
+            {pickPost && <p className="mt-3 font-mono text-[11px] uppercase tracking-[0.18em] text-[#FFD230]">Release · {fmtSlot(pickPost)} ET</p>}
+            <button type="button" onClick={() => { setSkipRelease(true); setPickPost(null); }} className="mt-3 font-mono text-[10px] uppercase tracking-[0.18em] text-[#9A9A9E] underline">Not sure yet · place me by email</button>
+          </>
+        ) : (
+          <p className="mt-3 font-mono text-[11px] uppercase tracking-[0.18em] text-[#FFD230]">Release · to be placed by email <button type="button" onClick={() => setSkipRelease(false)} className="ml-2 text-[#9A9A9E] underline">pick a date instead</button></p>
+        )}
+      </div>
+
       <div className="flex items-center justify-between gap-4 border-t border-[#F2EFE9]/20 pt-6">
         <Button tone="ghost" onClick={onBack}>← Back</Button>
-        <Button onClick={() => onNext(pickPost, pickSess)} disabled={(!pickPost && (post?.length ?? 0) > 0) || (needsSession && !pickSess && (sess?.length ?? 0) > 0)}>Continue →</Button>
+        <Button onClick={() => onNext(skipRelease ? null : pickPost, pickSess)} disabled={!shootReady}>Continue →</Button>
       </div>
     </div>
   );
@@ -473,7 +455,8 @@ function ScheduleStep({ session, needsSession, postAt, sessionAt, onBack, onNext
 
 // ── 5. Pay ─────────────────────────────────────────────────────────────────
 function PayStep({ session, order, onBack }: { session: Session; order: Order; onBack: () => void }) {
-  const [plan, setPlan] = useState<PaymentPlan>(order.payment_plan);
+  const depositOk = quote(order.tier, order.ad_budget_cents, "deposit").plan === "deposit";
+  const [plan, setPlan] = useState<PaymentPlan>(depositOk && order.payment_plan === "full" && !order.paid_at ? "deposit" : order.payment_plan);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const q = quote(order.tier, order.ad_budget_cents, plan);
@@ -518,14 +501,14 @@ function PayStep({ session, order, onBack }: { session: Session; order: Order; o
 
       {q.tier.depositAllowed && (
         <div className="grid gap-2 sm:grid-cols-2">
-          {(["full", "deposit"] as PaymentPlan[]).map((p) => {
+          {(["deposit", "full"] as PaymentPlan[]).map((p) => {
             const pq = quote(order.tier, order.ad_budget_cents, p);
             const active = plan === p;
             return (
               <button key={p} type="button" onClick={() => setPlan(p)} aria-pressed={active} className="border p-4 text-left" style={{ borderColor: active ? "#FFD230" : "rgba(242,239,233,0.3)" }}>
-                <span className="block font-mono text-[10px] uppercase tracking-[0.18em]" style={{ color: active ? "#FFD230" : "#9A9A9E" }}>{p === "full" ? "Pay in full" : "50% deposit"}</span>
+                <span className="block font-mono text-[10px] uppercase tracking-[0.18em]" style={{ color: active ? "#FFD230" : "#9A9A9E" }}>{p === "full" ? "Pay in full" : "50% deposit · locks your date"}</span>
                 <span className="mt-1 block font-display text-3xl uppercase leading-none tracking-[-0.03em] text-[#F2EFE9]">{formatUsd(pq.dueNowCents)}</span>
-                <span className="mt-1 block font-mono text-[10px] uppercase tracking-[0.12em] text-[#9A9A9E]">{p === "full" ? "nothing else owed" : `${formatUsd(pq.balanceCents)} before posting`}</span>
+                <span className="mt-1 block font-mono text-[10px] uppercase leading-4 tracking-[0.12em] text-[#9A9A9E]">{p === "full" ? `nothing else owed${q.tier.financing ? " · Affirm available" : ""}` : `${formatUsd(pq.balanceCents)} the day before the shoot, charged to this card · or pay it earlier by link, or in cash`}</span>
               </button>
             );
           })}
@@ -538,7 +521,7 @@ function PayStep({ session, order, onBack }: { session: Session; order: Order; o
         <div className="grid gap-px bg-[#F2EFE9]/15 sm:grid-cols-3">
           {[
             ["Payments by Stripe", `Cards · Apple Pay · Google Pay · Link${q.tier.financing && q.dueNowCents >= AFFIRM_MIN_CENTS ? " · Affirm, pay over time" : ""}`],
-            ["Your date, held", "Paid means booked. Move the shoot free up to 7 days before."],
+            ["Your date, held", "Deposit or full, paid means booked. Move the shoot free up to 7 days before."],
             ["A person on the other end", "Jay confirms by email. Questions now: the chat, bottom left."],
           ].map(([k, v]) => (
             <div key={k} className="bg-[#0B0B0B] p-3">
@@ -661,7 +644,7 @@ export default function Start() {
             {err && <div className="mb-4"><ErrorLine>{err}</ErrorLine></div>}
             {inviteErr && <div className="mb-4"><ErrorLine>{inviteErr} — showing the public plans instead.</ErrorLine></div>}
             {step === 0 && <TierStep tier={tier} setTier={setTier} adBudget={adBudget} setAdBudget={setAdBudget} onNext={() => go(1)} invite={invite} />}
-            {step === 1 && <DetailsStep initial={order ? { ...details, artist_name: order.artist_name, legal_name: order.legal_name, email: order.email, phone: order.phone ?? "", instagram_handle: order.instagram_handle ?? "", tiktok_url: order.tiktok_url ?? "", youtube_url: order.youtube_url ?? "", track_title: order.track_title ?? "", explicit: order.explicit, wants_distribution: order.wants_distribution } : details} busy={busy} onBack={() => go(0)} onSubmit={submitDetails} forceDistribution={!!tierDef.distribution} />}
+            {step === 1 && <DetailsStep initial={order ? { ...details, artist_name: order.artist_name, legal_name: order.legal_name, email: order.email, phone: order.phone ?? "", instagram_handle: order.instagram_handle ?? "", tiktok_url: order.tiktok_url ?? "", youtube_url: order.youtube_url ?? "", track_title: order.track_title ?? "", explicit: order.explicit, wants_distribution: order.wants_distribution } : details} busy={busy} onBack={() => go(0)} onSubmit={submitDetails} forceDistribution={!!tierDef.distribution} showAdResults={tier === "viral" || adBudget > 0} />}
             {step === 2 && session && <UploadStep session={session} uploads={uploads} setUploads={(u) => setOrder((o) => (o ? { ...o, uploads: u } : o))} onBack={() => go(1)} onNext={() => go(3)} />}
             {step === 3 && session && <ScheduleStep session={session} needsSession={tierDef.bookings.includes("session")} postAt={order?.post_at ?? null} sessionAt={order?.session_at ?? null} onBack={() => go(2)} onNext={submitSchedule} />}
             {step === 4 && session && order && <PayStep session={session} order={order} onBack={() => go(3)} />}

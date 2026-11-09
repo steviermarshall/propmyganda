@@ -92,3 +92,12 @@ platforms, once per client:
 - Add-ons are shown only after a booking is complete: on the done page and the prep page, after the area guide and the tips, and in the confirmation email. Never inside the booking steps. Data in `_shared/addons.ts` and `src/lib/addons.ts`.
 
 Deploy after these changes: `onboarding`, `stripe-webhook`, `onboarding-followups`, `contact-agent`. Run migration `20261109_019` and `supabase/pmg_onboarding_cron.sql`.
+
+
+## Deposits and balances
+
+Every paid plan offers a 50% deposit, shown first. The deposit checkout saves the card (Stripe `setup_future_usage: off_session`, consent text on the checkout) and the webhook stores the customer and payment method. The hourly follow-ups job charges the balance once inside 36 hours of the shoot (or the release if there is no shoot); if the charge fails or no card was saved, the artist gets a pay link (`/start/balance?order=&token=`, the `balance-link` action) and the reminder emails carry the same link. Staff mark cash at `/admin/funnel` → Balances open, which stops any charge. Affirm is full-pay only, since Stripe cannot save it.
+
+Also in this round: no Explicit flag; ad-results preference only on Viral or when an ad budget is added; the distribution toggle is gone from paid plans (DSP Release is the only distribution path); the schedule step books the shoot first and the release can be skipped ("place me by email"); the prep guide is in the confirmation email and under Pay, the done page shows the receipt, next steps and the add-ons.
+
+Deploy after these changes: `onboarding`, `stripe-webhook`, `onboarding-followups`. Run migration `20261109_020`.

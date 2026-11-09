@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import CrmLayout from "@/components/crm/CrmLayout";
@@ -12,12 +13,21 @@ const db = supabase as unknown as SupabaseClient;
 const STEP_NAMES = ["", "Tier", "Details", "Upload", "Schedule", "Pay", "Paid"];
 
 interface Ev { visitor: string; step: number; tier: string | null; created_at: string }
-interface Ord { id: string; created_at: string; status: string; tier: string; last_step: number | null; email: string; artist_name: string; total_cents: number; paid_at: string | null; followups: Record<string, string> | null; catalogue_no: string | null }
+interface Ord { id: string; created_at: string; status: string; tier: string; last_step: number | null; email: string; artist_name: string; total_cents: number; due_now_cents: number; payment_plan: string; paid_at: string | null; followups: Record<string, string> | null; catalogue_no: string | null; session_at: string | null; post_at: string | null; balance_paid_at: string | null; balance_method: string | null; balance_note: string | null }
 
 function pct(a: number, b: number) { return b ? `${Math.round((a / b) * 100)}%` : "—"; }
 
 export default function Funnel() {
+  const qc = useQueryClient();
   const [days, setDays] = useState(30);
+  const markCash = useMutation({
+    mutationFn: async (o: Ord) => {
+      const { error } = await db.from("onboarding_orders").update({ balance_paid_at: new Date().toISOString(), balance_method: "cash", status: "paid", balance_note: "cash, marked by staff" }).eq("id", o.id);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["funnel-orders"] }); toast.success("Marked paid in cash"); },
+    onError: (e: Error) => toast.error(e.message),
+  });
   const since = new Date(Date.now() - days * 86400_000).toISOString();
 
   const { data: events = [] } = useQuery({
@@ -31,7 +41,7 @@ export default function Funnel() {
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ["funnel-orders", days],
     queryFn: async () => {
-      const { data, error } = await db.from("onboarding_orders").select("id,created_at,status,tier,last_step,email,artist_name,total_cents,paid_at,followups,catalogue_no").gte("created_at", since).order("created_at", { ascending: false }).limit(2000);
+      const { data, error } = await db.from("onboarding_orders").select("id,created_at,status,tier,last_step,email,artist_name,total_cents,due_now_cents,payment_plan,paid_at,followups,catalogue_no,session_at,post_at,balance_paid_at,balance_method,balance_note").gte("created_at", since).order("created_at", { ascending: false }).limit(2000);
       if (error) throw new Error(error.message);
       return (data ?? []) as Ord[];
     },
@@ -47,6 +57,7 @@ export default function Funnel() {
     return { t, drafts: os.length, paid: p.length, revenue: p.reduce((s, o) => s + o.total_cents, 0) };
   }).filter((r) => r.drafts > 0);
   const stalled = orders.filter((o) => !o.paid_at && !["cancelled", "done"].includes(o.status));
+  const balances = orders.filter((o) => o.paid_at && o.payment_plan === "deposit" && !o.balance_paid_at && o.total_cents > o.due_now_cents);
 
   return (
     <CrmLayout title="Funnel" accent={ACCENT}>
@@ -86,6 +97,23 @@ export default function Funnel() {
               ))}
             </tbody>
           </table>
+        )}
+
+        <h2 className="mt-10 mb-1 text-lg font-bold">Balances open</h2>
+        <p className="mb-3 text-xs opacity-50">Deposit orders. The card is charged the day before the shoot; if that fails the artist gets a pay link. Mark cash here so nothing is charged.</p>
+        {balances.length === 0 ? <p className="text-sm opacity-50">No open balances.</p> : (
+          <ul className="space-y-1">
+            {balances.map((o) => (
+              <li key={o.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 border border-white/15 px-3 py-2 text-sm">
+                <span className="font-semibold">{o.artist_name}</span>
+                <span className="text-xs opacity-60">{o.catalogue_no}</span>
+                <span className="tabular-nums" style={{ color: ACCENT }}>${((o.total_cents - o.due_now_cents) / 100).toLocaleString()}</span>
+                <span className="text-[10px] uppercase tracking-widest opacity-60">{o.session_at ? `shoot ${new Date(o.session_at).toLocaleDateString()}` : o.post_at ? `release ${new Date(o.post_at).toLocaleDateString()}` : "no date yet"}</span>
+                {o.balance_note && <span className="text-[10px] opacity-50">{o.balance_note}</span>}
+                <button type="button" onClick={() => markCash.mutate(o)} className="ml-auto border border-white/30 px-2.5 py-1 text-xs uppercase tracking-widest hover:border-white">Paid in cash</button>
+              </li>
+            ))}
+          </ul>
         )}
 
         <h2 className="mt-10 mb-1 text-lg font-bold">Stopped before paying</h2>

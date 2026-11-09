@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { dueFollowups, type FollowupOrder } from "../../supabase/functions/_shared/followups";
-import { TIERS, monthlyEstimateCents } from "../../supabase/functions/_shared/tiers";
+import { balanceDue, dueFollowups, type FollowupOrder } from "../../supabase/functions/_shared/followups";
+import { TIERS, monthlyEstimateCents, quote } from "../../supabase/functions/_shared/tiers";
 
 const now = new Date("2026-11-09T15:00:00Z");
 const base: FollowupOrder = { id: "o1", status: "draft", email: "a@b.co", created_at: "2026-11-09T13:30:00Z", paid_at: null, session_at: null, post_at: null, followups: {} };
@@ -38,5 +38,20 @@ describe("pay over time", () => {
     expect(monthlyEstimateCents(55_000)).toBe(4_584);
     expect(monthlyEstimateCents(100_000)).toBe(8_334);
     expect(monthlyEstimateCents(1_500_000)).toBe(125_000);
+  });
+});
+
+describe("deposit balance", () => {
+  const dep: FollowupOrder = { ...base, status: "deposit_paid", paid_at: ago(200), payment_plan: "deposit", total_cents: 55_000, due_now_cents: 27_500, balance_paid_at: null, session_at: ahead(30), post_at: ahead(24 * 10) };
+  it("is due inside 36 hours of the shoot, once", () => {
+    expect(balanceDue(dep, now)).toEqual({ cents: 27_500, at: dep.session_at });
+    expect(balanceDue({ ...dep, session_at: ahead(72) }, now)).toBeNull();
+    expect(balanceDue({ ...dep, balance_paid_at: ago(1) }, now)).toBeNull();
+    expect(balanceDue({ ...dep, payment_plan: "full" }, now)).toBeNull();
+    expect(balanceDue({ ...dep, session_at: null, post_at: ahead(20) }, now)).toEqual({ cents: 27_500, at: dep.post_at! && ahead(20) });
+  });
+  it("is allowed on every paid plan at 50%", () => {
+    expect(TIERS.filter((t) => t.depositAllowed).map((t) => t.id)).toEqual(["basic", "mid", "viral"]);
+    expect(quote("basic", 0, "deposit")).toMatchObject({ plan: "deposit", dueNowCents: 27_500, balanceCents: 27_500 });
   });
 });

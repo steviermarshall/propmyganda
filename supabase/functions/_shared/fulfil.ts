@@ -9,6 +9,7 @@ import { EDITING_COLUMNS, SESSION_MINUTES, distributionRow, editingRow, type Ord
 import { AGREEMENT_TEXT, AGREEMENT_VERSION, splitsLine } from "./agreement.ts";
 import { sendEmail } from "./email.ts";
 import { ADDONS } from "./addons.ts";
+import { PREP_TEXT } from "./prepText.ts";
 
 const DEFAULT_DISTRO_SHEET = "1-lGUtKmwAL7SmfaAHXbbPZK7715Detj1M6Ts_r6-kls";
 
@@ -74,11 +75,13 @@ export async function fulfil(supabase: SupabaseClient, order: OrderRow, paidStat
     await sendEmail(order.email, `PMG · ${order.catalogue_no} · you're in`, [
       `${order.artist_name} — you're in.`, "",
       `Plan: ${tier?.name ?? order.tier} · ${moneyLine(order, paidStatus)}`,
-      `Posting date: ${when(order.post_at)}`, order.session_at ? `Session: ${when(order.session_at)}` : "",
-      `Files received: ${uploads.length}`, "",
-      "Before your date: accounts public, collab requests on, accept the invite when it lands.",
-      "Read this before the shoot and the post: https://propmyganda.com/start/prep",
+      order.session_at ? `Shoot: ${when(order.session_at)} · 81 Prospect Street, DUMBO · 30 min` : "",
+      order.post_at ? `Release: ${when(order.post_at)}` : "Release: we'll place you by email",
+      `Files received: ${uploads.length}`,
+      order.payment_plan === "deposit" ? `Balance: ${formatUsd(order.total_cents - order.due_now_cents)}, charged to your card the day before the shoot, or pay it any time: https://propmyganda.com/start/balance?order=${order.id}&token=${(order as unknown as { client_token?: string }).client_token ?? ""} · cash on the day is fine, reply to say so` : "",
+      "",
       "Reply to this email for anything. One thread, start to finish.", "",
+      PREP_TEXT, "",
       "Once you're booked, these are open to you by request. Reply with the one you want and we quote it:",
       ...ADDONS.map((a) => `  · ${a.name} — ${a.from}`), "", "— PMG",
       ...(order.wants_distribution ? [

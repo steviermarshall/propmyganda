@@ -28,7 +28,7 @@ describe("tiers", () => {
   });
   it("quotes full pay by default and a 50% deposit where allowed", () => {
     expect(quote("basic").dueNowCents).toBe(55_000);
-    expect(quote("basic", 0, "deposit").plan).toBe("full"); // not allowed on Basic
+    expect(quote("basic", 0, "deposit").plan).toBe("deposit"); // every paid plan takes a deposit
     const mid = quote("mid", 0, "deposit");
     expect(mid.dueNowCents).toBe(100_000 * DEPOSIT_SHARE);
     expect(mid.balanceCents).toBe(50_000);

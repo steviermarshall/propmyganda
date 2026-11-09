@@ -8,6 +8,7 @@ export interface Order {
   phone: string | null; instagram_handle: string | null; instagram_url: string | null; tiktok_url: string | null; youtube_url: string | null;
   track_title: string | null; explicit: boolean; wants_distribution: boolean; report_preference: string | null; uploads: Upload[];
   post_at: string | null; session_at: string | null; paid_at: string | null; sync_errors: string | null;
+  balance_paid_at?: string | null; balance_method?: string | null;
   signature?: string | null; signed_at?: string | null; agreement_version?: string | null; dsp_title?: string | null;
 }
 export interface Slot { start: string; end: string }
@@ -49,6 +50,7 @@ export const api = {
   availability: (s: Session, kind: "post" | "session") => call<{ slots: Slot[] }>("availability", { orderId: s.orderId, token: s.token, kind }),
   checkout: (s: Session, plan: "full" | "deposit") => call<{ url?: string; error?: string; configured?: boolean }>("checkout", { orderId: s.orderId, token: s.token, plan }),
   status: (s: Session) => call<{ order: Order; tier: Tier }>("status", { orderId: s.orderId, token: s.token }),
+  balanceLink: (s: Session) => call<{ url?: string; paid?: boolean; cents?: number; error?: string }>("balance-link", { orderId: s.orderId, token: s.token }),
   confirm: (s: Session) => call<{ ok: boolean; errors?: string[] }>("confirm", { orderId: s.orderId, token: s.token }),
   inviteCheck: (invite: string) => call<{ ok: boolean; tier?: string; label?: string | null; reason?: string }>("invite-check", { invite }),
   async upload(s: Session, file: File, onProgress?: (pct: number) => void): Promise<Upload> {
