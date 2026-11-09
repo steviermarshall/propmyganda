@@ -1,6 +1,5 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import PMGFight3D from "@/components/PMGFight3D";
 import SEO from "@/components/SEO";
 import ChunkBoundary from "@/components/ChunkBoundary";
 import { lazyWithRetry } from "@/lib/lazyWithRetry";
@@ -11,6 +10,7 @@ import { PORTAL_BY_ID, placePlayerAtDoor, type Portal } from "@/components/propw
 const PropworldScene = lazyWithRetry(() => import("@/components/propworld/PropworldScene"));
 const SpaceGameOverlay = lazyWithRetry(() => import("@/components/propworld/SpaceGameOverlay"));
 const RoomExclusive = lazyWithRetry(() => import("@/components/propworld/RoomExclusive"));
+const PMGFight3D = lazyWithRetry(() => import("@/components/PMGFight3D"));
 
 type Mode = "forest" | "transitioning" | Portal;
 
@@ -121,7 +121,11 @@ const Propworld = () => {
       <AnimatePresence>
         {mode === "fight" && (
           <motion.div key="fight" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.45 }} className="absolute inset-0 z-[60] overflow-auto bg-background">
-            <PMGFight3D onExit={() => exitTo("fight")} />
+            <ChunkBoundary label="PMG Fight didn't load">
+              <Suspense fallback={<div className="h-full w-full bg-[#050304]" />}>
+                <PMGFight3D onExit={() => exitTo("fight")} />
+              </Suspense>
+            </ChunkBoundary>
           </motion.div>
         )}
         {mode === "game" && (
