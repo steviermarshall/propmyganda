@@ -2349,11 +2349,13 @@ const PAD_HINT = "□ / X punch (hold and release = signature) · ✕ / A kick �
 const WET = "'Rubik Wet Paint', 'Permanent Marker', Impact, sans-serif";
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Russo+One&family=Rubik+Wet+Paint&display=swap');
-.pmg{position:relative;min-height:100dvh;width:100%;overflow-x:hidden;color:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+.pmg{position:relative;min-height:100dvh;width:100%;overflow-x:hidden;overflow:clip;color:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
   background:radial-gradient(120% 70% at 50% 115%,#5a1a08 0%,#1a0a06 45%,#050304 100%);
   display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px;box-sizing:border-box;
   user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;overscroll-behavior:none}
 .pmg *{box-sizing:border-box}
+/* clip, not hidden: "overflow-x:hidden" quietly turned .pmg into its own scroll box (the drifting stripes poke out of it), and with
+   overscroll-behavior:none a swipe on a phone scrolled that box a few pixels and never reached the page — the select screen stuck at 4 fighters */
 /* motion graphics: slanted stripes drifting behind the menus, slam-ins, staggered rises, a wipe between screens. All off under .rm */
 .pmg.menu::before,.pmg.select::before,.pmg.stage::before{content:"";position:absolute;inset:-20%;pointer-events:none;z-index:0;opacity:.6;
   background:repeating-linear-gradient(-32deg,rgba(255,255,255,.045) 0 14px,transparent 14px 86px);animation:pmgDrift 26s linear infinite}
