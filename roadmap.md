@@ -50,5 +50,5 @@
 - [x] Populate Events page from the 10 Instagram post links the user sent
 - [x] PMG Fight batch 2: store the 7 announcer voice clips on the asset CDN and install the uploaded game build unchanged.
 - [x] Propworld: stop a missing scene file from blanking the page (retry the load, reload once, show a readable fallback).
-- [ ] Allow tiers dsp, basic, mid, viral, comp, test on sign-up orders (replace the old tier rule).
-- [ ] Deploy onboarding, stripe-webhook and onboarding-followups unchanged.
+- [x] Allow tiers dsp, basic, mid, viral, comp, test on sign-up orders (replace the old tier rule).
+- [x] Deploy onboarding, stripe-webhook and onboarding-followups unchanged.
