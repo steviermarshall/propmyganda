@@ -85,6 +85,13 @@
       "when": 1794603153136,
       "tag": "0011_create_agent_conversations",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1794604140322,
+      "tag": "0012_update_onboarding_tier_check",
+      "breakpoints": true
     }
   ]
 }
