@@ -52,6 +52,69 @@ export type Database = {
           },
         ]
       }
+      agent_conversations: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          instagram: string | null
+          intent: string | null
+          ip: string | null
+          messages: Json
+          metrics: Json | null
+          notes: string | null
+          notified_at: string | null
+          page: string | null
+          qualified: boolean | null
+          spotify: string | null
+          stage: string
+          transcript: string
+          turns: number
+          updated_at: string
+          visitor_name: string | null
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          instagram?: string | null
+          intent?: string | null
+          ip?: string | null
+          messages?: Json
+          metrics?: Json | null
+          notes?: string | null
+          notified_at?: string | null
+          page?: string | null
+          qualified?: boolean | null
+          spotify?: string | null
+          stage?: string
+          transcript?: string
+          turns?: number
+          updated_at?: string
+          visitor_name?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          instagram?: string | null
+          intent?: string | null
+          ip?: string | null
+          messages?: Json
+          metrics?: Json | null
+          notes?: string | null
+          notified_at?: string | null
+          page?: string | null
+          qualified?: boolean | null
+          spotify?: string | null
+          stage?: string
+          transcript?: string
+          turns?: number
+          updated_at?: string
+          visitor_name?: string | null
+        }
+        Relationships: []
+      }
       articles: {
         Row: {
           ai_draft: string | null
