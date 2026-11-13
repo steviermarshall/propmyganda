@@ -52,6 +52,7 @@ import voice_ko from "@/assets/pmg/voice-ko.mp3.asset.json";
 import voice_perfect from "@/assets/pmg/voice-perfect.mp3.asset.json";
 import voice_round1 from "@/assets/pmg/voice-round1.mp3.asset.json";
 import voice_round2 from "@/assets/pmg/voice-round2.mp3.asset.json";
+import voice_wins_stockz from "@/assets/pmg/voice-wins-stockz.mp3.asset.json";
 import dirtyDanTrack from "@/assets/pmg/song-dirty-dan.mp3.asset.json";
 import stockzTrack from "@/assets/pmg/song-fine-tiino-stockz.mp3.asset.json";
 import jahballaPrideTrack from "@/assets/pmg/song-jahballa-pride.mp3.asset.json";
@@ -59,7 +60,7 @@ import zoeTrack from "@/assets/pmg/song-zoe-tuesday-rayny.mp3.asset.json";
 
 /** Where the game files live: Lovable's asset CDN (the .asset.json files in src/assets/pmg). The -v2 models are meshopt-compressed. */
 const ASSET_URLS: Record<string, string> = {
-  jpeez: jpeezModel.url, jahballa: jahballaModel.url, stockz: stockzModel.url, zoe: zoeModel.url, hammad: hammadModel.url, katbot: katbotModel.url, subway: subwayModel.url, bench: benchModel.url, spraycan: spraycanModel.url, rat: ratModel.url, dumpster: dumpsterModel.url, billboard: billboardModel.url, car: carModel.url,
+  "jpeez": jpeezModel.url, "jahballa": jahballaModel.url, "stockz": stockzModel.url, "zoe": zoeModel.url, "hammad": hammadModel.url, "katbot": katbotModel.url, "subway": subwayModel.url, "bench": benchModel.url, "spraycan": spraycanModel.url, "rat": ratModel.url, "dumpster": dumpsterModel.url, "billboard": billboardModel.url, "car": carModel.url,
   "portrait-jpeez": portrait_jpeezPic.url, "portrait-jahballa": portrait_jahballaPic.url, "portrait-stockz": portrait_stockzPic.url, "portrait-zoe": portrait_zoePic.url, "portrait-katbot": portrait_katbotPic.url, "portrait-hammad": portrait_hammadPic.url, "stage-streets": stage_streetsPic.url, "stage-subway": stage_subwayPic.url, "sign-34th": sign34Pic.url,
 };
 /** Resolve a file name to its hosted copy; unknown names return "" so loaders fail fast and fall back. */
@@ -69,7 +70,7 @@ const LOGO_URL = pmgGraffitiLogo.url;
 const PORTRAIT_URL = (id: string) => assetUrl(`portrait-${id}`);
 const STAGE_PIC_URL = (id: string) => assetUrl(`stage-${id}`);
 /** Announcer and fighter voice lines (ElevenLabs clips): round1 round2 final fight ko perfect finisher wins-<id> quote-<id>. A missing clip is skipped. */
-const VOICE_URLS: Record<string, string> = { "fight": voice_fight.url, "final": voice_final.url, "finisher": voice_finisher.url, "ko": voice_ko.url, "perfect": voice_perfect.url, "round1": voice_round1.url, "round2": voice_round2.url };
+const VOICE_URLS: Record<string, string> = { "fight": voice_fight.url, "final": voice_final.url, "finisher": voice_finisher.url, "ko": voice_ko.url, "perfect": voice_perfect.url, "round1": voice_round1.url, "round2": voice_round2.url, "wins-stockz": voice_wins_stockz.url };
 const voiceUrl = (name: string) => VOICE_URLS[name] ?? "";
 
 /** Every .glb is meshopt-compressed (about 4× smaller than the originals), so each loader gets the decoder. */
@@ -117,13 +118,18 @@ interface FighterDef {
   sigName: string; sigDesc: string;            // the signature move (hold Punch, let go) and what it does
   headUp?: number;                             // per-fighter: lift the chin if the model's idle looks at the floor
   elbowsIn?: boolean;                          // per-fighter: keep the elbows tight to the ribs
+  skins?: Skin[];                              // alternate looks (same moves and stats); the first is the default
+  skin?: string; model?: string; pic?: string; // set by withSkin(): which look, which model file, which portrait
 }
+/** A skin: another look for a fighter, on the same skeleton and fighting idle. Picked on the select screen. */
+interface Skin { id: string; name: string; model: string; look: string; headUp?: number }
 
 const ROSTER: FighterDef[] = [
-  { id: "jpeez",    name: "JPeez",    lookLabel: "Street wear",  fightStyle: "Streetfighter", arch: "aggressive", style: "Heavy hitter — slow, but every hit hurts", power: 9, speed: 6, defense: 5, special: 7, color: "#FF8A1F", sig: { name: "HEAT ROCK", kind: "record" }, quote: "Step up or step out.", finisher: "HEAT ROCK REVENGE", sigName: "HAYMAKER", sigDesc: "Slow, huge, and it smashes through a block." },
-  { id: "jahballa", name: "JahBalla", lookLabel: "Street wear",  headUp: 0.3, fightStyle: "Streetfighter", arch: "aggressive", style: "Brawler — heavy hands, nonstop pressure",  power: 8, speed: 7, defense: 5, special: 6, color: "#F5C400", sig: { name: "GOLD RUSH", kind: "gold" }, quote: "Respect ain't given here, it's taken.", finisher: "GOLD RUSH SLAM", sigName: "BODY SHOT", sigDesc: "Quick low hook: knocks down and fills your heat." },
-  { id: "stockz",   name: "Stockz",   lookLabel: "High fashion", fightStyle: "Kickboxer", arch: "technical",  style: "Technician — fast, safe, precise",         power: 6, speed: 8, defense: 6, special: 8, color: "#3AA0FF", sig: { name: "BULL RUN", kind: "ticker" }, quote: "Your numbers just crashed.", finisher: "BULL RUN MATRIX", sigName: "STEP-IN KICK", sigDesc: "Lunges a full step forward and recovers fast." },
-  { id: "zoe",      name: "Zoe",      lookLabel: "High fashion", fightStyle: "Kickboxer", arch: "balanced",   style: "All-rounder — quick feet, sharp kicks",    power: 6, speed: 6, defense: 7, special: 6, color: "#FF5FB0", sig: { name: "HIGH NOTE", kind: "note" }, quote: "Catch the rhythm of this hit.", finisher: "HIGH NOTE FREQUENCY", sigName: "HIGH KICK", sigDesc: "Head-height kick: knocks jumpers out of the air for extra damage." },
+  { id: "jpeez",    name: "JPeez",    lookLabel: "Street wear",  fightStyle: "Streetfighter", arch: "aggressive", style: "Heavy hitter — slow, but every hit hurts", power: 9, speed: 6, defense: 6, special: 7, color: "#FF8A1F", sig: { name: "HEAT ROCK", kind: "record" }, quote: "Step up or step out.", finisher: "HEAT ROCK REVENGE", sigName: "HAYMAKER", sigDesc: "Slow, huge, and it smashes through a block." },
+  { id: "jahballa", name: "JahBalla", lookLabel: "Street wear",  headUp: 0.3, fightStyle: "Streetfighter", arch: "aggressive", style: "Brawler — heavy hands, nonstop pressure",  power: 8, speed: 7, defense: 6, special: 6, color: "#F5C400", sig: { name: "GOLD RUSH", kind: "gold" }, quote: "Respect ain't given here, it's taken.", finisher: "GOLD RUSH SLAM", sigName: "BODY SHOT", sigDesc: "Quick low hook: knocks down and fills your heat." },
+  { id: "stockz",   name: "Stockz",   lookLabel: "High fashion", fightStyle: "Kickboxer", arch: "technical",  style: "Technician — fast, safe, precise",         power: 6, speed: 8, defense: 5, special: 7, color: "#3AA0FF",
+    sig: { name: "BULL RUN", kind: "ticker" }, quote: "Your numbers just crashed.", finisher: "BULL RUN MATRIX", sigName: "STEP-IN KICK", sigDesc: "Lunges a full step forward and recovers fast." },
+  { id: "zoe",      name: "Zoe",      lookLabel: "High fashion", fightStyle: "Kickboxer", arch: "balanced",   style: "All-rounder — quick feet, sharp kicks",    power: 6, speed: 6, defense: 8, special: 6, color: "#FF5FB0", sig: { name: "HIGH NOTE", kind: "note" }, quote: "Catch the rhythm of this hit.", finisher: "HIGH NOTE FREQUENCY", sigName: "HIGH KICK", sigDesc: "Head-height kick: knocks jumpers out of the air for extra damage." },
   { id: "katbot",   name: "KatBot",   lookLabel: "Street tech",  fightStyle: "Kickboxer", arch: "technical",  style: "Wildcard — fastest in the roster, but fragile", power: 8, speed: 9, defense: 4, special: 8, color: "#B070FF", sig: { name: "NINE LIVES", kind: "paw" }, quote: "Fast hands, faster exits.", finisher: "NINE LIVES BLITZ", sigName: "NINE LIVES DASH", sigDesc: "Blinks through the rival and hits them from behind." },
   { id: "hammad",   name: "Hammad",   lookLabel: "Casual",       fightStyle: "Submission", arch: "balanced",   style: "All-rounder — solid at every range",       power: 7, speed: 7, defense: 6, special: 6, color: "#2ED47A", sig: { name: "BASS DROP", kind: "wave" }, quote: "Feel the pressure drop.", finisher: "BASS DROP CHOKE", sigName: "CHOKE SLAM", sigDesc: "Long-reach grab that can't be dodged and breaks a block." },
 ];
@@ -153,7 +159,14 @@ interface Move {
   heatGain?: number;               // extra heat for the attacker on hit
   noDodge?: boolean;               // a sidestep does not escape it (grabs only; a duck never beats a grab anyway)
   onBlock?: number;                // frame advantage when blocked: + = the attacker moves first, − = the defender can punish
+  hardKD?: boolean;                // HARD knockdown: longer on the floor and no quick rise (sweeps, grabs and the finisher)
 }
+
+/* Knockdowns and getting up (fix 7). Soft knockdown (roundhouse, jump-ins, signatures): hold JUMP while down to QUICK RISE.
+   Hard knockdown (sweep, grab, finisher): longer on the floor, no quick rise. Either way, as you get up you choose:
+   hold BACK = roll away · hold DOWN = stay down a moment longer · press PUNCH or KICK = GET-UP KICK (can't be hit while it winds up,
+   but very unsafe if they block it) · nothing = stand up normally. */
+const KD_SOFT = 50, KD_HARD = 64, KD_QUICK = 14, WAKE = 22, STAY_DOWN = 24, ROLL_SPEED = 4.6;
 
 /** Counter-hit: striking a rival while their own attack is still winding up. */
 const COUNTER_DMG = 1.3, COUNTER_STUN = 12;
@@ -179,7 +192,9 @@ function movesFor(arch: Arch): Record<string, Move> {
     HK:  mk({ id: "HK",  btn: "kick", pose: "roundhouse", height: 140, startup: 11 + d.su, active: 5, recovery: 20 + d.rec, damage: 12 + d.dmg, hitstun: 22, blockstun: 13 + d.bs, hitstop: 9, reach: 104, knockback: 8, knockdown: true, onBlock: -6 }),
     // crouching
     CP:  mk({ id: "CP",  btn: "punch", pose: "lowpunch", ctx: "crouch", height: 108, startup: 4 + d.su, recovery: 8 + d.rec, damage: 4, hitstun: 14, blockstun: 10 + d.bs, hitstop: 4, reach: 78, knockback: 3, onBlock: 1 }),
-    CK:  mk({ id: "CK",  btn: "kick",  pose: "sweep", ctx: "crouch", level: "low", height: 10, startup: 8 + d.su, active: 4, recovery: 22 + d.rec, damage: 9 + d.dmg, hitstun: 20, blockstun: 12, hitstop: 7, reach: 112, knockback: 6, knockdown: true, onBlock: -10 }),
+    CK:  mk({ id: "CK",  btn: "kick",  pose: "sweep", ctx: "crouch", level: "low", height: 10, startup: 8 + d.su, active: 4, recovery: 22 + d.rec, damage: 9 + d.dmg, hitstun: 20, blockstun: 12, hitstop: 7, reach: 112, knockback: 6, knockdown: true, onBlock: -10, hardKD: true }),
+    // get-up kick: only from the floor (press Punch or Kick while getting up). Can't be hit while it winds up; −12 if blocked
+    GU:  mk({ id: "GU",  btn: "kick",  pose: "roundhouse", height: 120, startup: 6, active: 3, recovery: 28, damage: 7, hitstun: 18, blockstun: 12, hitstop: 7, reach: 96, knockback: 7, onBlock: -12 }),
     // jumping
     JP:  mk({ id: "JP",  btn: "punch", pose: "airpunch", ctx: "air", level: "air", height: 90, startup: 3, active: 12, recovery: 6, damage: 7, hitstun: 18, blockstun: 12, hitstop: 6, reach: 76, knockback: 4 }),
     JK:  mk({ id: "JK",  btn: "kick",  pose: "airkick",  ctx: "air", level: "air", height: 60, startup: 4, active: 14, recovery: 6, damage: 9 + d.dmg, hitstun: 20, blockstun: 13, hitstop: 7, reach: 92, knockback: 5 }),
@@ -197,10 +212,10 @@ function sigMoveFor(id: string): Move {
   switch (id) {
     case "jpeez":    return { ...base, pose: "hook",       startup: 14, active: 4, recovery: 24, damage: 19, hitstop: 12, reach: 86, knockback: 11, guardCrush: true };        // HAYMAKER
     case "jahballa": return { ...base, pose: "lowpunch",   startup: 7,  active: 3, recovery: 16, damage: 10, height: 110, reach: 80, knockback: 7, heatGain: 20, onBlock: -6 };           // BODY SHOT
-    case "stockz":   return { ...base, pose: "roundhouse", startup: 9,  active: 5, recovery: 10, damage: 9, height: 130, reach: 112, knockback: 9, lunge: 60, onBlock: -5 }; // STEP-IN KICK (fast recovery: only -3 on block)
+    case "stockz":   return { ...base, pose: "roundhouse", startup: 9,  active: 5, recovery: 10, damage: 8, height: 130, reach: 112, knockback: 9, lunge: 60, onBlock: -5 }; // STEP-IN KICK (fast recovery: only -3 on block)
     case "zoe":      return { ...base, pose: "roundhouse", startup: 6,  active: 6, recovery: 18, damage: 11, height: 195, reach: 100, knockback: 6, knockdown: false, antiAir: 1.6, onBlock: -6 }; // HIGH KICK
     case "katbot":   return { ...base, pose: "cross",      startup: 8,  active: 4, recovery: 14, damage: 13, reach: 90, knockback: 9, crossUp: true, hitstun: 26, onBlock: -4 };          // NINE LIVES DASH
-    case "hammad":   return { ...base, btn: "grab", pose: "grab", startup: 12, active: 3, recovery: 30, damage: 12, reach: 92, knockback: 6, hitstop: 10, noDodge: true };   // CHOKE SLAM
+    case "hammad":   return { ...base, btn: "grab", pose: "grab", startup: 12, active: 3, recovery: 30, damage: 12, reach: 95, knockback: 6, hitstop: 10, noDodge: true };   // CHOKE SLAM
     default:         return base;
   }
 }
@@ -210,7 +225,7 @@ function withArchetype(moves: Record<string, Move>, def: FighterDef): Record<str
   const a = archOf(def);
   moves.SIG = sigMoveFor(def.id);
   for (const m of Object.values(moves)) {
-    if (m.projectile) continue;
+    if (m.projectile || m.id === "GU") continue;                  // the get-up kick is the same for everyone
     if (m.btn === "grab") { m.reach = Math.round(m.reach * a.grabMod); m.damage = Math.round(m.damage * a.grabMod); }
     else if (m.id !== "SIG") m.reach = Math.round(m.reach * a.reachMod);
     if (m.id !== "SIG") { m.startup = Math.max(2, Math.round(m.startup / a.speedMod)); m.recovery = Math.max(4, Math.round(m.recovery / a.speedMod)); }
@@ -243,6 +258,9 @@ interface Fighter {
   combo: number; hitstop: number; flash: number;
   buffer: { b: Btn; age: number }[];
   qDown: number; qReady: number;
+  hardDown: boolean;               // this knockdown is a hard one (no quick rise)
+  wake: "" | "roll" | "attack";    // what the fighter chose to do on getting up
+  wakeAtk: boolean; stayed: boolean; rollDir: 1 | -1;
 }
 
 interface Ctl { left: boolean; right: boolean; up: boolean; down: boolean; queue: Btn[]; charge: number }   // charge = frames Punch has been held (≥ 20 arms the signature)
@@ -259,7 +277,7 @@ interface Game {
   hype: number; slow: number; shake: number; sfx: string[];
   camX: number; camY: number; callout: [{ text: string; t: number }, { text: string; t: number }];
   impacts: { who: 0 | 1; dir: 1 | -1; force: number }[];     // hits for the anatomy controllers to react to
-  ai: { t: number; walk: number; guard: number; low: boolean; react: number; crouch: number; airKick: boolean };
+  ai: { t: number; walk: number; guard: number; low: boolean; react: number; crouch: number; airKick: boolean; wake?: string };
   aiLevel: number;                 // 0 easy, 1 medium, 2 hard — set by the turf
   cine: { who: 0 | 1; t: number } | null;   // the 4-second finisher cutscene
   ev: string[];                    // what happened this tick ("hit:0:LP", "blocked:1", "ducked:0" …) — the tutorial reads these
@@ -278,7 +296,7 @@ function newFighter(def: FighterDef, tag: string): Fighter {
     air: false, airUsed: false, crouch: false, back: false,
     hp: 100, lag: 100, sta: 25, heat: 0, state: "idle", sf: 0, dur: 0,
     move: null, hitDone: false, connected: false, combo: 0, hitstop: 0, flash: 0,
-    buffer: [], qDown: -999, qReady: -999,
+    buffer: [], qDown: -999, qReady: -999, hardDown: false, wake: "", wakeAtk: false, stayed: false, rollDir: 1,
   };
 }
 
@@ -288,7 +306,7 @@ function startRound(g: Game) {
     Object.assign(f, {
       x: xs[i], y: 0, vx: 0, vy: 0, facing: i === 0 ? 1 : -1, air: false, airUsed: false, crouch: false, back: false,
       hp: 100, lag: 100, sta: 25, state: "idle", sf: 0, dur: 0, move: null, hitDone: false, connected: false,
-      combo: 0, hitstop: 0, flash: 0, buffer: [], qDown: -999, qReady: -999,
+      combo: 0, hitstop: 0, flash: 0, buffer: [], qDown: -999, qReady: -999, hardDown: false, wake: "", wakeAtk: false, stayed: false,
     });
   });
   g.ctl = [newCtl(), newCtl()];
@@ -315,7 +333,8 @@ function newGame(p1: FighterDef, p2: FighterDef, cpu: boolean, onOver: () => voi
 
 const isFree = (f: Fighter) => !f.air && (f.state === "idle" || f.state === "walk" || f.state === "crouch" || f.state === "block");
 const canBlockState = (f: Fighter) => !f.air && (isFree(f) || f.state === "blockstun");
-const invulnerable = (f: Fighter) => f.state === "wakeup" || f.state === "knockdown" || f.state === "ko" || f.state === "win";
+const invulnerable = (f: Fighter) => f.state === "wakeup" || f.state === "knockdown" || f.state === "ko" || f.state === "win"
+  || (f.state === "attack" && f.move?.id === "GU" && f.sf - 1 < f.move.startup);          // the get-up kick can't be stuffed while it winds up
 /** Dodge: frames 2–16 of the sidestep pass cleanly under anything except the finisher. */
 const dodging = (f: Fighter) => f.state === "dodge" && f.sf >= 2 && f.sf <= 16;
 /** Duck: frames 2–20 drop under punches, high kicks and specials. Sweeps, low punches, jump-ins and grabs still hit. */
@@ -367,10 +386,37 @@ function moveProgress(f: Fighter) {
   return Math.max(0, 1 - (fr - m.startup - m.active) / m.recovery) * 0.9;
 }
 
+/** A move's shape over time, for the picture only (the frame data is untouched). `wind` = how far it is pulled back
+ *  (0–1) during the wind-up; `reach` = how far the strike is out (0–1). It snaps out on the first hit frame, stays out
+ *  for a beat after the active frames (follow-through), then comes back fast and settles. */
+function movePhase(f: Fighter): { reach: number; wind: number } {
+  if (!f.move) return { reach: 0, wind: 0 };
+  const m = f.move, fr = f.sf - 1;
+  if (fr < m.startup) {
+    const u = (fr + 1) / m.startup;                                // 0 → 1 through the wind-up
+    const wind = (u < 0.7 ? Math.sin((u / 0.7) * Math.PI / 2) : Math.max(0, 1 - (u - 0.7) / 0.3)) * windScale(m);
+    return { reach: u > 0.6 ? (0.5 * (u - 0.6)) / 0.4 : 0, wind };
+  }
+  if (fr < m.startup + m.active) return { reach: 1, wind: 0 };
+  const r = Math.min(1, (fr - m.startup - m.active + 1) / m.recovery);   // 0 → 1 through the recovery
+  return { reach: r < 0.12 ? 1 - 0.25 * (r / 0.12) : 0.75 * (1 - (r - 0.12) / 0.88) ** 2, wind: 0 };
+}
+/** Light moves barely wind up; heavy ones (long wind-ups) pull right back. */
+const windScale = (m: Move) => Math.min(1, Math.max(0.3, (m.startup - 3) / 9));
+/** How far a hit throws the head and chest back: a small flinch on the hit's freeze frame (sf 0), the full snap over
+ *  the next 2 frames, then easing off until the stun ends. */
+function hitSnap(f: Fighter) {
+  if (f.sf === 0) return 0.2;
+  if (f.state !== "hitstun") return 0;
+  if (f.sf <= 2) return 0.2 + 0.4 * f.sf;
+  return Math.max(0, 1 - (f.sf - 2) / Math.max(1, f.dur - 2));
+}
+
 interface HitOpts {
   damage: number; hitstun: number; blockstun: number; hitstop: number; knockback: number;
   knockdown: boolean; sx: number; sy: number; blocked: boolean; proj: boolean; dir: 1 | -1;
   flat?: boolean;                  // finisher: fixed damage, no stat or combo scaling
+  hard?: boolean;                  // a knockdown from this hit is a HARD knockdown
 }
 
 function landHit(g: Game, i: 0 | 1, o: HitOpts) {
@@ -408,7 +454,10 @@ function landHit(g: Game, i: 0 | 1, o: HitOpts) {
   if (d.hp <= 0) {
     g.sfx.push("ko"); setState(d, "ko"); d.air = true; d.vy = -8; d.vx = o.dir * 5; g.slow = 60; g.shake = 12;
   } else if (o.knockdown || d.air) {
-    setState(d, "knockdown", 50);
+    const hard = !!o.hard && o.knockdown;
+    setState(d, "knockdown", hard ? KD_HARD : KD_SOFT);
+    d.hardDown = hard; d.wake = ""; d.wakeAtk = false; d.stayed = false;
+    if (hard) g.ev.push(`hardkd:${1 - i}`);
     if (!d.air) { d.air = true; d.vy = -5; }
     d.vx = o.dir * 4; g.shake = 8;
   } else {
@@ -433,7 +482,7 @@ function tryHit(g: Game, i: 0 | 1) {
     a.hitDone = true; a.connected = true;
     const guardBreak = d.state === "block" || d.state === "blockstun" || (d.back && canBlockState(d));
     landHit(g, i, { damage: m.damage * (guardBreak ? 1.3 : 1), hitstun: 0, blockstun: 0, hitstop: m.hitstop, knockback: m.knockback, knockdown: true,
-      sx: a.x + a.facing * 40, sy: GROUND - 120, blocked: false, proj: false, dir: a.facing });
+      sx: a.x + a.facing * 40, sy: GROUND - 120, blocked: false, proj: false, dir: a.facing, hard: true });
     g.sfx.push("grab"); g.ev.push(`grab:${i}`);
     if (m.id === "SIG") { g.callout[i] = { text: a.def.sigName + "!", t: 50 }; g.ev.push(`sig:${i}`); }
     else if (guardBreak) g.callout[i] = { text: "GUARD BREAK!", t: 50 };
@@ -469,7 +518,7 @@ function tryHit(g: Game, i: 0 | 1) {
   landHit(g, i, {
     damage, hitstun, blockstun, hitstop: m.hitstop, knockback: m.knockback,
     knockdown, sx: a.x + a.facing * Math.max(12, Math.min(dist, m.reach) * 0.85), sy: GROUND + hy,
-    blocked, proj: false, dir: a.facing,
+    blocked, proj: false, dir: a.facing, hard: !!m.hardKD,
   });
   if (m.id === "SIG") {
     if (!blocked) { a.heat = Math.min(100, a.heat + (m.heatGain ?? 0)); if (g.callout[i].t <= 0) g.callout[i] = { text: a.def.sigName + "!", t: 50 }; }
@@ -535,7 +584,7 @@ function kickUpDust(g: Game, x: number, n: number, spread: number) {
 function land(g: Game, f: Fighter) {
   f.y = 0; f.vy = 0; f.air = false;
   if (f.state === "jump" || f.state === "attack") { f.vx = 0; f.move = null; setState(f, "idle"); kickUpDust(g, f.x, 3, 50); }
-  else if (f.state === "hitstun") { setState(f, "knockdown", 50); kickUpDust(g, f.x, 6, 110); }
+  else if (f.state === "hitstun") { setState(f, "knockdown", KD_SOFT); f.hardDown = false; f.wake = ""; f.wakeAtk = false; f.stayed = false; kickUpDust(g, f.x, 6, 110); }
   else if (f.state === "knockdown" || f.state === "ko") { g.sfx.push("thud"); f.vx *= 0.4; kickUpDust(g, f.x, 7, 120); }
 }
 
@@ -584,8 +633,38 @@ function stepFighter(g: Game, i: 0 | 1) {
     }
     case "hitstun":   if (f.sf >= f.dur) { o.combo = 0; setState(f, "idle"); } break;
     case "blockstun": if (f.sf >= f.dur) setState(f, "idle"); break;
-    case "knockdown": if (f.air) f.sf = 0; else if (f.sf >= f.dur) { o.combo = 0; setState(f, "wakeup", 22); } break;
-    case "wakeup":    if (f.sf >= f.dur) setState(f, "idle"); break;
+    case "knockdown": {
+      if (f.air) { f.sf = 0; break; }
+      if (!live) { if (f.sf >= f.dur) { o.combo = 0; setState(f, "wakeup", WAKE); } break; }
+      const away: 1 | -1 = o.x >= f.x ? -1 : 1;
+      const awayHeld = away < 0 ? c.left : c.right;
+      // a Punch / Kick pressed while on the floor (after the first moment) = get-up kick; it stays chosen until you stand
+      if (f.sf >= 8 && f.buffer.some((e) => e.b === "punch" || e.b === "kick" || e.b === "sig")) { f.wakeAtk = true; f.buffer = []; }
+      // QUICK RISE: soft knockdowns only — hold Jump while you're down
+      if (!f.hardDown && c.up && !f.stayed && f.dur === KD_SOFT && f.sf >= 6 && f.sf < KD_SOFT - 4) { f.dur = Math.max(f.sf + 1, KD_QUICK); g.callout[i] = { text: "QUICK RISE", t: 35 }; g.sfx.push("jump"); g.ev.push(`quickrise:${i}`); }
+      if (f.sf >= f.dur) {
+        if (c.down && !f.stayed && !f.wakeAtk) { f.stayed = true; f.dur += STAY_DOWN; g.ev.push(`staydown:${i}`); break; }   // STAY DOWN: once, a moment longer
+        o.combo = 0;
+        f.wake = f.wakeAtk ? "attack" : awayHeld ? "roll" : "";
+        f.rollDir = away;
+        setState(f, "wakeup", WAKE);
+        if (f.wake === "roll") { g.callout[i] = { text: "ROLL", t: 30 }; g.sfx.push("dodge"); g.ev.push(`roll:${i}`); }
+      }
+      break;
+    }
+    case "wakeup": {
+      if (f.wake === "roll") f.x = Math.max(40, Math.min(W - 40, f.x + f.rollDir * ROLL_SPEED));
+      // face the rival once you're mostly upright (the body lies head-away-from-them, so it can't turn while flat)
+      if (f.sf >= f.dur * 0.65) f.facing = o.x >= f.x ? 1 : -1;
+      if (f.sf >= f.dur) {
+        const atk = f.wake === "attack" && live;
+        f.wake = ""; f.wakeAtk = false; f.stayed = false;
+        f.facing = o.x >= f.x ? 1 : -1;
+        if (atk) { startMove(f, f.moves.GU); g.sfx.push("swingHeavy"); g.callout[i] = { text: "GET-UP KICK", t: 35 }; g.ev.push(`getup:${i}`); }
+        else setState(f, "idle");
+      }
+      break;
+    }
     case "dodge": case "parry": case "duck": if (f.sf >= f.dur) setState(f, "idle"); break;
   }
 
@@ -650,7 +729,7 @@ function tickCine(g: Game) {
   g.cine = null;
   a.sf = (a.move?.startup ?? 12) + 1;                                   // release (no projectile: the hit lands directly)
   landHit(g, c.who, { damage: 35, hitstun: 30, blockstun: 0, hitstop: 12, knockback: 10, knockdown: true,
-    sx: d.x, sy: GROUND - 120, blocked: false, proj: true, dir: a.facing, flat: true });   // unblockable
+    sx: d.x, sy: GROUND - 120, blocked: false, proj: true, dir: a.facing, flat: true, hard: true });   // unblockable
   g.callout[c.who] = { text: a.def.finisher + "!", t: 90 }; g.shake = 20; g.slow = 30; g.sfx.push("blast");
 }
 
@@ -674,6 +753,23 @@ function cpuThink(g: Game) {
   if (g.phase !== "fight") { c.left = c.right = c.up = c.down = false; return; }
   const toward: 1 | -1 = opp.x > me.x ? 1 : -1, dist = Math.abs(opp.x - me.x);
   c.up = false;
+
+  // on the floor: pick how to get up once per knockdown — quick rise, roll away, stay down, get-up kick, or just stand
+  if (me.state === "knockdown" && !me.air) {
+    if (!ai.wake) {
+      const L = g.aiLevel, r = Math.random(), standingOver = dist < 120 && isFree(opp);
+      const q = me.hardDown ? 0 : [0.15, 0.3, 0.45][L], atk = [0.08, 0.16, 0.26][L] + (standingOver ? 0.14 : 0), roll = [0.18, 0.24, 0.28][L], stay = [0.04, 0.08, 0.12][L];
+      ai.wake = r < q ? "quick" : r < q + atk ? "attack" : r < q + atk + roll ? "roll" : r < q + atk + roll + stay ? "stay" : "stand";
+    }
+    c.left = c.right = c.down = false;
+    if (ai.wake === "quick") c.up = true;
+    else if (ai.wake === "attack" && me.sf === 12) c.queue.push("kick");
+    else if (ai.wake === "roll") walk(-toward);
+    else if (ai.wake === "stay") c.down = true;
+    return;
+  }
+  if (me.state === "wakeup") { c.left = c.right = c.down = false; return; }
+  ai.wake = "";
 
   if (ai.guard > 0) { ai.guard--; walk(-toward); c.down = ai.low; return; }
   if (ai.crouch > 0) { ai.crouch--; c.down = true; } else c.down = false;
@@ -1062,6 +1158,19 @@ const UNLOCKS: { id: UnlockId; name: string; cost: number; blurb: string }[] = [
   { id: "hardturf",  name: "HARD TURF",       cost: 2500, blurb: "HARD difficulty on every location: the sharpest computer, and a +500 cred bounty per win." },
 ];
 /** Fighters a player has to unlock before picking them (the computer may still use them as a rival). */
+/* ---------- skins ---------- */
+/** The model file and portrait for a fighter's current look (skins point at their own files; the default look uses the fighter id). */
+const modelOf = (d: FighterDef) => d.model ?? d.id;
+const picOf = (d: FighterDef) => d.pic ?? d.id;
+/** The fighter wearing one of its skins (unknown or missing id = the default look). */
+function withSkin(d: FighterDef, skinId?: string): FighterDef {
+  const s = d.skins?.find((x) => x.id === skinId) ?? d.skins?.[0];
+  if (!s) return d;
+  return s === d.skins![0] ? { ...d, skin: s.id } : { ...d, skin: s.id, model: s.model, pic: `${d.id}-${s.id}`, headUp: s.headUp ?? d.headUp };   // the cap's brim hides V3's eyes unless the chin comes up
+}
+const randomSkin = (d: FighterDef) => (d.skins ? d.skins[Math.floor(Math.random() * d.skins.length)].id : undefined);
+const savedSkin = (d: FighterDef) => { try { return localStorage.getItem("pmg-skin-" + d.id) ?? undefined; } catch { return undefined; } };
+
 const LOCKED_FIGHTER: Partial<Record<string, UnlockId>> = { katbot: "katbot" };
 const fighterLocked = (id: string) => { const u = LOCKED_FIGHTER[id]; return !!u && !Cred.has(u); };
 const ALT_COLOR: Record<string, string> = { jpeez: "#4FD1FF", jahballa: "#FF3B5C", stockz: "#39E075", zoe: "#B76BFF", katbot: "#C6FF3A", hammad: "#FF7A1F" };
@@ -1404,6 +1513,13 @@ interface Rig3 {
   hipsRest: THREE.Quaternion;                                    // hips orientation in the model's own space, in the bind pose
   anatomy: CharacterAnatomyController;
   idle: THREE.AnimationAction | null;                            // the model's own idle clip
+  tuckW: number; crouchW: number; blockW: number;                // eased weights of the jump tuck, crouch and block poses
+  feet: FootLock[];                                              // left, right: where each planted foot is pinned (see footLock)
+  lockFacing: number;                                            // the facing the pins were made with (turning round re-sets the feet)
+  lunge: number; lungeMove: Move | null;                         // the step-in reached on this move's hit frames (it only shrinks after)
+  lungeCur: number; lungeFacing: number;                         // the step-in shown now (eases back), and the facing it was made in
+  prevX: number; speed: number;                                  // world x last frame and the body's smoothed speed (m/s), for stepping ahead
+  pendingHit: number;                                            // a hit's push-back on the body, waiting for the hit freeze to end
 }
 
 const BONE_NAMES = ["Hips", "Spine", "Spine1", "Spine2", "Neck", "Head", "LeftArm", "LeftForeArm", "LeftHand", "RightArm", "RightForeArm", "RightHand",
@@ -1431,7 +1547,8 @@ function makeRig(asset: Asset, color: string): Rig3 {
   const footRest = Math.min(footY(bones.LeftFoot), footY(bones.RightFoot));   // measured in the bind pose, before the clip runs
   const hipsRest = hipsInModel(model, bones.Hips);
   mixer.update(0.4 + Math.random() * 1.2);                      // prime the clip: no bind-pose (T-pose) frame, and the two fighters don't breathe in sync
-  return { root, model, mixer, bones, glow, stanceW: 1, hipsRest, footRest: Number.isFinite(footRest) ? footRest : 0.08, anatomy: new CharacterAnatomyController(), idle };
+  return { root, model, mixer, bones, glow, stanceW: 1, hipsRest, footRest: Number.isFinite(footRest) ? footRest : 0.08, anatomy: new CharacterAnatomyController(), idle, tuckW: 0, crouchW: 0, blockW: 0, pendingHit: 0,
+    feet: [newFootLock(), newFootLock()], lockFacing: 0, lunge: 0, lungeMove: null, lungeCur: 0, lungeFacing: 0, prevX: NaN, speed: 0 };
 }
 
 const _f = new THREE.Vector3();
@@ -1443,14 +1560,14 @@ function hipsInModel(model: THREE.Object3D, hips: THREE.Bone | undefined) {
   return _mq.clone().invert().multiply(_hq);
 }
 /** Turn the hips so the body squares up to the rival (a little open to the camera), whatever the idle clip does. */
-function faceRival(rg: Rig3, s: number) {
+function faceRival(rg: Rig3, s: number, w = 1) {
   const hips = rg.bones.Hips; if (!hips) return;
   rg.root.updateMatrixWorld(true);
   const q = hipsInModel(rg.model, hips).multiply(rg.hipsRest.clone().invert());   // how far the clip turned the hips
   _fv.set(0, 0, 1).applyQuaternion(q);                                            // model forward is +Z
   const yaw = Math.atan2(_fv.x, _fv.z), want = -s * 0.3;                          // 0.3 rad open toward the camera
   let d = want - yaw; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI;
-  turn(hips, UP, d);
+  turn(hips, UP, d * w);
 }
 
 /** Shift the body up/down so the lower foot sits exactly on the floor — no sinking, no floating. */
@@ -1674,33 +1791,44 @@ function poseRig(rg: Rig3, f: Fighter, dt: number, t: number) {
   const frozen = (defeated || st === "knockdown") && !f.air;
   // start every frame from the rest pose; bones the idle clip doesn't animate would otherwise keep last frame's twist
   for (const b of Object.values(B)) if (b?.userData.rest) b.quaternion.copy(b.userData.rest as THREE.Quaternion);
+  // The hit's freeze frame (both fighters stop for 4–12 frames): the rival only flinches, so the fist or foot is still
+  // on the body in the picture everyone sees. The big snap-back, or the fall, starts when the freeze ends.
+  // (a knocked-down fighter's frame count stays at 0 for the whole flight, so for them the freeze is told by hitstop)
+  const impact = (st === "hitstun" && f.sf === 0) || ((st === "knockdown" || st === "ko") && f.hitstop > 0);
   // the winner lets go of the fight idle completely: stands still in a relaxed pose instead of bouncing
   // the idle clip is a fighting crouch: let go of it when the fighter wins (stand relaxed) or goes down (lie flat —
   // a crouched spine rotated onto its back curls up off the floor and looks like it's hovering)
-  const fall0 = fallAmount(f);
+  const fall0 = impact ? 0 : fallAmount(f);
   if (rg.idle) rg.idle.setEffectiveWeight(st === "win" ? 1 - ease(Math.min(1, f.sf / 24)) : 1 - fall0);
   rg.mixer.update(frozen ? 0 : dt);
   rg.root.position.set(X3(f.x), Y3(f.y), 0);
   rg.root.scale.setScalar(1);
   rg.model.rotation.set(0, s > 0 ? Math.PI / 2 : -Math.PI / 2, 0);
   rg.root.rotation.z = 0;
-  if (fall0 === 0) faceRival(rg, s);
+  if (fall0 < 1) faceRival(rg, s, 1 - fall0);                    // eased back in while getting up (it used to snap on the last frame)
   rg.model.position.set(0, 0, 0);
   rg.glow.visible = false;
   const side = ZAX;                                              // lean axis; angles below carry the facing (s)
 
   // knocked down / defeated / getting up — see layDown()
-  const downAmt = fallAmount(f);
+  const downAmt = fall0;
   if (downAmt > 0) {
-    rg.stanceW = 0;
+    // let go of the guard over ~8 frames (switching it off at once snapped the forearms ~150° in a single frame)
+    rg.stanceW = Math.max(0, rg.stanceW - dt * 7);
+    if (rg.stanceW > 0.01) STANCES[f.def.fightStyle](rg, s, t, rg.stanceW, f.def);
+    rg.tuckW = rg.crouchW = rg.blockW = 0;
+    rg.pendingHit = 0;                                             // the fall is the reaction
+    rg.anatomy.update(dt);                                         // and any earlier push-back dies out while down
     // limp once they hit the floor; while getting back up the limbs blend back from limp
-    const limp = st === "wakeup" ? downAmt : f.air ? downAmt * 0.6 : 1;
+    const limp = st === "wakeup" ? downAmt : f.air ? downAmt * (0.6 + 0.4 * downAmt) : 1;   // reaches 1 as the body lands
     // small bounce as the body hits the concrete
     const bounce = !f.air && (st === "knockdown" || st === "ko") && f.sf < 12 ? Math.sin((f.sf / 12) * Math.PI) * 0.05 : 0;
     layDown(rg, s, downAmt, limp, bounce);
     return;
   }
   rg.root.rotation.z = 0;
+  // a hit's push-back on the body starts once the hit freeze is over
+  if (rg.pendingHit && f.sf > 0) { rg.anatomy.applyHitPhysics((Math.random() - 0.5) * 0.4, -1, rg.pendingHit); rg.pendingHit = 0; }
 
   // idle stance, faded in and out so attacks flow back into it
   rg.stanceW += ((st === "idle" || st === "walk" ? 1 : 0) - rg.stanceW) * Math.min(1, dt * 7);
@@ -1720,16 +1848,24 @@ function poseRig(rg: Rig3, f: Fighter, dt: number, t: number) {
     rg.root.position.y += h - h * Math.cos(th);
   }
 
+  // crouch — eased in and out over ~3 frames instead of switching in one
   const crouched = !f.air && ((f.crouch && (st === "crouch" || st === "block" || st === "blockstun")) || (st === "attack" && f.move?.ctx === "crouch"));
-  if (crouched) {
-    rg.model.position.y = -0.34;
-    aim(B.RightUpLeg, B.RightLeg, V(s * 0.85, -0.5, 0.1 * s), 1); aim(B.RightLeg, B.RightFoot, V(-s * 0.15, -1, 0), 1);
-    aim(B.LeftUpLeg, B.LeftLeg, V(s * 0.55, -0.8, -0.1 * s), 1); aim(B.LeftLeg, B.LeftFoot, V(-s * 0.5, -1, 0), 1);
-    turn(B.Spine, side, -s * 0.25);
+  rg.crouchW += ((crouched ? 1 : 0) - rg.crouchW) * Math.min(1, dt * 30);
+  if (rg.crouchW > 0.01) {
+    const w = rg.crouchW;
+    rg.model.position.y = -0.34 * w;
+    aim(B.RightUpLeg, B.RightLeg, V(s * 0.85, -0.5, 0.1 * s), w); aim(B.RightLeg, B.RightFoot, V(-s * 0.15, -1, 0), w);
+    aim(B.LeftUpLeg, B.LeftLeg, V(s * 0.55, -0.8, -0.1 * s), w); aim(B.LeftLeg, B.LeftFoot, V(-s * 0.5, -1, 0), w);
+    turn(B.Spine, side, -s * 0.25 * w);
   }
-  if (f.air && st !== "attack") {                                  // tuck
-    aim(B.RightUpLeg, B.RightLeg, V(s * 0.8, 0.3, 0.1 * s), 0.9); aim(B.RightLeg, B.RightFoot, V(-s * 0.3, -1, 0), 0.9);
-    aim(B.LeftUpLeg, B.LeftLeg, V(s * 0.6, 0.1, -0.1 * s), 0.9); aim(B.LeftLeg, B.LeftFoot, V(-s * 0.4, -1, 0), 0.9);
+  // tuck in the air — eased in and out (it used to switch off in one frame on landing, snapping the hips 76–104°);
+  // the few frames it takes to let go read as a landing squash. During a backflip the tuck turns with the body
+  // (aimed at fixed directions, the legs flipped round in one frame when the body went upside down).
+  rg.tuckW += ((f.air && (st === "jump" || st === "hitstun") && !impact ? 0.9 : 0) - rg.tuckW) * Math.min(1, dt * (f.air ? 14 : 20));
+  if (rg.tuckW > 0.01) {
+    const rz = rg.root.rotation.z, D = (x: number, y: number, z: number) => (rz ? V(x, y, z).applyAxisAngle(ZAX, rz) : V(x, y, z)), w = rg.tuckW;
+    aim(B.RightUpLeg, B.RightLeg, D(s * 0.8, 0.3, 0.1 * s), w); aim(B.RightLeg, B.RightFoot, D(-s * 0.3, -1, 0), w);
+    aim(B.LeftUpLeg, B.LeftLeg, D(s * 0.6, 0.1, -0.1 * s), w); aim(B.LeftLeg, B.LeftFoot, D(-s * 0.4, -1, 0), w);
   }
   if (st === "walk") {
     // shuffle-step: the stride follows the distance actually travelled, so feet don't skate
@@ -1759,13 +1895,16 @@ function poseRig(rg: Rig3, f: Fighter, dt: number, t: number) {
     aim(B.RightArm, B.RightForeArm, V(s * 0.6, -0.5, 0.3 * s), k); aim(B.RightForeArm, B.RightHand, V(s * 0.45, 0.9, -0.2 * s), k);
     lean(B.Spine, s, -0.06 * k);
   }
-  if (st === "block" || st === "blockstun") {                     // forearms up in front of the face
-    aim(B.RightArm, B.RightForeArm, V(s * 0.45, -0.8, 0.25 * s), 1); aim(B.RightForeArm, B.RightHand, V(s * 0.25, 1, 0.05 * s), 1);
-    aim(B.LeftArm, B.LeftForeArm, V(s * 0.45, -0.8, -0.25 * s), 1); aim(B.LeftForeArm, B.LeftHand, V(s * 0.25, 1, -0.05 * s), 1);
-    turn(B.Spine1, side, -s * 0.15);
+  const blockOn = st === "block" || st === "blockstun";
+  rg.blockW += ((blockOn ? 1 : 0) - rg.blockW) * Math.min(1, dt * (blockOn ? 30 : 14));
+  if (rg.blockW > 0.01) {                                          // forearms up in front of the face (eased over ~3 frames)
+    const w = rg.blockW;
+    aim(B.RightArm, B.RightForeArm, V(s * 0.45, -0.8, 0.25 * s), w); aim(B.RightForeArm, B.RightHand, V(s * 0.25, 1, 0.05 * s), w);
+    aim(B.LeftArm, B.LeftForeArm, V(s * 0.45, -0.8, -0.25 * s), w); aim(B.LeftForeArm, B.LeftHand, V(s * 0.25, 1, -0.05 * s), w);
+    turn(B.Spine1, side, -s * 0.15 * w);
   }
-  if (st === "hitstun") {                                          // head and chest snap back
-    const k = Math.max(0, 1 - f.sf / Math.max(1, f.dur));
+  if (st === "hitstun" || impact) {                                // head and chest snap back — see hitSnap()
+    const k = hitSnap(f);
     turn(B.Spine, side, s * 0.5 * k); turn(B.Spine2, side, s * 0.2 * k); turn(B.Neck, side, s * 0.45 * k);
     rg.model.position.x = -s * 0.08 * k;
   }
@@ -1780,32 +1919,48 @@ function poseRig(rg: Rig3, f: Fighter, dt: number, t: number) {
   }
 
   if (st === "attack" && f.move) {
-    const m = f.move, k = moveProgress(f), reach = Math.min(1, k);
+    const m = f.move, k = moveProgress(f), { reach, wind } = movePhase(f);
     // body behind the move: punches drive the shoulder in, low moves dip, the special winds up and shakes
     if (m.btn === "punch" && m.ctx === "stand") turn(B.Spine, side, -s * 0.12 * reach);
     else if (m.ctx === "crouch") turn(B.Spine, side, -s * 0.2 * reach);
     else if (m.btn === "special" && f.sf - 1 < m.startup) {
-      rg.root.scale.setScalar(1 + 0.08 * reach);
-      rg.model.position.x += Math.sin(t * 57) * 0.015 * reach; rg.model.position.y += Math.cos(t * 43) * 0.01 * reach;
+      const k1 = Math.min(1, k);
+      rg.root.scale.setScalar(1 + 0.08 * k1);
+      rg.model.position.x += Math.sin(t * 57) * 0.015 * k1; rg.model.position.y += Math.cos(t * 43) * 0.01 * k1;
     }
-    const punch = (side2: "Right" | "Left", dir: THREE.Vector3) => {
-      aim(B[`${side2}Arm`], B[`${side2}ForeArm`], dir, reach); aim(B[`${side2}ForeArm`], B[`${side2}Hand`], dir, reach);
-      turn(B.Spine1, UP, (side2 === "Right" ? 1 : -1) * 0.35 * reach);
+    const punch = (sd: "Right" | "Left", dir: THREE.Vector3, hook = false) => {
+      const sg = sd === "Right" ? 1 : -1, sz = sg * s;               // sz: sideways, toward the punching side
+      if (wind > 0.01) {                                             // wind-up: elbow back, fist by the chin, shoulders coiled
+        if (hook) { aim(B[`${sd}Arm`], B[`${sd}ForeArm`], V(-s * 0.25, -0.45, sz * 0.85), wind); aim(B[`${sd}ForeArm`], B[`${sd}Hand`], V(s * 0.55, 0.35, -sz * 0.55), wind); }
+        else { aim(B[`${sd}Arm`], B[`${sd}ForeArm`], V(-s * 0.4, -0.9, sz * 0.3), wind); aim(B[`${sd}ForeArm`], B[`${sd}Hand`], V(s * 0.3, 0.95, -sz * 0.15), wind); }
+        turn(B.Spine1, UP, -sg * (hook ? 0.45 : 0.3) * wind);
+      }
+      aim(B[`${sd}Arm`], B[`${sd}ForeArm`], dir, reach); aim(B[`${sd}ForeArm`], B[`${sd}Hand`], dir, reach);
+      turn(B.Spine1, UP, sg * 0.35 * reach);
     };
     switch (m.pose) {
       case "jab": punch("Right", V(s, 0.12, 0.08 * s)); break;
       case "cross": punch("Left", V(s, 0.1, -0.08 * s)); break;
-      case "hook": punch("Right", V(s, 0.35, (0.5 - reach * 0.5) * s)); turn(B.Spine, side, -s * 0.1 * reach); break;
+      case "hook": punch("Right", V(s, 0.35, (0.5 - reach * 0.5) * s), true); turn(B.Spine, side, -s * 0.1 * reach); break;
       case "lowpunch": punch("Right", V(s, -0.25, 0.05 * s)); break;
       case "airpunch": punch("Right", V(s, -0.6, 0.05 * s)); break;
       case "roundhouse":
+        turn(B.Hips, UP, 0.35 * Math.max(wind * 0.5, reach));      // the hip turns over into the kick (before the leg is aimed)
+        if (wind > 0.01) {                                           // chamber: knee up and out, foot tucked under it
+          aim(B.RightUpLeg, B.RightLeg, V(s * 0.55, 0.3, 0.5 * s), wind); aim(B.RightLeg, B.RightFoot, V(-s * 0.35, -0.75, 0.3 * s), wind);
+        }
         aim(B.RightUpLeg, B.RightLeg, V(s, 0.25 + 0.5 * reach, 0.1 * s), reach); aim(B.RightLeg, B.RightFoot, V(s, 0.35 * reach, 0.1 * s), reach);
-        turn(B.Spine, side, s * 0.35 * reach); break;
+        turn(B.Spine, side, s * 0.35 * Math.max(reach, wind * 0.4)); break;   // leans away from the kick
       case "sweep":
+        if (wind > 0.01) { aim(B.RightUpLeg, B.RightLeg, V(s * 0.25, -0.55, 0.65 * s), wind); aim(B.RightLeg, B.RightFoot, V(-s * 0.25, -0.95, 0.2 * s), wind); }
         aim(B.RightUpLeg, B.RightLeg, V(s, -0.18, 0.25 * s), reach); aim(B.RightLeg, B.RightFoot, V(s, -0.25, 0.3 * s), reach); break;
       case "airkick":
         aim(B.RightUpLeg, B.RightLeg, V(s, -0.35, 0.1 * s), 1); aim(B.RightLeg, B.RightFoot, V(s, -0.5, 0.1 * s), 1); break;
-      case "grab": {                                               // both hands out, then drag the rival down
+      case "grab": {                                               // arms gather in, then both hands out and drag the rival down
+        if (wind > 0.01) {
+          aim(B.RightArm, B.RightForeArm, V(-s * 0.2, -0.9, 0.35 * s), wind); aim(B.LeftArm, B.LeftForeArm, V(-s * 0.2, -0.9, -0.35 * s), wind);
+          lean(B.Spine, s, 0.12 * wind);
+        }
         const d2 = V(s, -0.1 - 0.3 * Math.max(0, k - 0.9) * 10, 0);
         aim(B.RightArm, B.RightForeArm, V(s, -0.05, 0.12 * s), reach); aim(B.RightForeArm, B.RightHand, d2, reach);
         aim(B.LeftArm, B.LeftForeArm, V(s, -0.05, -0.12 * s), reach); aim(B.LeftForeArm, B.LeftHand, d2, reach);
@@ -1813,6 +1968,11 @@ function poseRig(rg: Rig3, f: Fighter, dt: number, t: number) {
         break;
       }
       case "fireball": {
+        if (wind > 0.01) {                                           // both hands drawn back by the hip
+          aim(B.RightArm, B.RightForeArm, V(-s * 0.55, -0.8, 0.25 * s), wind); aim(B.RightForeArm, B.RightHand, V(s * 0.6, -0.2, -0.3 * s), wind);
+          aim(B.LeftArm, B.LeftForeArm, V(-s * 0.45, -0.85, -0.2 * s), wind); aim(B.LeftForeArm, B.LeftHand, V(s * 0.6, -0.15, 0.3 * s), wind);
+          turn(B.Spine1, UP, -0.3 * wind);
+        }
         const d2 = V(s, 0.05, 0);
         aim(B.RightArm, B.RightForeArm, d2, reach); aim(B.RightForeArm, B.RightHand, d2, reach);
         aim(B.LeftArm, B.LeftForeArm, d2, reach); aim(B.LeftForeArm, B.LeftHand, d2, reach);
@@ -1829,6 +1989,200 @@ function poseRig(rg: Rig3, f: Fighter, dt: number, t: number) {
   rg.anatomy.update(dt);
   rg.anatomy.apply(rg, s);
   if (!f.air) plantFeet(rg);
+}
+
+/* ---------- contact: make the fist or foot land on the rival ---------- */
+
+const _ia = new THREE.Vector3(), _ib = new THREE.Vector3(), _ic = new THREE.Vector3(), _it = new THREE.Vector3(), _in = new THREE.Vector3(), _ie = new THREE.Vector3();
+/** Two-bone IK: turn `upper` and `lower` so `end` lands on `target`, the middle joint (elbow, knee) bending toward
+ *  `pole`. Blended by w. Out of reach, the limb points straight at the target. */
+function ik2(upper: THREE.Bone | undefined, lower: THREE.Bone | undefined, end: THREE.Bone | undefined, target: THREE.Vector3, pole: THREE.Vector3, w: number) {
+  if (!upper || !lower || !end || w <= 0.001) return;
+  upper.updateWorldMatrix(true, true);
+  upper.getWorldPosition(_ia); lower.getWorldPosition(_ib); end.getWorldPosition(_ic);
+  const la = _ia.distanceTo(_ib), lb = _ib.distanceTo(_ic);
+  _it.copy(target).sub(_ia); let d = _it.length(); if (d < 1e-5) return; _it.divideScalar(d);
+  d = Math.min(Math.max(d, Math.abs(la - lb) + 1e-3), (la + lb) * 0.999);
+  const x = (la * la - lb * lb + d * d) / (2 * d), y = Math.sqrt(Math.max(0, la * la - x * x));
+  _in.copy(pole).addScaledVector(_it, -pole.dot(_it)); if (_in.lengthSq() < 1e-8) _in.set(0, 1, 0); _in.normalize();
+  _ie.copy(_ia).addScaledVector(_it, x).addScaledVector(_in, y);          // where the elbow / knee goes
+  aim(upper, lower, _ie.sub(_ia), w);
+  _ic.copy(_ia).addScaledVector(_it, d);                                  // where the wrist / ankle goes
+  lower.getWorldPosition(_ib);                                            // the elbow after the first turn
+  aim(lower, end, _ic.sub(_ib), w);
+}
+
+type Chain = [THREE.Bone | undefined, THREE.Bone | undefined, THREE.Bone | undefined];
+const _tp = new THREE.Vector3(), _tq = new THREE.Vector3();
+/** Where on the rival a move lands, nudged out to the skin on the attacker's side: into a block, the nearer forearm;
+ *  a low move, the nearer shin; otherwise head, chest or belly by the move's height. */
+function strikePoint(org: Rig3, of: Fighter, m: Move, s: number, out: THREE.Vector3): boolean {
+  const O = org.bones;
+  const nearer = (pairs: [THREE.Bone | undefined, THREE.Bone | undefined][], pad: number) => {
+    let best = Infinity;
+    for (const [a, b] of pairs) {
+      if (!a || !b) continue;
+      a.getWorldPosition(_tp); b.getWorldPosition(_tq); _tp.add(_tq).multiplyScalar(0.5);
+      if (_tp.x * s < best) { best = _tp.x * s; out.copy(_tp); }
+    }
+    if (best === Infinity) return false;
+    out.x -= s * pad; return true;
+  };
+  if (m.level === "low" || m.pose === "sweep") return nearer([[O.LeftLeg, O.LeftFoot], [O.RightLeg, O.RightFoot]], 0.07);
+  if (of.state === "block" || of.state === "blockstun") return nearer([[O.LeftForeArm, O.LeftHand], [O.RightForeArm, O.RightHand]], 0.07);
+  let b: THREE.Bone | undefined, r: number;
+  if (m.ctx === "air") { b = m.pose === "airkick" ? O.Spine2 : O.Head; r = m.pose === "airkick" ? 0.16 : 0.13; }
+  else if (m.height >= 150) { b = O.Head; r = 0.13; }
+  else if (m.height >= 125) { b = O.Spine2; r = 0.16; }
+  else { b = O.Spine; r = 0.17; }
+  if (!b) return false;
+  b.getWorldPosition(out); out.x -= s * r; return true;
+}
+
+type ContactPlan = { chains: { ch: Chain; tip: number; pole: THREE.Vector3; target: THREE.Vector3 }[]; w: number; need: number };
+/** Where the striking arm(s) or leg should land on the rival this frame, how strongly (w) and how far the limb is short
+ *  of it (need, metres) — or null when the move shouldn't reach for the rival. */
+function contactPlan(rg: Rig3, f: Fighter, org: Rig3, of: Fighter): ContactPlan | null {
+  const m = f.move;
+  if (f.state !== "attack" || !m || m.projectile || m.pose === "fireball") return null;
+  let w = movePhase(f).reach;
+  const s = f.facing, dist = (of.x - f.x) * s;
+  if (w < 0.02 || dist < 10 || dist > m.reach + 60 || of.state === "wakeup") return null;   // rival behind, far off or getting up: plain pose
+  // don't chase a flying body: once the freeze is over, let go within ~5 frames of the rival's fall
+  if ((of.state === "knockdown" || of.state === "ko") && of.hitstop <= 0) w *= Math.max(0, 1 - (fallAmount(of) - 0.12) * 4);
+  if (w < 0.02) return null;
+  rg.root.updateMatrixWorld(true); org.root.updateMatrixWorld(true);
+  const B = rg.bones, O = org.bones;
+  const chains: ContactPlan["chains"] = [];
+  if (m.pose === "grab") {                                         // right hand to the neck, left hand to the chest
+    if (!O.Neck || !O.Spine2) return null;
+    const neck = O.Neck.getWorldPosition(new THREE.Vector3()), chest = O.Spine2.getWorldPosition(new THREE.Vector3());
+    neck.x -= s * 0.1; chest.x -= s * 0.16;
+    chains.push({ ch: [B.RightArm, B.RightForeArm, B.RightHand], tip: 0.06, pole: V(-0.3 * s, -1, 0.6 * s), target: neck });
+    chains.push({ ch: [B.LeftArm, B.LeftForeArm, B.LeftHand], tip: 0.06, pole: V(-0.3 * s, -1, -0.6 * s), target: chest });
+  } else {
+    const target = new THREE.Vector3();
+    if (!strikePoint(org, of, m, s, target)) return null;
+    if (m.pose === "roundhouse" || m.pose === "sweep" || m.pose === "airkick") {
+      const pole = m.pose === "roundhouse" ? V(0.2 * s, 0.7, 0.7 * s) : V(0.3 * s, 1, 0.3 * s);
+      chains.push({ ch: [B.RightUpLeg, B.RightLeg, B.RightFoot], tip: 0.1, pole, target });
+    } else {
+      const sd = m.pose === "cross" ? "Left" : "Right", sz = (sd === "Right" ? 1 : -1) * s;
+      const pole = m.pose === "hook" ? V(-0.1 * s, 0.15, sz) : V(-0.35 * s, -1, 0.55 * sz);
+      chains.push({ ch: [B[`${sd}Arm`], B[`${sd}ForeArm`], B[`${sd}Hand`]], tip: 0.08, pole, target });
+    }
+  }
+  // the end bone is the wrist / ankle: stop it short by the fist or foot, so the knuckles or the foot touch the skin
+  let need = 0;
+  for (const c of chains) {
+    const [a, b, e] = c.ch; if (!a || !b || !e) return null;
+    a.getWorldPosition(_ia); b.getWorldPosition(_ib); e.getWorldPosition(_ic);
+    const len = _ia.distanceTo(_ib) + _ib.distanceTo(_ic);
+    _it.copy(c.target).sub(_ia); const d = _it.length(); if (d < 1e-5) return null;
+    c.target.addScaledVector(_it.divideScalar(d), -c.tip);
+    need = Math.max(need, d - c.tip - len * 0.98);
+  }
+  return { chains, w, need };
+}
+
+/** Step the body in when a move reaches further than the arm or leg (the Kickboxers' long reach) — only for a move
+ *  that is going to land. After the hit (or the hit frames) the step-in can only shrink, and it eases back rather
+ *  than snapping (a thrown rival flying off used to yank the attacker back in one frame). Runs before footLock, so
+ *  the planted feet stay put while the body moves over them. Pictures only. */
+function stepIn(rg: Rig3, f: Fighter, org: Rig3, of: Fighter, dt: number) {
+  if (rg.lungeFacing !== f.facing) { rg.lungeFacing = f.facing; rg.lungeCur = 0; }
+  const p = contactPlan(rg, f, org, of), m = f.move;
+  let want = 0;
+  if (p && m) {
+    if (rg.lungeMove !== m) { rg.lungeMove = m; rg.lunge = 0; }
+    const dist = (of.x - f.x) * f.facing;
+    let step = p.need > 0 && !f.air && dist <= m.reach + 26 ? Math.min(p.need, 0.6) : 0;
+    if (f.hitDone || f.sf - 1 >= m.startup + m.active) step = Math.min(step, rg.lunge); else rg.lunge = Math.max(rg.lunge, step);
+    want = step * p.w;
+  }
+  const d = want - rg.lungeCur;
+  rg.lungeCur += d > 0 ? d : Math.max(d, -dt * 1.5);            // out at once (it's the strike), back at most 2.5 cm a frame
+  if (rg.lungeCur > 0.001) { rg.model.position.x += f.facing * rg.lungeCur; rg.root.updateMatrixWorld(true); }
+}
+
+/** After both fighters are posed (and stepped in, and their feet pinned): bend the striking arm or leg so the fist or
+ *  foot lands on the rival — no air gap, no sinking in. Pictures only: where a hit counts is still decided by the
+ *  game's reach numbers. */
+function contactIK(rg: Rig3, f: Fighter, org: Rig3, of: Fighter) {
+  const p = contactPlan(rg, f, org, of);
+  if (p) for (const c of p.chains) ik2(c.ch[0], c.ch[1], c.ch[2], c.target, c.pole, p.w);
+}
+
+/* ---------- feet: a planted foot stays where it is ---------- */
+
+interface FootLock { on: boolean; lock: THREE.Vector3; from: THREE.Vector3; step: number; w: number }
+const newFootLock = (): FootLock => ({ on: false, lock: new THREE.Vector3(), from: new THREE.Vector3(), step: -1, w: 0 });
+const _fp = new THREE.Vector3(), _fh = new THREE.Vector3(), _fk = new THREE.Vector3(), _ft = new THREE.Vector3(), _fs = new THREE.Vector3();
+const _fq = new THREE.Quaternion(), _fq2 = new THREE.Quaternion();
+const FOOT_SIDES = ["Left", "Right"] as const;
+/** After the fighter is posed: a foot that is on the floor stays pinned to its spot while the body moves over it
+ *  (two-bone leg IK). When the pose wants it somewhere else — the body walked on, was pushed back or stepped in — it
+ *  takes a quick step there (one foot at a time). A leg that can't reach (a lunge) drags its foot just enough. The
+ *  kicking leg is left to the kick, and the standing leg of a kick never steps, it only drags. Pictures only. */
+function footLock(rg: Rig3, f: Fighter, dt: number) {
+  const st = f.state, s = f.facing, B = rg.bones, m = f.move;
+  const allowed = !f.air && st !== "knockdown" && st !== "ko" && st !== "wakeup" && st !== "dodge" && st !== "jump";
+  const turned = rg.lockFacing !== 0 && rg.lockFacing !== s; rg.lockFacing = s;
+  // a kick owns the right leg while it is out; once it is mostly back (late in recovery) the foot may plant again
+  const kicking = st === "attack" && !!m && (m.pose === "roundhouse" || m.pose === "sweep" || m.pose === "airkick")
+    && !(f.sf - 1 >= m.startup + m.active && movePhase(f).reach < 0.35);
+  // how far the pose may pull away from a pinned foot before it steps (further in attacks and crouches: no fidgeting)
+  const reach = st === "walk" ? 0.14 : st === "attack" ? 0.32 : st === "crouch" || st === "block" || st === "duck" || st === "parry" ? 0.3 : 0.18;
+  rg.root.updateMatrixWorld(true);
+  const floor = rg.root.position.y + rg.footRest + 0.035;       // a posed ankle lower than this is on the floor
+  // how fast the body is moving: a step lands a little ahead of the pose, so the feet keep up with a walk
+  if (dt > 0) { const v = Number.isFinite(rg.prevX) ? (rg.root.position.x - rg.prevX) / dt : 0; rg.speed += (Math.max(-6, Math.min(6, v)) - rg.speed) * Math.min(1, dt * 15); }
+  rg.prevX = rg.root.position.x;
+  const lead = Math.abs(rg.speed) > 0.3 ? rg.speed * 0.1 : 0, stepTime = st === "walk" ? 0.075 : 0.09;
+  FOOT_SIDES.forEach((side, i) => {
+    const F = rg.feet[i], other = rg.feet[1 - i];
+    const up = B[`${side}UpLeg`], kn = B[`${side}Leg`], an = B[`${side}Foot`];
+    if (!up || !kn || !an) return;
+    const kickLeg = allowed && kicking && side === "Right";
+    const free = !allowed || kickLeg;                           // in the air, down, dodging — or it's the kicking leg
+    an.getWorldPosition(_fp);                                   // where the pose put the ankle
+    if (kickLeg && F.on && F.w > 0.99) {
+      // the kicking foot leaves the floor with a little lift (letting go of the pin by weight slid it along the floor)
+      if (F.step < 0) { F.step = 0; F.from.copy(F.lock); }
+    } else {
+      F.w += ((free ? 0 : 1) - F.w) * Math.min(1, dt * 18);   // eased, so pins never switch on or off in one frame
+      if (free) { F.on = false; F.step = -1; }
+      else if (!F.on) { if (_fp.y > floor) return; F.on = true; F.lock.copy(_fp); F.step = -1; }
+    }
+    if (!F.on) {                                                // letting go: blend from the last pin back to the pose
+      if (F.w < 0.01) return;
+      _ft.copy(F.lock);
+    } else {
+      if (turned && F.step < 0) { F.step = 0; F.from.copy(F.lock); }   // turned round: both feet re-set at once
+      const drift = Math.hypot(F.lock.x - _fp.x, F.lock.z - _fp.z);
+      if (F.step < 0 && !(kicking && side === "Left") && drift > reach && (other.step < 0 || other.step > 0.55)) { F.step = 0; F.from.copy(F.lock); }
+      if (F.step >= 0) {                                        // a quick step (4–5 frames), lifted 7 cm at the top
+        F.step = Math.min(1, F.step + dt / stepTime);
+        const u = ease(F.step);
+        _fs.copy(_fp); _fs.x += lead;                           // land where the pose will be, not where it was
+        _ft.copy(F.from).lerp(_fs, u); _ft.y += Math.sin(Math.PI * u) * 0.07;
+        if (F.step >= 1) { F.lock.copy(_fs); F.step = -1; if (kickLeg) { F.on = false; F.w = 0; } }   // a kick's take-off: the leg is the kick's now
+      } else _ft.copy(F.lock);
+    }
+    // out of the leg's reach (a lunge): slide the pin toward the pose until the leg reaches
+    up.getWorldPosition(_fh); kn.getWorldPosition(_fk);
+    const len = (_fh.distanceTo(_fk) + _fk.distanceTo(_fp)) * 0.995;
+    if (_ft.distanceTo(_fh) > len) {
+      let lo = 0, hi = 1;                                       // the posed spot is always reachable
+      for (let k = 0; k < 12; k++) { const mid = (lo + hi) / 2; _fs.copy(_ft).lerp(_fp, mid); if (_fs.distanceTo(_fh) > len) lo = mid; else hi = mid; }
+      _ft.lerp(_fp, hi);
+      if (F.on && F.step < 0) F.lock.copy(_ft);
+    }
+    an.getWorldQuaternion(_fq);                                 // the foot keeps the angle the pose gave it
+    ik2(up, kn, an, _ft, _fk.sub(_fh).add(V(s * 0.3, 0, 0)), F.w);   // knee bends the way the pose bent it, a bit forward
+    kn.getWorldQuaternion(_fq2);
+    an.quaternion.slerp(_fq2.invert().multiply(_fq), F.w);
+  });
 }
 
 /* ---------- effects: hit sparks, dust, special moves ---------- */
@@ -2173,9 +2527,10 @@ function renderPortraits(): Promise<Record<string, string>> {
   if (portraitJob) return portraitJob;
   portraitJob = (async () => {
     const out: Record<string, string> = {};
-    const pre = await Promise.all(ROSTER.map((d) => imageExists(PORTRAIT_URL(d.id))));
-    ROSTER.forEach((d, i) => { if (pre[i]) out[d.id] = PORTRAIT_URL(d.id); });
-    const todo = ROSTER.filter((d) => !out[d.id]);
+    const looks = ROSTER.flatMap((d) => [d, ...(d.skins ?? []).slice(1).map((sk) => withSkin(d, sk.id))]);   // every fighter in every skin
+    const pre = await Promise.all(looks.map((d) => imageExists(PORTRAIT_URL(picOf(d)))));
+    looks.forEach((d, i) => { if (pre[i]) out[picOf(d)] = PORTRAIT_URL(picOf(d)); });
+    const todo = looks.filter((d) => !out[picOf(d)]);
     if (!todo.length) return out;
     const S = 320;
     const r = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
@@ -2189,7 +2544,7 @@ function renderPortraits(): Promise<Record<string, string>> {
     const cc = comp.getContext("2d")!;
     for (const d of todo) {
       try {
-        const rg = makeRig(await loadFighter(d.id), d.color);
+        const rg = makeRig(await loadFighter(modelOf(d)), d.color);
         rg.mixer.update(0.5); rg.model.rotation.y = 0.3;
         scene.add(rg.root); rg.root.updateMatrixWorld(true);
         faceRival(rg, 0);                                                          // square the hips to the camera (Stockz's idle turns his back)
@@ -2220,9 +2575,9 @@ function renderPortraits(): Promise<Record<string, string>> {
         cc.drawImage(r.domElement, 0, 0);
         const v = cc.createLinearGradient(0, S * 0.7, 0, S); v.addColorStop(0, "rgba(0,0,0,0)"); v.addColorStop(1, "rgba(0,0,0,0.55)");
         cc.fillStyle = v; cc.fillRect(0, 0, S, S);
-        out[d.id] = comp.toDataURL("image/jpeg", 0.88);
+        out[picOf(d)] = comp.toDataURL("image/jpeg", 0.88);
         scene.remove(rg.root);
-      } catch { out[d.id] = ""; }
+      } catch { out[picOf(d)] = ""; }
     }
     r.dispose();
     return out;
@@ -2432,6 +2787,10 @@ const CSS = `
 .pmg-card .bar{height:3px;margin-bottom:6px}
 .pmg-card .meta{font-size:12px;color:#d9dde6;margin-bottom:6px;line-height:1.35}
 .pmg-badge{position:absolute;top:14px;left:14px;background:#ffc21a;color:#000;font:13px ${HUDF};padding:3px 8px;border:2px solid #000}
+.pmg-skinbadge{position:absolute;top:14px;right:14px;background:#3AA0FF;color:#fff;font:11px ${HUDF};letter-spacing:1px;padding:2px 6px;border:2px solid #000;pointer-events:none}
+.pmg-skins{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;width:100%}
+.pmg-skins .pmg-card h3{font-size:17px}
+.pmg-skins .pmg-card[aria-pressed="true"]{outline:3px solid #ffc21a;outline-offset:-3px}
 .pmg-stat{display:grid;grid-template-columns:58px 1fr 16px;align-items:center;gap:6px;font-size:12px;margin-top:3px}
 .pmg-stat i{display:block;height:7px;background:#23262e;border:1px solid #000}
 .pmg-stat i b{display:block;height:100%;background:linear-gradient(#fff7c2,#ffc21a 50%,#e07b00)}
@@ -2493,7 +2852,8 @@ const CSS = `
 .pmg-unlock p{margin:2px 0 0;font-size:12.5px;color:#d9dde6;line-height:1.4}
 .pmg-unlock .cost{font:13px ${HUDF};color:#ffcf7a;letter-spacing:1px}
 .pmg-unlock .pmg-toggle{grid-row:1/3}
-.pmg-diff{display:flex;gap:8px;justify-content:center;margin:0 0 16px;flex-wrap:wrap}
+.pmg-diff{display:flex;gap:8px;justify-content:center;align-items:center;margin:0 0 16px;flex-wrap:wrap}
+.pmg-difflabel{font:13px ${HUDF};letter-spacing:2px;color:#ffc21a;margin-right:4px}
 .pmg-code{font:12px ${HUDF};letter-spacing:1px;color:#9aa3b0;margin:-8px 0 16px;text-align:center;max-width:46ch;line-height:1.6}
 .pmg-code b{color:#fff;letter-spacing:3px;font-size:14px}
 .pmg-codeval{font:16px ${HUDF};letter-spacing:4px;color:#ffcf7a}
@@ -2536,7 +2896,57 @@ const CSS = `
 .pmg-tap{font:clamp(16px,3vw,22px) ${HUDF};color:#e9e3d6;letter-spacing:4px}
 @media (max-width:900px){.pmg-grid{grid-template-columns:repeat(3,1fr)}}
 @media (max-width:480px){.pmg-grid{grid-template-columns:repeat(2,1fr)}.pmg-locs{grid-template-columns:1fr}}
+/* PHONES: compact pick screens — every fighter on one screen (portrait 3 × 2, landscape 6 in a row). The cards keep the portrait,
+   name, colour bar, archetype, signature name and the four stat bars (P S D X); the long descriptions and the quote stay on bigger screens. */
+@media (max-width:520px) and (orientation:portrait),(max-height:500px) and (orientation:landscape){
+  .pmg.select,.pmg.stage{justify-content:flex-start;padding-top:6px}
+  .pmg.select .pmg-h2,.pmg.stage .pmg-h2{margin:2px 0 4px}
+  .pmg.select .pmg-sub,.pmg.stage .pmg-sub{font-size:12px;margin:0 0 8px;line-height:1.35}
+  .pmg-grid{gap:6px}
+  .pmg-grid .pmg-card{padding:4px}
+  .pmg-grid .pmg-card h3{font-size:13px;margin:4px 0 1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pmg-grid .pmg-card .bar{margin-bottom:3px}
+  .pmg-grid .pmg-card .meta,.pmg-grid .pmg-card .quote{display:none}
+  .pmg-grid .pmg-card .arch{font-size:0;margin-bottom:2px;line-height:1.2}
+  .pmg-grid .pmg-card .arch b{font-size:10px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pmg-grid .pmg-card .arch i{display:none}
+  .pmg-grid .pmg-stat{grid-template-columns:3.4ch 1fr 1.6ch;gap:3px;font-size:10px;margin-top:1px}
+  .pmg-grid .pmg-stat span{font-size:0}
+  .pmg-grid .pmg-stat span::before{content:attr(data-short);font-size:9px;letter-spacing:.3px}
+  .pmg-grid .pmg-stat i{height:5px}
+  .pmg-grid .pmg-badge{top:6px;left:6px;font-size:10px;padding:1px 5px}
+  .pmg-grid .pmg-skinbadge{top:6px;right:6px;font-size:8px;padding:1px 4px}
+  .pmg-grid .pmg-lock{font-size:11px}
+  .pmg-grid .pmg-lock small{font-size:8px}
+  .pmg-diff{margin:0 0 8px;gap:6px}
+  .pmg-diff .pmg-toggle{min-width:0;font-size:12px;padding:5px 8px}
+  .pmg-locs{grid-template-columns:repeat(2,1fr);gap:8px}
+  .pmg-loc h3{font-size:15px;margin:4px 0 1px}
+  .pmg-loc .meta{font-size:11px;margin-bottom:2px}
+  .pmg-loc .turf{font-size:10px;gap:6px;flex-wrap:wrap}
+  .pmg.select .pmg-col,.pmg.stage .pmg-col{margin-top:10px !important}
+  .pmg.select .pmg-btn,.pmg.stage .pmg-btn{padding-top:8px;padding-bottom:8px;font-size:15px}
+}
+@media (max-width:520px) and (orientation:portrait){.pmg-grid{grid-template-columns:repeat(3,minmax(0,1fr));width:100%}}
+@media (max-height:500px) and (orientation:landscape){
+  .pmg-grid{grid-template-columns:repeat(6,minmax(0,1fr));width:min(1040px,98vw)}
+  .pmg-grid .pmg-card img,.pmg-grid .pmg-card .ph{aspect-ratio:4/3;object-fit:cover;object-position:50% 15%}
+  .pmg-grid .pmg-lock{aspect-ratio:4/3}
+  .pmg.select .pmg-sub,.pmg.stage .pmg-sub{display:none}
+  .pmg-locs{width:min(540px,62vw)}
+  /* title: two columns of buttons so the menu isn't three screens tall */
+  .pmg.menu{justify-content:flex-start;padding-top:6px}
+  .pmg.menu .pmg-sub{display:none}
+  .pmg.menu .pmg-titlelogo{width:min(200px,28dvh)}
+  .pmg.menu .pmg-fight{font-size:15dvh}
+  .pmg.menu .pmg-col{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:min(680px,94vw)}
+  .pmg.menu .pmg-btn{padding-top:8px;padding-bottom:8px;font-size:15px}
+  .pmg.menu .pmg-btn small{font-size:11px;margin-top:2px}
+}
 `;
+
+/** Stat labels on the compact phone cards (Speed and Special both start with S). */
+const STAT_SHORT = { power: "POW", speed: "SPD", defense: "DEF", special: "SPC" } as const;
 
 function useIsTouch() {
   const [t] = useState(() => typeof window !== "undefined" && ("ontouchstart" in window || navigator.maxTouchPoints > 0));
@@ -2655,6 +3065,7 @@ function ControlsHelp({ touch, cpu }: { touch: boolean; cpu: boolean }) {
       <b>G</b><span>Grab and slam — breaks through a block</span>
       <b>HOLD P</b><span>Hold Punch about a third of a second and let go: your fighter's <em>signature move</em> (each one is different)</span>
       <b>COUNTER</b><span>Hit them while they're winding up: 30% more damage, and a jab then links into a kick</span>
+      <b>ON THE FLOOR</b><span>Stick up = quick rise (not after a sweep, grab or finisher) · stick away = roll back · stick down = stay down a moment · P or K = get-up kick (unsafe if blocked)</span>
       <h4>DEFEND — SWIPE THE ARENA</h4>
       <b>SWIPE ↓</b><span>Duck under punches, high kicks and specials</span>
       <b>SWIPE ← →</b><span>Dodge: sidestep anything except a grab</span>
@@ -2685,6 +3096,7 @@ function ControlsHelp({ touch, cpu }: { touch: boolean; cpu: boolean }) {
       {!cpu && <><h4>PLAYER 2</h4>{rows(1)}</>}
       <h4>GAME</h4>
       <b>COUNTER</b><span>hit them while they're winding up: 30% more damage, and a jab links into a kick · a blocked jab leaves you ahead, a blocked kick or sweep can be punished</span>
+      <b>ON THE FLOOR</b><span>hold <kbd>{keysFor(0, "up").map(keyName).join(" / ")}</kbd> = quick rise (not after a sweep, grab or finisher) · hold back = roll away · hold <kbd>{keysFor(0, "down").map(keyName).join(" / ")}</kbd> = stay down a moment · punch or kick = get-up kick (unsafe if blocked)</span>
       <b>SIGNATURE</b><span>hold <kbd>{keysFor(0, "punch").map(keyName).join(" / ")}</kbd> about a third of a second, let go — every fighter's is different (see the select screen)</span>
       <b>PAUSE</b><span><kbd>P</kbd> or <kbd>Esc</kbd> · <small className="pmg-note">special also: <kbd>↓</kbd> <kbd>→</kbd> + punch</small></span>
       <b>CONTROLLER</b><span><small className="pmg-note">{PAD_HINT}</small></span>
@@ -3144,11 +3556,13 @@ export default function PMGFight3D({ onExit }: { onExit?: () => void } = {}) {
   const [stagePics, setStagePics] = useState<Record<string, string> | null>(null);
   const [mode, setMode] = useState<"cpu" | "2p">("cpu");
   const [picks, setPicks] = useState<number[]>([]);
+  const [pickSkins, setPickSkins] = useState<(string | undefined)[]>([]);   // the skin chosen with each pick
+  const [skinFor, setSkinFor] = useState<number | null>(null);              // roster index whose skin picker is open
+  const clearPicks = () => { setPicks([]); setPickSkins([]); };
   const [round, setRound] = useState(0);
   const [portraits, setPortraits] = useState<Record<string, string> | null>(null);
   const [settings, setSettings] = useState(false);
   const [unlocks, setUnlocks] = useState(false);
-  const [quickPick, setQuickPick] = useState(false);          // SELECT CHARACTER: you pick, the rival and the turf are random
   const [diff, setDiff] = useState<Difficulty>("EASY");
   const isTouch = useIsTouch();
 
@@ -3165,21 +3579,21 @@ export default function PMGFight3D({ onExit }: { onExit?: () => void } = {}) {
     if (a < 0) { const open = ROSTER.map((_, i) => i).filter((i) => !fighterLocked(ROSTER[i].id)); a = open[Math.floor(Math.random() * open.length)]; }
     let b = Math.floor(Math.random() * (ROSTER.length - 1)); if (b >= a) b++;
     const pool = DIFFICULTIES.filter((d) => d !== "HARD" || Cred.has("hardturf"));
-    setMode("cpu"); setPicks([a, b]); setLoc(LOCATIONS[Math.floor(Math.random() * LOCATIONS.length)].id); setDiff(pool[Math.floor(Math.random() * pool.length)]);
-    setQuickPick(false); setRound((r) => r + 1); go("fight");
+    setMode("cpu"); setPicks([a, b]); setPickSkins([randomSkin(ROSTER[a]), randomSkin(ROSTER[b])]); setLoc(LOCATIONS[Math.floor(Math.random() * LOCATIONS.length)].id); setDiff(pool[Math.floor(Math.random() * pool.length)]);
+    setRound((r) => r + 1); go("fight");
   };
   useEffect(() => { if (screen === "stage" && !stagePics) renderStagePreviews().then(setStagePics); }, [screen, stagePics]);
 
   // alt colours (an unlock) recolour player 1; memoised so the fight doesn't restart on every render
   const altOn = Cred.altOn();
-  const fighters = useMemo(() => picks.length === 2 ? [altOn ? withAlt(ROSTER[picks[0]]) : ROSTER[picks[0]], ROSTER[picks[1]]] : [], [picks, altOn]);
+  const fighters = useMemo(() => picks.length === 2 ? [withSkin(altOn ? withAlt(ROSTER[picks[0]]) : ROSTER[picks[0]], pickSkins[0]), withSkin(ROSTER[picks[1]], pickSkins[1])] : [], [picks, pickSkins, altOn]);
 
-  const choose = (i: number) => {
+  const choose = (i: number, skin?: string) => {
     if (moving.current || picks.length >= 2) return;              // a fast double tap can't add a third fighter
-    if (quickPick) { quickFight(i); return; }
+    if (ROSTER[i].skins && skin === undefined) { setSkinFor(i); return; }   // more than one look: pick the skin first
     const next = [...picks, i];
-    if (next.length === 2) { setPicks(next); go("stage"); }
-    else setPicks(next);
+    setPicks(next); setPickSkins([...pickSkins, skin]);
+    if (next.length === 2) go("stage");
   };
 
   return (
@@ -3190,6 +3604,30 @@ export default function PMGFight3D({ onExit }: { onExit?: () => void } = {}) {
       {screen === "intro" && <SprayIntro onDone={() => go("menu")} />}
       {settings && <SettingsPanel onClose={() => setSettings(false)} />}
       {unlocks && <UnlocksPanel onClose={() => setUnlocks(false)} />}
+      {skinFor !== null && screen === "select" && (() => {
+        const d = ROSTER[skinFor], cur = savedSkin(d) ?? d.skins![0].id;
+        return (
+          <div className="pmg-modal" role="dialog" aria-label={`${d.name}: pick a skin`}>
+            <div className="pmg-panel">
+              <h2 className="pmg-h2" style={{ margin: "0 0 4px" }}>{d.name.toUpperCase()} · PICK A SKIN</h2>
+              <p className="pmg-sub" style={{ margin: "0 0 12px" }}>Same moves and stats, a different look.</p>
+              <div className="pmg-skins">
+                {d.skins!.map((sk) => {
+                  const pic = portraits?.[picOf(withSkin(d, sk.id))];
+                  return (
+                    <button key={sk.id} className="pmg-card" aria-pressed={cur === sk.id} onClick={() => { try { localStorage.setItem("pmg-skin-" + d.id, sk.id); } catch { /* private mode */ } setSkinFor(null); choose(skinFor, sk.id); }}>
+                      {pic ? <img src={pic} alt={`${d.name}, ${sk.name} skin`} /> : <div className="ph">{portraits ? "NO PICTURE" : "LOADING…"}</div>}
+                      <h3>{sk.name}</h3>
+                      <div className="meta">{sk.look}</div>
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="pmg-col" style={{ marginTop: 12 }}><button className="pmg-btn ghost" onClick={() => setSkinFor(null)}>BACK</button></div>
+            </div>
+          </div>
+        );
+      })()}
 
       {screen === "menu" && (
         <>
@@ -3206,17 +3644,14 @@ export default function PMGFight3D({ onExit }: { onExit?: () => void } = {}) {
             <button className="pmg-btn primary" style={{ ["--i" as string]: 0 }} onClick={() => quickFight()}>
               QUICK FIGHT<small>Random fighters, random turf — straight to the block</small>
             </button>
-            <button className="pmg-btn" style={{ ["--i" as string]: 1 }} onClick={() => { setMode("cpu"); setPicks([]); setQuickPick(true); go("select"); }}>
-              SELECT CHARACTER<small>Pick your fighter — random rival, random turf</small>
+            <button className="pmg-btn" style={{ ["--i" as string]: 1 }} onClick={() => { setMode("cpu"); clearPicks(); go("select"); }}>
+              1 PLAYER<small>Pick your fighter, your rival (or a random one), the level and the turf</small>
             </button>
-            <button className="pmg-btn ghost" style={{ ["--i" as string]: 2 }} onClick={() => { setMode("cpu"); setPicks([]); setQuickPick(false); go("select"); }}>
-              1 PLAYER<small>Pick your fighter, your rival and the turf</small>
-            </button>
-            <button className="pmg-btn ghost" style={{ ["--i" as string]: 3 }} onClick={() => { setMode("2p"); setPicks([]); setQuickPick(false); go("select"); }}>
+            <button className="pmg-btn ghost" style={{ ["--i" as string]: 2 }} onClick={() => { setMode("2p"); clearPicks(); go("select"); }}>
               2 PLAYERS<small>Two people, one keyboard</small>
             </button>
-            <button className="pmg-btn ghost" style={{ ["--i" as string]: 4 }} onClick={() => setUnlocks(true)}>UNLOCKS<small>Spend your Street Cred · {Cred.owned().size} of {UNLOCKS.length} owned</small></button>
-            <button className="pmg-btn ghost" style={{ ["--i" as string]: 5 }} onClick={() => setSettings(true)}>SETTINGS<small>Music · sound effects · next song</small></button>
+            <button className="pmg-btn ghost" style={{ ["--i" as string]: 3 }} onClick={() => setUnlocks(true)}>UNLOCKS<small>Spend your Street Cred · {Cred.owned().size} of {UNLOCKS.length} owned</small></button>
+            <button className="pmg-btn ghost" style={{ ["--i" as string]: 4 }} onClick={() => setSettings(true)}>SETTINGS<small>Music · sound effects · next song</small></button>
           </div>
           <button className="pmg-link" onClick={() => go("intro")}>REPLAY INTRO</button>
         </>
@@ -3225,19 +3660,20 @@ export default function PMGFight3D({ onExit }: { onExit?: () => void } = {}) {
       {screen === "select" && (
         <>
           <h1 className="pmg-h2">
-            {quickPick ? "SELECT YOUR FIGHTER" : picks.length === 0 ? "PLAYER 1 · SELECT YOUR FIGHTER" : mode === "cpu" ? "PICK YOUR RIVAL" : "PLAYER 2 · SELECT YOUR FIGHTER"}
+            {picks.length === 0 ? "PLAYER 1 · SELECT YOUR FIGHTER" : mode === "cpu" ? "PICK YOUR RIVAL" : "PLAYER 2 · SELECT YOUR FIGHTER"}
           </h1>
-          <p className="pmg-sub">{quickPick ? "Tap or click a fighter — a random rival and turf are waiting." : "Stats are 1 to 10. Tap or click a fighter."}</p>
+          <p className="pmg-sub">{mode === "cpu" && picks.length === 1 ? "Tap a fighter, or let the streets pick one for you." : "Stats are 1 to 10. Tap or click a fighter."}</p>
           <div className="pmg-grid">
             {ROSTER.map((r, i) => {
               // a locked fighter can be picked as the rival (the computer's side), never as a player
-              const locked = fighterLocked(r.id) && (mode === "2p" || quickPick || picks.length === 0);
+              const locked = fighterLocked(r.id) && (mode === "2p" || picks.length === 0);
               const price = UNLOCKS.find((u) => u.id === LOCKED_FIGHTER[r.id])?.cost ?? 0;
               return (
               <button key={r.id} className={`pmg-card${locked ? " locked" : ""}`} style={{ ["--i" as string]: i }} aria-pressed={picks[0] === i} aria-disabled={locked} onClick={() => (locked ? setUnlocks(true) : choose(i))}>
                 {portraits?.[r.id] ? <img src={portraits[r.id]} alt={`${r.name} portrait`} /> : <div className="ph">{portraits ? "NO MODEL" : "LOADING…"}</div>}
                 {locked && <span className="pmg-lock">🔒 {price.toLocaleString()} CRED<small>TAP TO UNLOCK</small></span>}
                 {picks[0] === i && <span className="pmg-badge">P1</span>}
+                {r.skins && <span className="pmg-skinbadge">{r.skins.length} SKINS</span>}
                 <h3>{r.name.toUpperCase()}</h3>
                 <div className="bar" style={{ background: r.color }} />
                 <div className="meta">{r.lookLabel} · {r.style}</div>
@@ -3245,7 +3681,7 @@ export default function PMGFight3D({ onExit }: { onExit?: () => void } = {}) {
                 <div className="arch sig"><b>SIG · {r.sigName}</b> {r.sigDesc} <i>Hold Punch, let go.</i></div>
                 {(["power", "speed", "defense", "special"] as const).map((k) => (
                   <div className="pmg-stat" key={k}>
-                    <span style={{ textTransform: "capitalize" }}>{k}</span>
+                    <span style={{ textTransform: "capitalize" }} data-short={STAT_SHORT[k]}>{k}</span>
                     <i><b style={{ width: `${r[k] * 10}%` }} /></i>
                     <strong>{r[k]}</strong>
                   </div>
@@ -3256,18 +3692,24 @@ export default function PMGFight3D({ onExit }: { onExit?: () => void } = {}) {
             })}
           </div>
           <div className="pmg-col" style={{ marginTop: 18 }}>
-            <button className="pmg-btn ghost" onClick={() => (picks.length ? setPicks([]) : (setQuickPick(false), go("menu")))}>BACK</button>
+            {mode === "cpu" && picks.length === 1 && (
+              <button className="pmg-btn" onClick={() => { if (moving.current) return; let b = Math.floor(Math.random() * (ROSTER.length - 1)); if (b >= picks[0]) b++; setPicks([picks[0], b]); setPickSkins([pickSkins[0], randomSkin(ROSTER[b])]); go("stage"); }}>
+                RANDOM RIVAL<small>Anyone on the roster — then pick the level and turf</small>
+              </button>
+            )}
+            <button className="pmg-btn ghost" onClick={() => (picks.length ? clearPicks() : go("menu"))}>BACK</button>
           </div>
         </>
       )}
 
       {screen === "stage" && picks.length === 2 && (
         <>
-          <h1 className="pmg-h2">SELECT YOUR TURF</h1>
+          <h1 className="pmg-h2">{mode === "cpu" ? "PICK THE LEVEL, THEN THE TURF" : "SELECT YOUR TURF"}</h1>
           <p className="pmg-sub">{ROSTER[picks[0]].name} vs {ROSTER[picks[1]].name}. Where does it go down?</p>
           <p className="pmg-cred">CRED BALANCE · {Cred.get().toLocaleString()}</p>
           {mode === "cpu" && (
-            <div className="pmg-diff" role="group" aria-label="Difficulty">
+            <div className="pmg-diff" role="group" aria-label="Level">
+              <span className="pmg-difflabel">LEVEL</span>
               {DIFFICULTIES.map((d) => {
                 const locked = d === "HARD" && !Cred.has("hardturf");
                 return <button key={d} className="pmg-toggle" aria-pressed={diff === d} disabled={locked} title={locked ? "Unlock HARD TURF with Street Cred" : undefined} onClick={() => setDiff(d)}>{d}{locked ? " 🔒" : ` · +${BOUNTY[d]}`}</button>;
@@ -3285,7 +3727,7 @@ export default function PMGFight3D({ onExit }: { onExit?: () => void } = {}) {
             ))}
           </div>
           <div className="pmg-col" style={{ marginTop: 18 }}>
-            <button className="pmg-btn ghost" onClick={() => { setPicks([]); go("select"); }}>BACK</button>
+            <button className="pmg-btn ghost" onClick={() => { clearPicks(); go("select"); }}>BACK</button>
           </div>
         </>
       )}
@@ -3295,9 +3737,9 @@ export default function PMGFight3D({ onExit }: { onExit?: () => void } = {}) {
           key={round}
           p1={fighters[0]} p2={fighters[1]} cpu={mode === "cpu"} isTouch={isTouch} loc={loc} diff={mode === "cpu" ? diff : "MEDIUM"}
           onRematch={() => setRound((r) => r + 1)}
-          onChange={() => { setPicks([]); go("select"); }}
+          onChange={() => { clearPicks(); go("select"); }}
           onStage={() => go("stage")}
-          onMenu={() => { setPicks([]); go("menu"); }}
+          onMenu={() => { clearPicks(); go("menu"); }}
         />
       )}
     </div>
@@ -3357,7 +3799,7 @@ function FightView3D(props: {
       Voice.say(`quote-${p1.id}`); setTimeout(() => { if (alive) Voice.say(`quote-${p2.id}`); }, 1700);
       let done = 0; const step = <T,>(p: Promise<T>) => p.then((v) => { done++; if (alive) setLoadPct(Math.round((done / 3) * 100)); return v; });
       try {
-        const loads = await Promise.all([step(loadFighter(p1.id)), step(loadFighter(p2.id)), step(stagePreload as Promise<unknown>), new Promise((r) => setTimeout(r, 2200))]);
+        const loads = await Promise.all([step(loadFighter(modelOf(p1))), step(loadFighter(modelOf(p2))), step(stagePreload as Promise<unknown>), new Promise((r) => setTimeout(r, 2200))]);
         a1 = loads[0]; a2 = loads[1];
       }
       catch { if (alive) setStatus("error"); return; }
@@ -3379,7 +3821,7 @@ function FightView3D(props: {
 
       // HUD portraits
       const pics: (HTMLImageElement | null)[] = [null, null];
-      renderPortraits().then((pp) => [p1, p2].forEach((d, i) => { if (pp[d.id]) { const im = new Image(); im.src = pp[d.id]; pics[i] = im; } }));
+      renderPortraits().then((pp) => [p1, p2].forEach((d, i) => { const k = picOf(d); if (pp[k]) { const im = new Image(); im.src = pp[k]; pics[i] = im; } }));
 
       const g: Game = newGame(p1, p2, cpu, () => {
         if (cpu && g.wins[0] >= 2) setCredWon({ won: BOUNTY[diff], total: Cred.add(BOUNTY[diff]) });   // bounty for the difficulty
@@ -3471,9 +3913,12 @@ function FightView3D(props: {
           const dpr = Math.min(2, window.devicePixelRatio || 1); hud.width = cw * dpr; hud.height = ch * dpr;
         }
         const slow = pausedRef.current ? 0 : g.slow > 0 ? 0.5 : 1;
-        for (const hit of g.impacts) rigs[hit.who].anatomy.applyHitPhysics((Math.random() - 0.5) * 0.4, -1, hit.force);
+        for (const hit of g.impacts) rigs[hit.who].pendingHit = Math.max(rigs[hit.who].pendingHit, hit.force);   // applied when the hit freeze ends
         g.impacts.length = 0;
         rigs.forEach((r, i) => poseRig(r, g.f[i], (dtMs / 1000) * slow, clock));
+        rigs.forEach((r, i) => stepIn(r, g.f[i], rigs[1 - i], g.f[1 - i], (dtMs / 1000) * slow));   // step-in
+        rigs.forEach((r, i) => footLock(r, g.f[i], (dtMs / 1000) * slow));               // planted feet stay put
+        rigs.forEach((r, i) => contactIK(r, g.f[i], rigs[1 - i], g.f[1 - i]));          // fist / foot onto the rival
         updateStage(stage, g, clock, pausedRef.current ? 0 : dtMs / 1000);
         updateFx(fx, g);
         if (g.sfx.length) { const seen = new Set<string>(); for (const e of g.sfx) if (!seen.has(e)) { seen.add(e); if (e.startsWith("say:")) Voice.say(e.slice(4)); else Sound.play(e); } g.sfx.length = 0; }
@@ -3511,8 +3956,8 @@ function FightView3D(props: {
         {status === "loading" && (
           <div className="pmg-vs" role="status" aria-label={`${p1.name} versus ${p2.name}, loading`}>
             {[p1, p2].map((d, k) => (
-              <div className={`side ${k ? "r" : "l"}`} key={d.id} style={{ ["--c" as string]: d.color }}>
-                {vsPics?.[d.id] ? <img src={vsPics[d.id]} alt="" /> : <div className="ph" />}
+              <div className={`side ${k ? "r" : "l"}`} key={k} style={{ ["--c" as string]: d.color }}>
+                {vsPics?.[picOf(d)] ? <img src={vsPics[picOf(d)]} alt="" /> : <div className="ph" />}
                 <h3>{d.name.toUpperCase()}</h3>
                 <span>{archOf(d).displayName}</span>
               </div>
