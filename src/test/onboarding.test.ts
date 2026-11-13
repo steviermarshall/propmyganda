@@ -17,7 +17,7 @@ const order: OrderRow = {
 describe("tiers", () => {
   it("shows only the three paid tiers in public; DSP and Invited open from their own links", () => {
     expect(TIERS.map((t) => [t.id, t.priceCents, t.public])).toEqual([
-      ["dsp", 0, false], ["basic", 55_000, true], ["mid", 100_000, true], ["viral", 1_500_000, true], ["comp", 0, false],
+      ["dsp", 0, false], ["basic", 55_000, true], ["mid", 100_000, true], ["viral", 1_500_000, true], ["comp", 0, false], ["test", 200, false],
     ]);
     expect(TIERS.find((t) => t.id === "dsp")).toMatchObject({ inviteOnly: true, distribution: true, revenueShare: true });
     expect(TIERS.find((t) => t.id === "comp")).toMatchObject({ inviteOnly: true });

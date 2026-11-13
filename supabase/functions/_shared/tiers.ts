@@ -1,7 +1,7 @@
 // PMG onboarding tiers. Single source of truth for the site and the edge functions.
 // Prices are in US cents. Edit here to lock pricing.
 
-export type TierId = "dsp" | "basic" | "mid" | "viral" | "comp";
+export type TierId = "dsp" | "basic" | "mid" | "viral" | "comp" | "test";
 export type PaymentPlan = "full" | "deposit";
 
 export interface Tier {
@@ -112,6 +112,20 @@ export const TIERS: Tier[] = [
     includes: MID_INCLUDES,
     adBudgetAddOn: false,
     depositAllowed: false,
+    financing: false,
+    bookings: ["post", "session"],
+    public: false,
+    inviteOnly: true,
+  },
+  {
+    // Staff only: runs the whole paid path (deposit, saved card, balance, webhook, calendar, email) for $2.
+    id: "test",
+    name: "Test",
+    priceCents: 200,
+    tagline: "Staff test. $1 deposit, $1 balance.",
+    includes: ["Runs the real payment path end to end", "Books the calendar and sends the emails", "Delete the calendar event after"],
+    adBudgetAddOn: false,
+    depositAllowed: true,
     financing: false,
     bookings: ["post", "session"],
     public: false,

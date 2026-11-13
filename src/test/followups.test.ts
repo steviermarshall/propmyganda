@@ -51,7 +51,8 @@ describe("deposit balance", () => {
     expect(balanceDue({ ...dep, session_at: null, post_at: ahead(20) }, now)).toEqual({ cents: 27_500, at: dep.post_at! && ahead(20) });
   });
   it("is allowed on every paid plan at 50%", () => {
-    expect(TIERS.filter((t) => t.depositAllowed).map((t) => t.id)).toEqual(["basic", "mid", "viral"]);
+    expect(TIERS.filter((t) => t.depositAllowed && t.public).map((t) => t.id)).toEqual(["basic", "mid", "viral"]);
+    expect(quote("test", 0, "deposit")).toMatchObject({ plan: "deposit", dueNowCents: 100, balanceCents: 100 }); // the staff test plan: $1 now, $1 later
     expect(quote("basic", 0, "deposit")).toMatchObject({ plan: "deposit", dueNowCents: 27_500, balanceCents: 27_500 });
   });
 });

@@ -35,7 +35,7 @@ async function signedLinks(supabase: SupabaseClient, uploads: OrderRow["uploads"
 function moneyLine(o: OrderRow, paidStatus: string): string {
   const tier = getTier(o.tier);
   if (tier?.revenueShare) return "DSP Release · $0 up front · split on streams";
-  if (tier?.inviteOnly) return "Invited · $0";
+  if (tier && tier.priceCents === 0) return "Invited · $0";
   return `${formatUsd(o.total_cents)}${o.payment_plan === "deposit" ? ` (deposit ${formatUsd(o.due_now_cents)} paid, balance due before posting)` : ` (${paidStatus})`}`;
 }
 

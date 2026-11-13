@@ -24,7 +24,7 @@ export default function Invites() {
   const [label, setLabel] = useState("");
   const [uses, setUses] = useState(1);
   const [days, setDays] = useState(30);
-  const [tier, setTier] = useState<"comp" | "dsp">("comp");
+  const [tier, setTier] = useState<"comp" | "dsp" | "test">("comp");
 
   const { data: invites = [], isLoading } = useQuery({
     queryKey: ["onboarding-invites"],
@@ -68,15 +68,16 @@ export default function Invites() {
       <div className="mx-auto max-w-4xl px-4 py-8">
         <h1 className="text-2xl font-bold tracking-tight">Invite links</h1>
         <p className="mt-1 mb-6 text-xs opacity-50">
-          Two private doors, neither on the public /start page. <b>Invited</b> is completely free: everything in Mid, $0, no agreement. <b>DSP Release</b> is $0 up front with a record released under PMG: the artist signs the streaming agreement in the flow. Both skip payment and still book the calendar and fill the sheets. One use by default; give a DSP link many uses to reuse it.
+          Two private doors, neither on the public /start page. <b>Invited</b> is completely free: everything in Mid, $0, no agreement. <b>DSP Release</b> is $0 up front with a record released under PMG: the artist signs the streaming agreement in the flow. Both skip payment and still book the calendar and fill the sheets. One use by default; give a DSP link many uses to reuse it. <b>Test</b> is for staff: a real $1 deposit and $1 balance to check payments end to end.
         </p>
 
         <form onSubmit={(e) => { e.preventDefault(); create.mutate(); }} className="mb-8 grid gap-3 border border-white/15 p-4 sm:grid-cols-[150px_1fr_90px_110px_auto]">
           <label className="text-xs uppercase tracking-widest opacity-70">
             Plan
-            <select value={tier} onChange={(e) => setTier(e.target.value as "comp" | "dsp")} className="mt-1 w-full border border-white/20 bg-black px-2 py-2 text-sm text-white">
+            <select value={tier} onChange={(e) => setTier(e.target.value as "comp" | "dsp" | "test")} className="mt-1 w-full border border-white/20 bg-black px-2 py-2 text-sm text-white">
               <option value="comp">Invited · free</option>
               <option value="dsp">DSP Release</option>
+              <option value="test">Test · $2 · staff only</option>
             </select>
           </label>
           <label className="text-xs uppercase tracking-widest opacity-70">
@@ -108,7 +109,7 @@ export default function Invites() {
                 <li key={i.code} className="flex flex-wrap items-center gap-3 border border-white/15 p-3">
                   <span className="font-mono text-sm tracking-widest">{i.code}</span>
                   <span className="text-[9px] uppercase tracking-widest px-1.5 py-0.5" style={{ background: st === "open" ? ACCENT : "rgba(255,255,255,0.15)", color: st === "open" ? "#000" : "#fff" }}>{st}</span>
-                  <span className="text-[9px] uppercase tracking-widest border border-white/30 px-1.5 py-0.5">{i.tier === "dsp" ? "DSP" : "Invited"}</span>
+                  <span className="text-[9px] uppercase tracking-widest border border-white/30 px-1.5 py-0.5">{i.tier === "dsp" ? "DSP" : i.tier === "test" ? "Test $2" : "Invited"}</span>
                   <span className="min-w-0 flex-1 truncate text-sm">{i.label ?? "—"}</span>
                   <span className="text-xs opacity-50">{i.used_count}/{i.max_uses} used{i.expires_at ? ` · until ${new Date(i.expires_at).toLocaleDateString()}` : ""}</span>
                   <button type="button" onClick={() => copy(i.code)} className="border border-white/30 px-2.5 py-1 text-xs uppercase tracking-widest hover:border-white">Copy link</button>

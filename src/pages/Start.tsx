@@ -26,7 +26,7 @@ function Stepper({ step }: { step: number }) {
 // ── 1. Tier ────────────────────────────────────────────────────────────────
 function priceLabel(t: Tier): string {
   if (t.revenueShare) return "$0 up front";
-  if (t.inviteOnly) return "On us";
+  if (t.priceCents === 0) return "On us";
   return formatUsd(t.priceCents);
 }
 
@@ -93,7 +93,7 @@ function TierStep({ tier, setTier, adBudget, setAdBudget, onNext, invite }: { ti
         <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#F2EFE9]">
           {q.tier.revenueShare ? (
             <>Due today <span className="text-[#FFD230]">$0</span><span className="text-[#9A9A9E]"> · PMG is paid from the streaming split you sign</span></>
-          ) : q.tier.inviteOnly ? (
+          ) : q.totalCents === 0 ? (
             <>Due today <span className="text-[#FFD230]">$0</span></>
           ) : (
             <>Total <span className="text-[#FFD230]">{formatUsd(q.totalCents)}</span>{q.tier.depositAllowed && <span className="text-[#9A9A9E]"> · deposit option at checkout</span>}</>
