@@ -101,3 +101,8 @@ Every paid plan offers a 50% deposit, shown first. The deposit checkout saves th
 Also in this round: no Explicit flag; ad-results preference only on Viral or when an ad budget is added; the distribution toggle is gone from paid plans (DSP Release is the only distribution path); the schedule step books the shoot first and the release can be skipped ("place me by email"); the prep guide is in the confirmation email and under Pay, the done page shows the receipt, next steps and the add-ons.
 
 Deploy after these changes: `onboarding`, `stripe-webhook`, `onboarding-followups`. Run migration `20261109_020`.
+
+
+## Email without a third-party account
+
+`_shared/email.ts` picks its transport from the secrets present. With `GMAIL_USER` and `GMAIL_APP_PASSWORD` it sends through Gmail over SMTP on port 465 (`_shared/smtp.ts`, a small client; Supabase blocks only ports 25 and 587). Mail comes from the team's own Gmail, replies land in that inbox, and Gmail's Sent folder is the copy. `NOTIFY_EMAIL` defaults to `GMAIL_USER`. Resend still works if `RESEND_API_KEY` is set and Gmail is not. A GET on `onboarding-followups` reports `email: gmail | resend | none`. Gmail allows about 500 recipients a day on a personal account.

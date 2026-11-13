@@ -139,7 +139,7 @@ async function calendarBusy(fromISO: string, toISO: string): Promise<Busy[]> {
 }
 
 /** Bump with every change so a GET on the function shows which build is live (Lovable only redeploys functions it notices changed). */
-const FUNCTION_VERSION = "2026-11-13.2";
+const FUNCTION_VERSION = "2026-11-13.3";
 const ACTIONS = ["tiers", "agreement", "track", "invite-check", "create", "update", "ig-lookup", "upload-url", "upload-done", "availability", "checkout", "balance-link", "confirm", "status"];
 
 Deno.serve(async (req) => {

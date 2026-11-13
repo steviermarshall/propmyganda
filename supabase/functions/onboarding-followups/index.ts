@@ -3,12 +3,12 @@
 //   GET       { ok, version }
 // Secrets: RESEND_API_KEY, NOTIFY_FROM, SITE_URL; optional CRON_SECRET.
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { sendEmail } from "../_shared/email.ts";
+import { emailTransport, sendEmail } from "../_shared/email.ts";
 import { balanceDue, dueFollowups, nyWhen, type FollowupKey, type FollowupOrder } from "../_shared/followups.ts";
 import { formEncode } from "../_shared/onboarding.ts";
 import { getTier, formatUsd } from "../_shared/tiers.ts";
 
-const VERSION = "2026-11-13.1";
+const VERSION = "2026-11-13.2";
 const headers = { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" };
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers });
 
@@ -51,7 +51,7 @@ function body(o: Row, key: FollowupKey, site: string): { subject: string; text: 
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "GET") return json({ ok: true, function: "onboarding-followups", version: VERSION });
+  if (req.method === "GET") return json({ ok: true, function: "onboarding-followups", version: VERSION, email: emailTransport() });
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
   const secret = Deno.env.get("CRON_SECRET");
   if (secret && req.headers.get("x-cron-secret") !== secret) return json({ error: "forbidden" }, 403);
