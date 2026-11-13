@@ -12,7 +12,8 @@ export async function sendEmail(to: string, subject: string, text: string, opts:
   const notify = teamEmail();
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST", headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from, to: [to], bcc: opts.bccTeam && notify && notify !== to ? [notify] : undefined, reply_to: opts.replyTo, subject, text }),
+    // Every email says "reply to this"; replies go to the team inbox unless a caller names another address.
+    body: JSON.stringify({ from, to: [to], bcc: opts.bccTeam && notify && notify !== to ? [notify] : undefined, reply_to: opts.replyTo ?? (notify && notify !== to ? notify : undefined), subject, text }),
     signal: AbortSignal.timeout(10_000),
   });
   if (!res.ok) throw new Error(`email ${res.status} ${await res.text()}`);

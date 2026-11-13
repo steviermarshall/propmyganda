@@ -8,7 +8,7 @@ import { balanceDue, dueFollowups, nyWhen, type FollowupKey, type FollowupOrder 
 import { formEncode } from "../_shared/onboarding.ts";
 import { getTier, formatUsd } from "../_shared/tiers.ts";
 
-const VERSION = "2026-11-09.2";
+const VERSION = "2026-11-13.1";
 const headers = { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" };
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers });
 
