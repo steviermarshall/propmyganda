@@ -40,6 +40,17 @@ browsers are documented to need partial answers before they play a video from an
 from memory, the loops run in Safari on a Mac and in Chrome (checked 2026-11-18). An iPhone itself
 has not been checked. The originals come from the asset store, which does answer partial requests.
 
+## On a phone
+
+On one column (narrow or portrait screens) every stop shows its title alone, with no explanation
+over the scene (Stevie, 2026-11-19: "remove the explanation and just have the background"; Asad:
+"just keep the segment titles"). A screen's code, details and streaming links are one tap away, in
+the opened view; the Play button and a part's list of screens stay in the tab order for keyboards
+and screen readers, out of sight until focused. The sign-up keeps its form. At home the full shade
+lifts off the Earth and a short one sits under the title; the logo and tower are framed into the
+larger band (HOME_BARE_Y), and the sign-up's tower into the band above its words (JOIN_FREE). The credit "Made by Kill Everything Digital (53XV
+Studios)" sits at the foot of the hub, above the art and type credits.
+
 ## Devices that cannot run it
 
 No WebGL 2, "reduce motion" switched on, or the hub failing to start: the visitor gets the classic

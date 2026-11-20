@@ -385,6 +385,8 @@ export interface HubWorld {
   css: CSS3DRenderer;
   setSize(w: number, h: number, dpr: number): void;
   apply(pose: Pose, pointer: [number, number], zoneFocus: number, cardFocus?: number): void;
+  /** How much of the shade kept behind words to draw over the Earth: 1 where words are, 0 where none are. */
+  setShade(k: number): void;
   /** Advances hover and opening; returns true while something is still moving. */
   step(dt: number, time: number): boolean;
   render(): void;
@@ -499,6 +501,7 @@ export async function createWorld(
       // Quiet the Earth behind the words: x the words' right edge, y where the dimming is full,
       // z where it starts (UV, y up), w how much.
       uShade: { value: new Vector4(0.48, 0.3, 0.46, 0.62) },
+      uShadeK: { value: 1 },
       // Parallax for the far-away Earth: the picture is drawn EARTH_ZOOM oversized and slides
       // within that margin, so Earthlight's camera stays parked and streams no new tiles.
       uShift: { value: new Vector2(0, 0) },
@@ -515,6 +518,7 @@ export async function createWorld(
       uniform vec3 uGround;
       uniform float uGain;
       uniform vec4 uShade;
+      uniform float uShadeK;
       uniform vec2 uShift;
       uniform float uZoom;
       varying vec2 vUv;
@@ -522,7 +526,7 @@ export async function createWorld(
         vec2 uv = ((vUv - 0.5) / uZoom + uShift) * uCover + 0.5;
         vec3 poster = mix(uGround, texture2D(tPoster, uv).rgb, uHasPoster);
         vec3 live = uMix > 0.0 ? texture2D(tLive, uv).rgb : poster;
-        float shade = uShade.w * smoothstep(uShade.z, uShade.y, vUv.y)
+        float shade = uShade.w * uShadeK * smoothstep(uShade.z, uShade.y, vUv.y)
           * smoothstep(uShade.x + 0.14, uShade.x - 0.04, vUv.x);
         gl_FragColor = vec4(mix(poster, live, uMix) * uGain * (1.0 - shade), 1.0);
       }`,
@@ -904,6 +908,11 @@ export async function createWorld(
     slotQ.setFromAxisAngle(up, a);
   }
 
+  let shadeK = 1;
+  let shadeTarget = 1;
+  function setShade(k: number) {
+    shadeTarget = k;
+  }
   function apply(pose: Pose, pointer: [number, number], zoneFocus: number, cardFocus = 0) {
     columnTarget = 1 - 0.62 * cardFocus;
     zoneNow = zoneFocus;
@@ -979,6 +988,10 @@ export async function createWorld(
 
   function step(dt: number, time: number): boolean {
     let moving = false;
+    shadeK += (shadeTarget - shadeK) * (1 - Math.exp(-dt * 4));
+    if (Math.abs(shadeTarget - shadeK) > 0.002) moving = true;
+    else shadeK = shadeTarget;
+    earthMat.uniforms.uShadeK.value = shadeK;
     const k = 1 - Math.exp(-dt * 10);
     screens.forEach((sc, i) => {
       sc.hoverTarget = i === hovered && opened < 0 ? 1 : 0;
@@ -1296,6 +1309,7 @@ export async function createWorld(
     css,
     setSize,
     apply,
+    setShade,
     step,
     render,
     warm,

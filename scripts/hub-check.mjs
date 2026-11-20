@@ -192,6 +192,7 @@ async function hubAt(browser, label, viewport, mobile) {
   // Every stop: its words show, and on one column the screen in focus sits clear above them.
   let wordsOk = true;
   let framingOk = true;
+  let titlesOk = true;
   const bad = [];
   for (const [i, stop] of info.stops.entries()) {
     const r = await page.evaluate(({ y, i }) => {
@@ -201,7 +202,11 @@ async function hubAt(browser, label, viewport, mobile) {
       const rect = window.__pmg.focusRect();
       return {
         visible: block ? Number(getComputedStyle(block).opacity) > 0.9 : false,
-        words: (block?.textContent ?? "").trim().length,
+        words: (block?.innerText ?? "").trim().length,
+        // On one column a stop shows its title alone: anything else visible (bigger than a 1px
+        // screen-reader clip) counts as an extra.
+        titleShown: (() => { const t = block?.querySelector(".w-title"); return Boolean(t && t.getBoundingClientRect().height > 8 && t.innerText.trim().length >= 2); })(),
+        extras: block ? [...block.children].filter((c) => !c.classList.contains("w-title") && getComputedStyle(c).display !== "none" && c.getBoundingClientRect().width * c.getBoundingClientRect().height > 4).length : 0,
         wordsTop: box?.top ?? 0,
         wordsRight: box?.right ?? 0,
         wordsBottom: box?.bottom ?? 0,
@@ -213,6 +218,10 @@ async function hubAt(browser, label, viewport, mobile) {
     if (!r.visible || r.words < 4 || r.wordsBottom > r.h + 1 || r.wordsRight > r.w + 1) {
       wordsOk = false;
       bad.push(`stop ${i} words`);
+    }
+    if (info.layout === "column" && stop.kind !== "join" && (!r.titleShown || r.extras > 0)) {
+      titlesOk = false;
+      bad.push(`stop ${i} not title-only (${r.extras} extra)`);
     }
     if (info.layout === "column" && stop.kind === "card" && r.rect && r.rect.bottom > r.wordsTop + 2) {
       framingOk = false;
@@ -226,6 +235,7 @@ async function hubAt(browser, label, viewport, mobile) {
   }
   check(`all ${info.stops.length} stops show their words inside the screen`, wordsOk, bad.join("; "));
   check("on one column, each screen sits above its words", framingOk, bad.join("; "));
+  if (info.layout === "column") check("on one column, each part shows its title alone (the sign-up keeps its form)", titlesOk, bad.join("; "));
   check("no script errors", errors.length === 0, errors.slice(0, 3).join(" | "));
   await ctx.close();
 }

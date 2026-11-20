@@ -124,6 +124,10 @@ export const bandHeight = (b: FreeBand) => Math.max(MIN_BAND, b.bottom - b.top);
  *  supports (320 x 568), as a share of a 1:2 still shown top-aligned. On taller phones the
  *  focused screen sits higher and smaller in the still, never over the words. */
 export const STILL_BAND: FreeBand = { top: 0.09, bottom: 0.37 };
+/** Where the logo sits on a one-column home that has only its title under it (a share of the height). */
+export const HOME_BARE_Y = 0.37;
+/** The band above the sign-up on a 390 x 844 phone that the join framing (radius 10.5) was tuned for. */
+const JOIN_FREE = 0.43;
 
 export function buildStops(
   tower: Tower,
@@ -152,7 +156,8 @@ export function buildStops(
     y: tower.zoneY[0] + 0.35,
     lookR: 0,
     lookY: tower.zoneY[0] + 0.25,
-    frame: row ? [0.68, 0.36] : [0.5, home ? Math.min(0.31, (home.top + home.bottom) / 2) : 0.31],
+    // With only the title under it (one column), the logo and tower sit lower, nearer the middle.
+    frame: row ? [0.68, 0.36] : [0.5, home ? Math.min(bandHeight(home) > 0.6 ? HOME_BARE_Y : 0.31, (home.top + home.bottom) / 2) : 0.31],
     fov,
   });
   ZONES.forEach((_, k) => {
@@ -196,17 +201,20 @@ export function buildStops(
     });
   });
   at += 1.2;
+  // One column: fit the tower into the band above the sign-up, as home and the cards are, so a
+  // taller block (the made-by credit, a small phone) never puts the tower behind its words.
+  const join = band(stops.length);
   stops.push({
     kind: 'join',
     zone: ZONES.length,
     slot: -1,
     at,
     theta: tower.endAngle,
-    radius: row ? 8.2 : 10.5,
+    radius: row ? 8.2 : 10.5 * (join ? Math.max(1, JOIN_FREE / bandHeight(join)) : 1),
     y: tower.bottom - 0.9,
     lookR: 0,
     lookY: tower.bottom + 2.4,
-    frame: row ? [0.66, 0.44] : [0.5, 0.3],
+    frame: row ? [0.66, 0.44] : [0.5, join ? Math.min(0.3, (join.top + join.bottom) / 2) : 0.3],
     fov,
   });
   return stops;

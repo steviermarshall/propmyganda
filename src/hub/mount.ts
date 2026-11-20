@@ -182,6 +182,7 @@ export async function mountHub(host: HTMLElement, opts: HubOptions): Promise<Hub
       <p class="form-note label" role="status" aria-live="polite">${esc(joinNote)}</p>
     </form>
     <p class="links">${[...SOCIALS, ['Contact PMG', '/contact'] as HubLink].map((l) => anchor(l)).join('')}</p>
+    <p class="made"><span class="label">Made by</span> <a href="https://ket-digital.com" target="_blank" rel="noopener">Kill Everything Digital <span class="nobr">(53XV Studios)</span></a></p>
     <p class="credit">Art, reels and music © Propmyganda and the artists. Type: Big Shoulders Display (Patric King), Space Mono (Colophon), SIL OFL. 3D: three.js. Earth: Earthlight by Max Vyshniakov (MIT, <a href="${esc(opts.root)}licenses/earthlight/LICENSE.txt" target="_blank" rel="noopener">licence</a>), adapted; NASA Black Marble and Blue Marble, NASA SVS Deep Star Maps (Ernie Wright) with ESA Gaia DR2, HYG stars by David Nash (<a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a>): <a href="${esc(opts.root)}licenses/earthlight/NOTICE.md" target="_blank" rel="noopener">full notice</a>.</p>
   </section>`;
   }
@@ -205,6 +206,11 @@ export async function mountHub(host: HTMLElement, opts: HubOptions): Promise<Hub
   let zoneNames: string[] = [];
 
   function applyWords(idx: number) {
+    // One column, at home: only the title is on screen (it carries its own short shade), so the
+    // full shade kept behind words lifts off the Earth and the tower.
+    const bare = layout === 'column' && idx < 0.55;
+    host.classList.toggle('at-home', bare);
+    world?.setShade(bare ? 0 : 1);
     // Only the title in view tears (Glitch Slice); none while a screen is open over the words.
     const cur = Math.round(clamp(idx, 0, blocks.length - 1));
     glitch.focus(
