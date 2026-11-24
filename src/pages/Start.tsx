@@ -15,10 +15,14 @@ const AD_PICKS = [0, 10_000, 25_000, 50_000, 100_000];
 
 /** Where you are in the five steps. A finished step is a way back to it. */
 /** The step names. With nothing to charge, the last step is a confirmation, not a payment. */
-const stepNames = (free: boolean): readonly string[] => (free ? [...STEPS.slice(0, -1), "Confirm"] : STEPS);
+const stepNames = (free: boolean, invited = false): readonly string[] => {
+  const names: string[] = free ? [...STEPS.slice(0, -1), "Confirm"] : [...STEPS];
+  if (invited) names[0] = "Invite";
+  return names;
+};
 
-function Stepper({ step, onJump, free = false }: { step: number; onJump: (n: number) => void; free?: boolean }) {
-  const names = stepNames(free);
+function Stepper({ step, onJump, free = false, invited = false }: { step: number; onJump: (n: number) => void; free?: boolean; invited?: boolean }) {
+  const names = stepNames(free, invited);
   return (
     <nav aria-label="Progress">
       <p className="mb-3 text-[12px] font-bold uppercase tracking-[0.16em] text-smoke sm:hidden">Step {step + 1} of {names.length} · {names[step]}</p>
@@ -76,17 +80,56 @@ const RULES_NO_CHARGE = [
   "You keep your masters.",
 ];
 
+// What an invite gets, written for the artist. The plan lists in tiers.ts compare plans ("Everything in Mid"),
+// which means nothing to someone who never saw the paid plans, so invites get their own words here.
+const INVITE_OFFER: Partial<Record<TierId, { title: string; line: string; gets: string[] }>> = {
+  comp: {
+    title: "A free video on PMG",
+    line: "We invite a few artists a month. This one is on us.",
+    gets: [
+      "A shoot at our studio in DUMBO, Brooklyn",
+      "One long-form and one short-form video",
+      "Posted as a collab on PMG's channels and yours",
+      "Ads behind the post",
+    ],
+  },
+  dsp: {
+    title: "Release with PMG",
+    line: "Your record, released under Propmyganda. Split on streams.",
+    gets: [
+      "Your record on every streaming platform, released by PMG through UnitedMasters",
+      "A shoot at our studio in DUMBO, Brooklyn, with long-form and short-form video",
+      "Posted as a collab with ads behind it",
+      "Non-exclusive, one release at a time. You keep your masters",
+      "Master split: 45 you, 45 PMG, 10 producer. You sign it in the next step",
+    ],
+  },
+};
+
+function InviteOffer({ tier }: { tier: TierId }) {
+  const t = getTier(tier);
+  const o = INVITE_OFFER[tier] ?? { title: t?.name ?? "Your invite", line: t?.tagline ?? "", gets: t?.includes ?? [] };
+  return (
+    <div className="max-w-2xl">
+      <p className="mb-5 inline-block bg-blood px-3 py-2 text-[12px] font-bold uppercase tracking-[0.16em] text-white">Invite only · nothing to pay</p>
+      <div className="border-2 border-bone bg-bone p-6 text-ink sm:p-8">
+        <h2 className="font-poster text-[34px] uppercase leading-[0.95] sm:text-[44px]">{o.title}</h2>
+        <p className="mt-3 text-[17px] font-bold leading-6">{o.line}</p>
+        <ul className="mt-6 space-y-3 text-[15px] leading-[22px]">
+          {o.gets.map((g) => <Bullet key={g} tone="light">{g}</Bullet>)}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
 function TierStep({ tier, setTier, adBudget, setAdBudget, onNext, invite }: { tier: TierId; setTier: (t: TierId) => void; adBudget: number; setAdBudget: (n: number) => void; onNext: () => void; invite: { label: string | null } | null }) {
   const q = quote(tier, adBudget);
   // An invite link shows exactly the plan it was issued for (Invited or DSP Release); the public link shows the paid tiers.
   const shown = invite ? TIERS.filter((t) => t.id === tier) : PUBLIC_TIERS;
   return (
     <div>
-      {invite && (
-        <p className="mb-5 inline-block bg-blood px-3 py-2 text-[12px] font-bold uppercase tracking-[0.16em] text-white">
-          Invite accepted{invite.label ? ` · ${invite.label}` : ""}
-        </p>
-      )}
+      {invite ? <InviteOffer tier={tier} /> : (
       <div role="radiogroup" aria-label="Plan" className={`grid gap-4 ${shown.length > 3 ? "md:grid-cols-2 lg:grid-cols-4" : shown.length > 1 ? "md:grid-cols-3" : "max-w-md"}`}>
         {shown.map((t) => {
           const active = t.id === tier;
@@ -111,6 +154,7 @@ function TierStep({ tier, setTier, adBudget, setAdBudget, onNext, invite }: { ti
           );
         })}
       </div>
+      )}
 
       {q.tier.adBudgetAddOn && (
         <div className="mt-10 border border-rule p-6">
@@ -158,7 +202,7 @@ function TierStep({ tier, setTier, adBudget, setAdBudget, onNext, invite }: { ti
           q.tier.revenueShare ? (
             <><span className="font-bold text-bone">{q.tier.name}.</span> PMG is paid from the streaming split you sign.</>
           ) : q.totalCents === 0 ? (
-            <span className="font-bold text-bone">{q.tier.name}</span>
+            <><span className="font-bold text-bone">{q.tier.name}.</span> Nothing to pay.</>
           ) : (
             <><span className="font-bold text-bone">{q.tier.name} · total {formatUsd(q.totalCents)}.</span>{q.tier.depositAllowed && <> Deposit option at checkout.</>}</>
           )
@@ -766,7 +810,8 @@ export default function Start() {
 
   const tierDef = quote(tier, adBudget).tier;
   const free = quote(tier, order?.ad_budget_cents ?? adBudget).totalCents === 0;
-  const names = stepNames(free);
+  const invited = !!tierDef.inviteOnly;
+  const names = stepNames(free, invited);
 
   return (
     <main className="min-h-screen bg-ink font-sans text-bone">
@@ -791,7 +836,7 @@ export default function Start() {
       </header>
 
       <section className="mx-auto max-w-5xl px-6 pb-16 md:px-10">
-        <Stepper step={step} onJump={go} free={free} />
+        <Stepper step={step} onJump={go} free={free} invited={invited} />
         <div className="mt-10">
           {err && <div className="mb-6"><ErrorLine>{err}</ErrorLine></div>}
           {inviteErr && <div className="mb-6"><ErrorLine>{inviteErr} Showing the public plans instead.</ErrorLine></div>}
